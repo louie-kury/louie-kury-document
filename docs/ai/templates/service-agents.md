@@ -1,6 +1,6 @@
 # 서비스 레포 작업 규칙
 
-<!-- 서비스 레포 루트에 AGENTS.md로 복사하고 공통 문서 경로를 맞춘다. -->
+<!-- 프론트엔드 또는 백엔드 레포 루트에 AGENTS.md로 복사하고 공통 문서 경로를 실제 클론 이름에 맞춘다. -->
 
-- 공통 문서는 서비스 레포 루트 기준 `../shared-docs/louie-kury-document/docs/`에 있다.
+- 공통 문서는 서비스 레포 루트 기준 `../louie-kury-document/docs/`에 있다.
 - 개발 전 공통 문서의 `ai/ROUTING.md`와 `ai/WORKFLOW.md`를 읽고, 작업에 해당하는 규칙과 절차를 따른다.

@@ -4,6 +4,9 @@
 
 개발 방향은 사람이 고릅니다. 메인이 planner·implementer·tester·reviewer를 필요한 단계에 배정합니다. planner는 바이브 와이즈로 설계를 돕고 마지막에 문서를 동기화합니다. 구현·테스트·코드 리뷰·별도 QA를 구분하며, 합의한 범위만 진행합니다. 이슈와 전체 단계를 자동으로 시작하지 않습니다.
 
+프론트엔드와 백엔드 작업은 이 공통 문서 레포를 Codex 프로젝트로 열어 시작합니다. 실제 코드는 [옆에 둔 대상 레포](docs/ai/WORKFLOW.md#서비스-작업-경로)에서 작업합니다.
+
+- [작업별 문서 찾기](docs/ai/ROUTING.md)
 - [시작과 도구 사용](docs/ai/SETUP.md)
 - [짧은 개발 흐름](docs/ai/WORKFLOW.md)
 - [Git 컨벤션과 작성 템플릿](docs/convension/GIT_CONVENTIONS.md)
