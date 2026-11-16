@@ -1,4 +1,4 @@
-"""Validate portable configuration and reject incomplete role definitions."""
+"""Validate portable harness configuration, role definitions, and routing."""
 import os
 from pathlib import Path
 import shutil
@@ -8,6 +8,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
+ROUTING_ENTRIES = ("AGENTS.md", "docs/ai/ROUTING.md")
 
 
 class LightweightHarnessTests(unittest.TestCase):
@@ -22,6 +23,8 @@ class LightweightHarnessTests(unittest.TestCase):
         names.extend(".agents/skills/" + skill + "/SKILL.md" for skill in skills)
         self.roles = ("planner", "implementer", "tester", "reviewer")
         names.extend(".codex/agents/" + role + ".toml" for role in self.roles)
+        names.append("AGENTS.md")
+        names.extend(path.relative_to(ROOT) for path in (ROOT / "docs").rglob("*.md"))
         for relative in names:
             target = self.root / relative
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -45,6 +48,43 @@ class LightweightHarnessTests(unittest.TestCase):
         self.assertFalse((self.root / ".specify").exists())
         self.assertFalse((self.root / "tools/ai/spec-kit").exists())
         self.assertFalse((self.clean_home / ".codex").exists())
+
+    def test_missing_routing_entry_is_rejected(self):
+        for entry in ROUTING_ENTRIES:
+            with self.subTest(entry=entry):
+                path = self.root / entry
+                original = path.read_bytes()
+                try:
+                    path.unlink()
+                    self.assert_configuration_rejected()
+                finally:
+                    path.write_bytes(original)
+
+    def test_broken_local_routing_link_is_rejected(self):
+        for entry in ROUTING_ENTRIES:
+            path = self.root / entry
+            original = path.read_text()
+            for destination in ("missing.md", "#missing-heading"):
+                with self.subTest(entry=entry, destination=destination):
+                    try:
+                        path.write_text(f"{original}\n[깨진 링크]({destination})\n")
+                        self.assert_configuration_rejected()
+                    finally:
+                        path.write_text(original)
+
+    def test_disabled_or_invalid_hook_feature_is_rejected(self):
+        path = self.root / ".codex/config.toml"
+        original = path.read_text()
+        self.assertIn("hooks = true", original)
+        for setting in ("hooks = false", "", 'hooks = "true"'):
+            with self.subTest(setting=setting):
+                path.write_text(original.replace("hooks = true", setting))
+                self.assert_configuration_rejected()
+
+    def assert_configuration_rejected(self):
+        result = self.check_configuration()
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertNotIn("PASS A:", result.stdout)
 
     def test_each_missing_role_is_rejected(self):
         for role in self.roles:

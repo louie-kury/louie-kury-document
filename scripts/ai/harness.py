@@ -8,10 +8,12 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
 import tomllib
+from urllib.parse import unquote, urlsplit
 import uuid
 
 
@@ -19,6 +21,11 @@ ROOT = Path(__file__).resolve().parents[2]
 MAX_INPUT = 64 * 1024
 FIELDS = ("task_id", "goal", "ownership", "completed", "remaining", "decisions",
           "unknowns", "validation", "limits", "next_step", "links")
+ROUTING_ENTRIES = ("AGENTS.md", "docs/ai/ROUTING.md")
+MARKDOWN_LINK = re.compile(
+    r"(?<!\\)\]\(\s*(?:<([^>\n]+)>|([^\s)]+))"
+    r"""(?:\s+(?:"[^"]*"|'[^']*'))?\s*\)"""
+)
 
 
 class HarnessError(ValueError):
@@ -124,6 +131,69 @@ def save_handoff(root, session, payload):
     return atomic_json(local_dir(root, "sessions", key), "handoff", payload)
 
 
+def markdown_lines(path):
+    """Yield line numbers and text outside fenced blocks."""
+    fence = ""
+    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        marker = re.match(r"^ {0,3}(\x60{3,}|~{3,})(.*)$", line)
+        if fence:
+            if marker and marker[1].startswith(fence) and not marker[2].strip():
+                fence = ""
+        elif marker:
+            fence = marker[1]
+        else:
+            yield number, line
+
+
+def markdown_anchors(path):
+    anchors = set()
+    headings = set()
+    for _, line in markdown_lines(path):
+        for match in re.finditer(r"""<a\b[^>]*?\s+(?:id|name)\s*=\s*(["'])(.*?)\1""", line):
+            anchors.add(match[2])
+        heading = re.match(r"^ {0,3}#{1,6}\s+(.+?)(?:\s+#+)?\s*$", line)
+        if heading:
+            base = re.sub(r"[^\w -]", "", heading[1].lower()).replace(" ", "-")
+            anchor = base
+            index = 1
+            while anchor in headings:
+                anchor = f"{base}-{index}"
+                index += 1
+            headings.add(anchor)
+    return anchors | headings
+
+
+def check_routing(root):
+    root = root.resolve()
+    for entry in ROUTING_ENTRIES:
+        source = root / entry
+        if not source.is_file() or not source.resolve().is_relative_to(root):
+            raise HarnessError(f"missing routing entry: {entry}")
+
+    anchors_by_path = {}
+    for entry in ROUTING_ENTRIES:
+        source = root / entry
+        for number, line in markdown_lines(source):
+            line = re.sub(r"(\x60+)(?!\x60).*?(?<!\x60)\1(?!\x60)", "", line)
+            for match in MARKDOWN_LINK.finditer(line):
+                link = urlsplit(match[1] or match[2])
+                if link.scheme or link.netloc:
+                    continue
+                path = unquote(link.path)
+                if path.startswith("/"):
+                    target = root / path.lstrip("/")
+                else:
+                    target = source.parent / path if path else source
+                target = target.resolve()
+                if not target.is_relative_to(root) or not target.exists():
+                    raise HarnessError(f"{entry}:{number}: broken local routing link")
+                if link.fragment and target.is_file() and target.suffix.lower() == ".md":
+                    if target not in anchors_by_path:
+                        anchors_by_path[target] = markdown_anchors(target)
+                    if unquote(link.fragment) not in anchors_by_path[target]:
+                        raise HarnessError(f"{entry}:{number}: broken local Markdown anchor")
+
+
 def check_config(root):
     roles = {"planner", "implementer", "tester", "reviewer"}
     directory = root / ".codex/agents"
@@ -142,6 +212,9 @@ def check_config(root):
     browser = json.loads((root / ".playwright/cli.config.json").read_text())
     manifest = json.loads((root / "tools/ai/package.json").read_text())
     lock = json.loads((root / "tools/ai/package-lock.json").read_text())
+    features = config.get("features")
+    if not isinstance(features, dict) or features.get("hooks") is not True:
+        raise HarnessError(".codex/config.toml: [features].hooks must be true")
     if config.get("hooks"):
         raise ValueError("inline hooks duplicate hooks.json")
     if set(config.get("mcp_servers", {})) != {"context7"}:
@@ -165,7 +238,8 @@ def check_config(root):
         data = (root / ".agents/skills" / skill / "SKILL.md").read_text()
         if not data.startswith("---\n") or f"name: {skill}\n" not in data or "description:" not in data:
             raise ValueError(f"invalid skill frontmatter: {skill}")
-    return "PASS A: JSON/TOML, hook structure, skills, tool lock"
+    check_routing(root)
+    return "PASS A: JSON/TOML, hook structure, skills, tool lock, routing entries and links"
 
 
 def verify(root):

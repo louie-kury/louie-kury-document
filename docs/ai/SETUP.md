@@ -26,6 +26,8 @@
 | 브라우저 도구 설치 | `npm ci --prefix tools/ai` |
 | 브라우저 도움말 | `sh scripts/ai/browser.sh --help` |
 
+설정 검사는 `AGENTS.md`와 `docs/ai/ROUTING.md`의 로컬 인라인 링크·앵커와 훅 활성화 설정도 확인한다.
+
 Python 3.11 이상이 필요하다. 프론트엔드·백엔드의 빌드·테스트·실행 명령은 [대상 레포](WORKFLOW.md#서비스-작업-경로)의 문서와 프로젝트 설정에서 확인한다. 하네스 검사를 제품 검증으로 표현하지 않는다.
 
 ## 세션·컨텍스트
@@ -42,7 +44,7 @@ Python 3.11 이상이 필요하다. 프론트엔드·백엔드의 빌드·테스
 
 ## Playwright
 
-사용자 선택으로 브라우저 검사 도구를 유지한다. `tools/ai/package-lock.json`으로 버전을 고정하고 `.playwright/cli.config.json`의 격리된 headless Chrome을 사용한다.
+공통 문서 폴더에서 최초 설치 또는 lock 파일 변경 시 `npm ci --prefix tools/ai`를 실행한다. 브라우저 명령은 `sh scripts/ai/browser.sh`를 사용한다. 이 래퍼는 `tools/ai/package-lock.json`으로 고정한 CLI와 `.playwright/cli.config.json`의 격리된 headless Chrome 설정을 사용한다.
 
 ```sh
 sh scripts/ai/browser.sh -s=my-check open about:blank
