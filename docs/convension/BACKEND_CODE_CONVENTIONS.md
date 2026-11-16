@@ -142,7 +142,7 @@ import java.time.Instant;
 
 ### 3.2 요청·응답 DTO
 
-- 요청·응답 DTO는 일반 `class`로 선언하고, 이름 끝에 `Dto`를 붙인다.
+- 도메인별 요청·응답 DTO는 일반 `class`로 선언하고, 이름 끝에 `Dto`를 붙인다. 공통 API 응답은 [`ApiResponse<T>`](#71-공통-api-응답--apiresponsejava)로 표기한다.
 - 요청 DTO는 동작, 대상, `RequestDto` 순으로 이름을 짓는다. 예를 들어 `CreateProductRequestDto`, `UpdateProductRequestDto`로 쓴다.
 - 응답 DTO 이름은 응답이 담는 대상을 드러내고 `ResponseDto`로 끝낸다. 예를 들어 `ProductResponseDto`로 쓴다.
 - 목록에서 한 항목을 담는 DTO는 `ListItemResponseDto`로 끝낸다. 예를 들어 상품 목록의 각 항목은 `ProductListItemResponseDto`로 표현한다.
@@ -222,7 +222,14 @@ consultation-service/
     │       └── ConsultationResponseDto.java
     └── global/
         ├── config/
-        └── exception/
+        ├── entity/
+        │   └── BaseEntity.java
+        ├── exception/
+        │   ├── BusinessException.java
+        │   ├── ErrorCode.java
+        │   └── GlobalExceptionHandler.java
+        └── response/
+            └── ApiResponse.java
 ```
 
 | 패키지 | 배치할 코드 |
@@ -233,7 +240,9 @@ consultation-service/
 | `entity` | `Consultation`처럼 서비스가 저장하고 관리하는 엔티티 |
 | `dto.request` | `CreateConsultationRequestDto` 같은 API 요청 DTO |
 | `dto.response` | `ConsultationResponseDto` 같은 API 응답 DTO |
-| `global` | 서비스 전역의 설정과 공통 예외 응답 처리 |
+| `global` | 서비스 전역의 설정과 공통 응답 처리 |
+| `global.entity` | 공통 엔티티 상위 클래스 `BaseEntity` |
+| `global.response` | 공통 API 응답 타입 `ApiResponse<T>` |
 
 별도 서비스가 책임지는 기능과 데이터는 해당 서비스에 둔다. 하나의 서비스 안에서 기능이 커져 관련 코드의 위치를 구분할 필요가 생기면 기능별 하위 패키지를 둘 수 있다.
 
@@ -270,7 +279,7 @@ consultation-service/
 
 ### 5.1 객체 생성과 변환
 
-- 애플리케이션 코드에서 DTO를 만들 때는 반드시 정적 팩토리 메서드 `from` 또는 `of`를 호출한다.
+- 도메인별 DTO를 만들 때는 정적 팩토리 메서드 `from` 또는 `of`를 호출한다. 공통 API 응답은 [`ApiResponse`의 생성 메서드](#71-공통-api-응답--apiresponsejava)를 사용한다.
 - DTO의 필드 매핑과 객체 생성은 팩토리 메서드에서 처리한다. DTO 빌더는 팩토리 내부에서 사용하도록 `@Builder(access = AccessLevel.PRIVATE)`로 선언한다. 엔티티는 값을 받는 생성자로 초기화한다. 상태 변경이 필요한 필드에는 해당 변경 메서드만 공개한다.
 - HTTP 요청 본문을 역직렬화할 때 Jackson은 요청 DTO의 `@JsonCreator`가 붙은 정적 팩토리 메서드를 호출한다. 서비스는 전달받은 DTO에서 엔티티 생성에 필요한 값을 읽는다.
 
@@ -280,7 +289,7 @@ consultation-service/
 | --- | --- | --- |
 | 컨트롤러 | 클래스에 `@RestController`와 공통 경로를 지정하는 `@RequestMapping`을 붙인다. 엔드포인트에는 `@GetMapping`, `@PostMapping` 등 HTTP 메서드에 맞는 매핑을 하나 붙인다. | 본문 DTO에는 `@Valid @RequestBody`, 경로 변수에는 `@PathVariable`을 붙인다. HTTP 상태와 공통 응답 본문은 `ResponseEntity`에서 지정한다. |
 | 서비스 | 클래스에 `@Service`를 붙인다. | DB 쓰기 유스케이스의 공개 메서드에는 `@Transactional`, DB 조회 전용 유스케이스에는 `@Transactional(readOnly = true)`를 붙인다. |
-| 레포지토리 | Spring Data JPA 인터페이스는 `JpaRepository<엔티티, ID 타입>`를 상속한다. 인터페이스에 `@Repository`를 중복 선언하지 않는다. | 복잡한 조회는 [조회 방식 선택](#92-조회-방식-선택) 기준에 따라 Querydsl로 작성한다. |
+| 레포지토리 | Spring Data JPA 인터페이스는 `JpaRepository<엔티티, ID 타입>`를 상속한다. 인터페이스에 `@Repository`를 중복 선언하지 않는다. | 복잡한 조회는 [조회 방식 선택](#102-조회-방식-선택) 기준에 따라 Querydsl로 작성한다. |
 | 요청 DTO | `private final` 필드, `@Getter`, `@RequiredArgsConstructor(access = AccessLevel.PRIVATE)`를 사용한다. `of`와 비공개 빌더로 생성한다. | JSON 본문과 연결하는 `of`에 `@JsonCreator`, 매개변수에 `@JsonProperty`를 붙인다. 입력 제약은 필드 위에 하나씩 한 줄에 쓴다. 각 필드와 그 어노테이션을 한 묶음으로 두고, 묶음 사이에 빈 줄을 한 줄 둔다. |
 | 응답 DTO | 클래스로 선언하고, 필드는 `private final`로 둔다. `@Getter`로 조회 메서드를 만들고, `@RequiredArgsConstructor(access = AccessLevel.PRIVATE)`로 생성자를 만든다. | 단일 엔티티를 변환할 때는 `from`과 비공개 빌더를 쓴다. |
 | 엔티티 | 클래스 어노테이션은 `@Getter`, `@Entity`, `@Table(name = "...")`, `@NoArgsConstructor` 순서로 붙인다. `@Table`에 테이블 이름을 명시하고 식별자 필드에 `@Id`를 붙인다. JPA용 기본 생성자는 `@NoArgsConstructor(access = AccessLevel.PROTECTED)`로 만들고, 값을 초기화하는 생성자는 직접 작성한다. | JPA가 생성하는 식별자에는 `@GeneratedValue(strategy = ...)`로 스키마에 맞는 생성 전략을 명시한다. 컬럼 제약, 연관관계, 읽기 접근자는 필요한 곳에 선언한다. |
@@ -294,14 +303,14 @@ consultation-service/
 
 #### 5.3.1 컨트롤러 · ProductController.java
 
-이 예시에서는 공통 성공 응답 타입을 `ApiResponseDto<T>`로 표기한다.
+공통 성공 응답은 [`ApiResponse<T>`](#71-공통-api-응답--apiresponsejava)를 사용한다.
 
 ```java
 package com.louiekury.product.controller;
 
 import com.louiekury.product.dto.request.CreateProductRequestDto;
 import com.louiekury.product.dto.response.ProductResponseDto;
-import com.louiekury.product.global.response.ApiResponseDto;
+import com.louiekury.product.global.response.ApiResponse;
 import com.louiekury.product.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -322,18 +331,18 @@ public class ProductController {
     private final ProductService productService;
 
     @PostMapping
-    public ResponseEntity<ApiResponseDto<ProductResponseDto>> createProduct(
+    public ResponseEntity<ApiResponse<ProductResponseDto>> createProduct(
         @Valid @RequestBody CreateProductRequestDto request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponseDto.of(productService.createProduct(request)));
+            .body(ApiResponse.success(productService.createProduct(request)));
     }
 
     @GetMapping("/{productId}")
-    public ResponseEntity<ApiResponseDto<ProductResponseDto>> getProduct(
+    public ResponseEntity<ApiResponse<ProductResponseDto>> getProduct(
         @PathVariable("productId") Long productId
     ) {
-        return ResponseEntity.ok(ApiResponseDto.of(productService.getProduct(productId)));
+        return ResponseEntity.ok(ApiResponse.success(productService.getProduct(productId)));
     }
 }
 ```
@@ -461,9 +470,12 @@ public class ProductResponseDto {
 
 #### 5.3.6 엔티티 · Product.java
 
+`Product`는 [`BaseEntity`](#75-베이스-엔티티--baseentityjava)를 상속한다. `products` 테이블에는 `created_at`, `updated_at`, `deleted_at` 컬럼을 둔다.
+
 ```java
 package com.louiekury.product.entity;
 
+import com.louiekury.product.global.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -479,7 +491,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "products")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Product {
+public class Product extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -513,7 +525,230 @@ public class Product {
 - 식별자, 값 객체, 열거형의 사용 범위
 - 시간대, 날짜·시간, 수량·금액 계산
 
-## 7. API와 데이터 계약
+## 7. 공통 컨벤션
+
+사용자가 공통 클래스 적용을 요청하면 이 절의 Java 파일 예시를 서비스 레포에 복사한다. 예시의 서비스 루트 패키지와 해당 import를 서비스에 맞추고, 클래스명과 공통 동작은 예시대로 적용한다.
+
+### 7.1 공통 API 응답 · ApiResponse.java
+
+서비스별 `global.response` 패키지에 둔다. 컨트롤러는 성공 데이터를 `ApiResponse.success(data)`로 감싸고, 예외 핸들러는 `ApiResponse.error(code, message)`로 오류 본문을 만든다. HTTP 상태 코드는 `ResponseEntity`에서 지정한다.
+
+[API 공통 계약](../api/README.md#공통-계약-초안)에 따라 성공 본문은 `{"data":{"balanceCoins":7000}}`, 오류 본문은 `{"code":"VALIDATION_ERROR","message":"요청 값이 올바르지 않습니다."}` 형태로 반환한다. `204`, 본문 없는 `202`, 파일 응답, `302` 리다이렉트는 래퍼 없이 반환한다.
+
+```java
+package com.louiekury.product.global.response;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import java.util.Objects;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
+@Getter
+@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder(access = AccessLevel.PRIVATE)
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class ApiResponse<T> {
+
+    private final String code;
+    private final String message;
+    private final T data;
+
+    public static <T> ApiResponse<T> success(T data) {
+        return ApiResponse.<T>builder()
+            .data(Objects.requireNonNull(data, "data"))
+            .build();
+    }
+
+    public static ApiResponse<Void> error(String code, String message) {
+        return ApiResponse.<Void>builder()
+            .code(Objects.requireNonNull(code, "code"))
+            .message(Objects.requireNonNull(message, "message"))
+            .build();
+    }
+}
+```
+
+### 7.2 비즈니스 예외 · BusinessException.java
+
+서비스는 업무 규칙 위반을 해당 `ErrorCode`로 표현한다. 기본 메시지를 사용하거나, 클라이언트에 공개할 메시지 또는 원인 예외를 지정할 수 있다. [FinPlay BusinessException](https://github.com/finplay-team/finplay-backend/blob/dev/src/main/java/com/finplay/api/global/exception/BusinessException.java)
+
+```java
+package com.louiekury.product.global.exception;
+
+import lombok.Getter;
+
+@Getter
+public class BusinessException extends RuntimeException {
+
+    private final ErrorCode errorCode;
+
+    public BusinessException(ErrorCode errorCode) {
+        this(errorCode, errorCode.getMessage());
+    }
+
+    public BusinessException(ErrorCode errorCode, String message) {
+        super(message);
+        this.errorCode = errorCode;
+    }
+
+    public BusinessException(ErrorCode errorCode, Throwable cause) {
+        super(errorCode.getMessage(), cause);
+        this.errorCode = errorCode;
+    }
+}
+```
+
+### 7.3 전역 예외 핸들러 · GlobalExceptionHandler.java
+
+`@RestControllerAdvice`에서 업무 예외, 검증 오류, 인증·인가 실패를 처리한다. 업무 예외는 `ErrorCode`의 HTTP 상태와 예외에 지정한 공개 메시지를 반환한다. Spring MVC 요청 오류는 기존 HTTP 상태와 헤더를 전달하고, 예상하지 못한 예외는 서버 로그에 기록한 뒤 기본 500 메시지로 응답한다. [FinPlay GlobalExceptionHandler](https://github.com/finplay-team/finplay-backend/blob/dev/src/main/java/com/finplay/api/global/exception/GlobalExceptionHandler.java)
+
+Spring Security 필터에서 발생한 인증·인가 실패는 각각 `AuthenticationEntryPoint`, `AccessDeniedHandler`에서 같은 오류 본문 형식으로 반환한다.
+
+```java
+package com.louiekury.product.global.exception;
+
+import com.louiekury.product.global.response.ApiResponse;
+import jakarta.validation.ConstraintViolationException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.ErrorResponse;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+@Slf4j
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException exception) {
+        ErrorCode code = exception.getErrorCode();
+        return ResponseEntity.status(code.getHttpStatus())
+            .body(ApiResponse.error(code.name(), exception.getMessage()));
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleValidation() {
+        return build(ErrorCode.VALIDATION_ERROR);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAuthentication() {
+        return build(ErrorCode.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAccessDenied() {
+        return build(ErrorCode.FORBIDDEN);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<Void>> handleException(Exception exception) {
+        if (exception instanceof ErrorResponse error && error.getStatusCode().is4xxClientError()) {
+            return handleRequestError(error);
+        }
+        log.error("요청 처리 중 예상하지 못한 예외가 발생했습니다.", exception);
+        if (exception instanceof ErrorResponse error) {
+            return ResponseEntity.status(error.getStatusCode())
+                .headers(error.getHeaders())
+                .body(errorBody(ErrorCode.INTERNAL_SERVER_ERROR));
+        }
+        return build(ErrorCode.INTERNAL_SERVER_ERROR);
+    }
+
+    private ResponseEntity<ApiResponse<Void>> handleRequestError(ErrorResponse error) {
+        var status = error.getStatusCode();
+        ApiResponse<Void> body = switch (status.value()) {
+            case 400 -> errorBody(ErrorCode.VALIDATION_ERROR);
+            case 404 -> errorBody(ErrorCode.NOT_FOUND);
+            case 405 -> errorBody(ErrorCode.METHOD_NOT_ALLOWED);
+            default -> status instanceof HttpStatus standardStatus
+                ? ApiResponse.error(standardStatus.name(), standardStatus.getReasonPhrase())
+                : ApiResponse.error("HTTP_" + status.value(), "요청을 처리할 수 없습니다.");
+        };
+        return ResponseEntity.status(status).headers(error.getHeaders()).body(body);
+    }
+
+    private ResponseEntity<ApiResponse<Void>> build(ErrorCode code) {
+        return ResponseEntity.status(code.getHttpStatus()).body(errorBody(code));
+    }
+
+    private ApiResponse<Void> errorBody(ErrorCode code) {
+        return ApiResponse.error(code.name(), code.getMessage());
+    }
+}
+```
+
+### 7.4 오류 코드 · ErrorCode.java
+
+`global.exception`에 두며, 각 상수에 HTTP 상태와 기본 메시지를 지정한다. API 응답의 `code`에는 상수 이름을 사용한다. 아래 상수는 이 문서의 핸들러와 상품 예제에 쓰는 참고용이다. 각 서비스는 해당 API 명세에 따라 업무 오류 코드를 정의한다.
+
+```java
+package com.louiekury.product.global.exception;
+
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+
+@Getter
+@RequiredArgsConstructor
+public enum ErrorCode {
+
+    // 참고용 예시 코드입니다.
+    VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다."),
+    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),
+    FORBIDDEN(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
+    NOT_FOUND(HttpStatus.NOT_FOUND, "대상을 찾을 수 없습니다."),
+    METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "지원하지 않는 요청 방식입니다."),
+    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다."),
+    PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "상품을 찾을 수 없습니다.");
+
+    private final HttpStatus httpStatus;
+    private final String message;
+}
+```
+
+### 7.5 베이스 엔티티 · BaseEntity.java
+
+서비스별 `global.entity`에 둔다. 상속하는 엔티티의 테이블에는 `created_at`, `updated_at`, `deleted_at` 컬럼을 두고, 식별자는 각 엔티티에 정의한다. `deleted_at`은 활성 상태일 때 `NULL`이고, 소프트 삭제 시 삭제 시각을 저장한다. [참고 저장소 BaseEntity](https://github.com/nongbu24/team3-plus-spring/blob/main/src/main/java/com/example/team3plusspring/global/entity/BaseEntity.java)
+
+서비스의 JPA 설정에 `@EnableJpaAuditing`을 적용한다. 기본 설정에서는 등록할 때 두 시각을 채우고, 수정할 때 `updatedAt`을 갱신한다.
+
+```java
+package com.louiekury.product.global.entity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.EntityListeners;
+import jakarta.persistence.MappedSuperclass;
+import java.time.LocalDateTime;
+import lombok.Getter;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+@Getter
+@MappedSuperclass
+@EntityListeners(AuditingEntityListener.class)
+public abstract class BaseEntity {
+
+    @CreatedDate
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @LastModifiedDate
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+}
+```
+
+## 8. API와 데이터 계약
 
 - 리소스 경로, HTTP 메서드, 상태 코드
 - 요청·응답 필드 이름, 타입, 필수 여부
@@ -521,16 +756,16 @@ public class Product {
 - 목록의 페이지네이션, 정렬, 필터링
 - 응답 스키마, 버전, 호환성, API 명세 동기화
 
-## 8. 예외와 오류 응답
+## 9. 예외와 오류 응답
 
 - 입력 오류, 도메인 오류, 인프라 오류 구분
 - 예외의 생성·변환·처리 위치
 - 오류 코드, 메시지, 응답 형식
 - 실패 전파, 재시도, 복구와 오류 로그
 
-## 9. 데이터베이스와 트랜잭션
+## 10. 데이터베이스와 트랜잭션
 
-### 9.1 엔티티 연관관계와 ID 참조
+### 10.1 엔티티 연관관계와 ID 참조
 
 | 상황 | 구현 기준 | 예시 |
 | --- | --- | --- |
@@ -555,43 +790,43 @@ private Long productId;
 
 연관관계를 매핑했다면 지연 로딩을 기본으로 명시하고, 연관 데이터가 필요한 조회에서 가져올 범위를 정한다. ID 참조도 목록의 각 ID를 개별 조회하면 호출이 늘어난다. 목록은 필요한 데이터를 묶어서 조회하고, 실제 SQL이나 API 호출 횟수를 확인한다. [Hibernate ORM 조회 전략](https://docs.hibernate.org/orm/7.1/userguide/html_single/#fetching), [마이크로서비스 데이터 소유권](https://learn.microsoft.com/en-us/azure/architecture/microservices/design/data-considerations)
 
-### 9.2 조회 방식 선택
+### 10.2 조회 방식 선택
 
 - 기본 CRUD와 단순 조회는 `JpaRepository`의 기본 메서드와 메서드 이름으로 쿼리를 생성하는 방식을 사용한다.
 - 선택 조건을 여러 개 조합하거나 조인·집계로 쿼리가 복잡해지는 조회는 Querydsl로 작성한다. 예를 들어 상담 목록에서 상태·수의사·기간 중 전달받은 조건만 조합해 조회한다.
 - 실행 성능을 개선하려고 조회 방식을 바꾸는 경우에는 실제 SQL, 쿼리 횟수, 필요에 따라 실행 계획을 비교한다.
 
-### 9.3 추가로 정할 항목
+### 10.3 추가로 정할 항목
 
-- `BaseEntity`에 둘 공통 필드와 상속을 적용할 엔티티의 범위
+- 서비스별 [`BaseEntity` 상속 대상](#75-베이스-엔티티--baseentityjava)
 - 테이블, 컬럼, 키, 인덱스 이름
 - 스키마 제약, 마이그레이션 파일과 변경 절차
 - 쿼리 작성 위치, 조회 범위, 성능 확인
 - 트랜잭션 시작과 종료, 실패 시 롤백
 - 동시성, 중복 요청, 데이터 정합성
 
-## 10. 외부 연동과 비동기 처리
+## 11. 외부 연동과 비동기 처리
 
 - 외부 클라이언트와 연동 모델의 위치
 - 시간 제한, 재시도, 장애 시 처리
 - 이벤트 이름과 데이터 형식
 - 중복 처리, 순서, 멱등성
 
-## 11. 보안과 설정
+## 12. 보안과 설정
 
 - 인증·인가 검사 위치와 권한 검증
 - 외부 입력 검증과 민감정보 처리
 - 환경 변수, 비밀값, 설정 파일 이름
 - 환경별 설정 분리와 누락된 설정 처리
 
-## 12. 로깅과 모니터링
+## 13. 로깅과 모니터링
 
 - 로그 수준, 메시지 형식, 공통 필드
 - 요청·작업 추적 식별자
 - 민감정보 마스킹과 로그 제외 항목
 - 메트릭, 상태 확인, 장애 진단 정보
 
-## 13. 테스트 코드
+## 14. 테스트 코드
 
 - 테스트 파일 위치, 이름, 시나리오 표현
 - 단위·통합·API 테스트의 범위
@@ -599,13 +834,13 @@ private Long productId;
 - Mock과 실제 의존성을 사용하는 범위
 - 정상·경계·실패·회귀 사례와 검증 방식
 
-## 14. 주석과 코드 문서
+## 15. 주석과 코드 문서
 
 - 주석을 작성하는 경우와 설명 범위
 - 공개 API 문서와 사용 예시
 - TODO·FIXME 표기와 추적 방법
 
-## 15. 자동 검사와 코드 리뷰
+## 16. 자동 검사와 코드 리뷰
 
 - 포매터, 린터, 정적 분석의 설정과 실행 위치
 - CI 검사 항목과 실패 처리
