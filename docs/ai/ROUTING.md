@@ -13,6 +13,7 @@
 | 주요 설계 결정 기록 | [ADR 작성 위치와 기준](WORKFLOW.md#설계-결정-기록) |
 | 역할 배정·테스트/리뷰/QA·문서 동기화 | [단계 선택과 순서](WORKFLOW.md#단계-선택과-순서)와 [위임할 자료](WORKFLOW.md#짧게-위임하기)에서 해당 단계만 확인한다. |
 | 개발 범위·사람의 결정 | [대화 확인](HUMAN_GATES.md) |
+| GitHub PR 리뷰 작성·재리뷰 | [PR 리뷰 템플릿](templates/pr-review_template.md)을 사용한다. |
 | 서비스 빌드·테스트·실행 | 대상 레포의 문서·빌드 설정에서 명령을 확인하고 해당 레포에서 실행한다. |
 | 공통 하네스 설치·검사 | [SETUP](SETUP.md#commands) |
 | 검증·코드 리뷰·보안 검토 | 필요한 경우에만 `project-verify` / `project-review` / `project-security-review` |
