@@ -51,6 +51,9 @@ test: 이미 완료된 상담의 재완료 요청 검증
 
 ## 작성 템플릿
 
+GitHub에 제출하는 이슈·PR·PR 리뷰 본문은 존댓말로 작성한다.
+
 - [PR 템플릿](../../.github/pull_request_template.md)
+- [PR 리뷰 템플릿](../ai/templates/pr-review_template.md)
 - [기능 개발 이슈 템플릿](../../.github/ISSUE_TEMPLATE/feature.md)
 - [버그 이슈 템플릿](../../.github/ISSUE_TEMPLATE/bug.md)
