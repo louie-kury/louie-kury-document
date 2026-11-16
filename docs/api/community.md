@@ -2,6 +2,8 @@
 
 공통 응답 형식은 [API 명세 안내](README.md)를 참고한다.
 
+관리자가 숨긴 게시글은 작성자 본인을 포함한 일반 사용자의 목록에서 제외한다. 숨김 게시글과 그 댓글·대댓글에 ID나 URL로 접근하면 `404 NOT_FOUND`를 반환한다. [첨부파일 직접 조회](media.md#첨부파일-조회)에도 게시글의 현재 노출 상태를 적용한다. 복구 후에는 기존 권한 범위에서 숨김 전에 보이던 게시글·댓글·첨부를 다시 반환한다. 별도로 삭제·숨김된 항목은 제외한다.
+
 ---
 
 ### 게시글 목록 조회
@@ -24,17 +26,17 @@
 
 | Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
 | --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/community/posts` | 보호자·활동 가능한 수의사 | `{"boardId":1,"categoryId":2,"title":"루이 산책","content":"오늘 산책을 다녀왔어요.","mediaIds":["media-1"]}` | `201 Post` | 400 VALIDATION_ERROR, 403 FORBIDDEN, 404 NOT_FOUND | No. 48 · COM-01 · D08 |
+| `POST` | `/api/community/posts` | 보호자·활동 가능한 수의사 | `multipart/form-data. data: {"boardId":1,"categoryId":2,"title":"루이 산책","content":"오늘 산책을 다녀왔어요."}, files(선택, 파일마다 같은 파트 이름 반복)` | `201 Post` | 400 VALIDATION_ERROR, 403 FORBIDDEN, 404 NOT_FOUND, 413 FILE_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 503 STORAGE_UNAVAILABLE | No. 48 · COM-01 · D08 |
 
-title·content는 필수, mediaIds는 선택 초안이다. 사진과 동영상 첨부를 지원하며 게시판·카테고리 필수 여부와 첨부 제한은 미정이다.
+title·content는 필수다. 사진과 동영상은 생성한 게시글 ID로 기존 게시글 미디어에 연결한다. 게시판·카테고리 필수 여부와 첨부 제한은 미정이다.
 
 ### 게시글 수정
 
 | Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
 | --- | --- | --- | --- | --- | --- | --- |
-| `PATCH` | `/api/community/posts/{postId}` | 작성자 | `{title?,content?,mediaIds?}` | `200 Post` | 400 VALIDATION_ERROR, 403 FORBIDDEN, 404 NOT_FOUND | No. 49 · COM-01 · D08 |
+| `PATCH` | `/api/community/posts/{postId}` | 작성자 | `multipart/form-data. data: {title?,content?,retainedMediaIds?}, files(선택, 파일마다 같은 파트 이름 반복)` | `200 Post` | 400 VALIDATION_ERROR, 403 FORBIDDEN, 404 NOT_FOUND, 413 FILE_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 503 STORAGE_UNAVAILABLE | No. 49 · COM-01 · D08 |
 
-mediaIds가 있으면 첨부 목록을 교체한다. 빈 배열은 모든 첨부 해제를 요청한다.
+`retainedMediaIds`를 생략하면 기존 첨부를 모두 유지한다. 배열을 보내면 현재 게시글에 이미 연결된 ID만 지정할 수 있으며, 지정한 첨부만 유지한다. 빈 배열은 기존 첨부를 모두 해제한다. 새 `files`는 유지한 첨부에 추가한다.
 
 ### 게시글 삭제
 
@@ -122,7 +124,7 @@ content는 필수다. parentCommentId는 선택이며 같은 글에 속해야 �
 | --- | --- | --- | --- | --- | --- | --- |
 | `POST` | `/api/reports` | 보호자·활동 가능한 수의사 | `{"targetType":"POST","targetId":"21","reasonCodes":["SPAM"],"content":"반복 광고입니다.","evidenceMediaIds":[]}` | `201 {"reportId":"report-1","status":"RECEIVED"}` | 400 VALIDATION_ERROR, 403 FORBIDDEN, 404 NOT_FOUND | No. 56~58 · COM-02 · D08 |
 
-targetType과 targetId의 조합으로 대상을 검증한다. 신고 대상에게 신고자 정보를 공개하지 않는다. 일반 신고의 중복 처리와 증빙 범위는 D08에서 확정한다. 상담 완료 확인창에서 담당 수의사가 해당 보호자를 신고하는 흐름은 [상담 완료와 보호자 신고](consultation.md#보호자-신고로-상담-완료)를 사용한다.
+targetType과 targetId의 조합으로 대상을 검증한다. 신고 대상에게 신고자 정보를 공개하지 않는다. 일반 신고의 중복 처리와 증빙 범위는 D08에서 확정한다. 완료된 상담에 보호자 신고를 연결하려면 [상담 신고 API](consultation.md#완료된-상담의-보호자-신고)를 사용한다.
 
 ## 응답 필드와 데이터 정책
 

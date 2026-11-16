@@ -24,17 +24,19 @@
 
 | Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
 | --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/pets` | 보호자 본인 | `{"name":"루이","speciesId":1,"breedId":2,"birthDate":"2023-05-01","sex":"MALE","neutered":true,"weight":4.2,"basicVaccinated":null,"profileMediaId":null}` | `201 PetDetail` | 400 VALIDATION_ERROR, 404 NOT_FOUND | No. 12 · PET-01 · D12 |
+| `POST` | `/api/pets` | 보호자 본인 | `multipart/form-data. data: {"name":"루이","speciesId":1,"breedId":2,"birthDate":"2023-05-01","sex":"MALE","neutered":true,"weight":4.2,"basicVaccinated":null}, profileImage(선택, 파일 1개)` | `201 PetDetail` | 400 VALIDATION_ERROR, 404 NOT_FOUND, 413 FILE_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 503 STORAGE_UNAVAILABLE | No. 12 · PET-01 · D12 |
 
-name, speciesId, breedId, sex는 필수 초안이다. 나머지 필드는 선택·nullable 초안이다. 품종은 같은 종에 속해야 한다. 체중 단위·범위는 미정이다.
+`data`의 name, speciesId, breedId, sex는 필수 초안이다. 나머지 JSON 필드는 선택·nullable 초안이다. 품종은 같은 종에 속해야 한다. 체중 단위·범위는 미정이다. 프로필 사진을 받으면 생성한 반려동물 ID로 기존 반려동물 미디어에 연결한다.
 
 ### 반려동물 정보 수정
 
 | Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
 | --- | --- | --- | --- | --- | --- | --- |
-| `PATCH` | `/api/pets/{petId}` | 보호자 본인 | `등록 필드 중 변경할 필드` | `200 PetDetail` | 400 VALIDATION_ERROR, 404 NOT_FOUND | No. 13 · PET-01 · D12 |
+| `PATCH` | `/api/pets/{petId}` | 보호자 본인 | `multipart/form-data. data: 등록 JSON 필드 중 변경할 값과 removeProfileImage(선택, true), profileImage(선택, 파일 1개)` | `200 PetDetail` | 400 VALIDATION_ERROR, 404 NOT_FOUND, 413 FILE_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 503 STORAGE_UNAVAILABLE | No. 13 · PET-01 · D12 |
 
 종과 품종의 조합을 최종 값 기준으로 검증한다. 프로필 체중과 체중 기록의 동기화 정책은 미정이다.
+
+`profileImage`를 보내면 대표 사진을 교체한다. `removeProfileImage: true`는 대표 사진 연결을 해제한다. 둘을 함께 보내면 400이며, 둘 다 생략하면 기존 사진을 유지한다.
 
 ### 반려동물 삭제
 
@@ -55,4 +57,4 @@ name, speciesId, breedId, sex는 필수 초안이다. 나머지 필드는 선택
 ## 응답 필드와 데이터 정책
 
 - `PetDetail` = 목록 항목 + `birthDate: date?`, `neutered: boolean?`, `weight: number?`, `basicVaccinated: boolean?`. `sex`는 `MALE`, `FEMALE` 초안이다.
-- `petId`는 문자열, `speciesId`와 `breedId`는 정수다. `profileMediaId`는 문자열이며 응답은 접근 검사를 거치는 `profileImageUrl`을 반환한다.
+- `petId`는 문자열, `speciesId`와 `breedId`는 정수다. 응답은 접근 검사를 거치는 `profileImageUrl`을 반환한다.

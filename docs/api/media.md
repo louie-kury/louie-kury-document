@@ -8,9 +8,11 @@
 
 | Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
 | --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/media` | 첨부 목적별 인가된 사용자 | `multipart/form-data. purpose(PET_PROFILE, HEALTH_RECORD, COMMUNITY_POST, REPORT_EVIDENCE), file 1개` | `201 {"mediaId":"media-1","contentType":"image/png","sizeBytes":12040}` | 400 VALIDATION_ERROR, 403 FORBIDDEN, 413 FILE_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 503 STORAGE_UNAVAILABLE | No. 12~13, 20~21, 48~49, 72, 74 · HLT-04 · COM-01·02 · D05·D08·D12 |
+| `POST` | `/api/media` | 신고 증빙 제출 권한자(초안) | `multipart/form-data. purpose=REPORT_EVIDENCE, file 1개` | `201 {"mediaId":"media-1","contentType":"image/png","sizeBytes":12040}` | 400 VALIDATION_ERROR, 403 FORBIDDEN, 413 FILE_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 503 STORAGE_UNAVAILABLE | No. 72, 74 · COM-02 · D08 |
 
-선업로드 후 대상 생성·수정에 mediaId를 전달한다. 소유자와 업로드 목적이 일치해야 한다. 면허는 수의사 가입 API에서 제출한다. 신고 증빙 업로드 범위와 첨부 개수·형식·용량·임시 보관 기한은 미정이다.
+신고 증빙 선업로드 계약은 D08에서 확정할 초안이다. 신고 접수에 `mediaId`를 사용할 때는 업로더와 업로드 목적을 검증한다. 증빙 범위와 첨부 개수·형식·용량·임시 보관 기한은 미정이다.
+
+반려동물 사진·건강 기록 첨부·게시글 첨부는 각 리소스의 생성·수정 API에서 [데이터와 함께 저장](README.md#파일과-함께-저장)한다. 면허는 수의사 가입 API에서 제출한다.
 
 ### 첨부파일 조회
 
@@ -19,3 +21,9 @@
 | `GET` | `/api/media/{mediaId}/file` | 연결된 리소스 조회 권한자 | `mediaId` | `200 파일 바이트 및 Content-Type` | 403 FORBIDDEN, 404 NOT_FOUND, 503 STORAGE_UNAVAILABLE | No. 11, 19, 47, 67, 72, 74, 81 · HLT-04 · COM-01·02 · D05·D08·D11 |
 
 요청할 때마다 대상 리소스와 현재 권한을 검사한다. 건강 기록을 공유받은 수의사는 유효한 승인 지정 예약의 범위에서만 열람한다. 즉시 상담 매칭은 기존 건강 기록 첨부파일의 접근 권한을 부여하지 않는다. 면허와 신고 증빙 원본은 별도 관리자 권한을 적용하며 허용 범위는 미정이다.
+
+건강 기록 첨부를 열 때는 첨부와 상위 건강 기록의 삭제 상태를 모두 확인한다. 어느 하나라도 삭제됐으면 보호자와 기존에 공유받은 수의사에게 `404 NOT_FOUND`를 반환한다. 기존 URL로 요청하는 경우에도 같은 검사를 적용한다.
+
+`mediaId`는 유형과 첨부 행을 식별하는 불투명 값이다. 서로 다른 미디어 테이블의 내부 ID가 같아도 서버는 각 파일과 연결된 대상을 구분한다. 교체하거나 연결을 해제한 첨부는 해당 리소스의 일반 조회에서 제외한다.
+
+게시글 첨부는 파일 URL로 직접 요청해도 게시글의 현재 노출 상태를 검사한다. 게시글이 숨김 상태이면 작성자를 포함한 일반 사용자에게 `404 NOT_FOUND`를 반환한다. 복구 후에는 기존 접근 권한과 첨부 상태를 기준으로 다시 제공한다.

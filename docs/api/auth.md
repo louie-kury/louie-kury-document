@@ -110,7 +110,7 @@
 
 ## 응답 필드와 데이터 정책
 
-- `hospitalRegistration`은 필수 객체다. `name: string`, `businessRegistrationNumber: string`, `addressSelection: object`, `representativeName: string`을 받는다. `addressSelection`은 주소 검색 결과에서 선택한 병원 주소를 식별한다. 주소 검색 업체, 검증 가능한 선택값의 형식, 상세주소 입력 및 기존 병원 연결 기준은 D11에서 확정한다.
+- `hospitalRegistration`은 필수 객체다. `name: string`, `businessRegistrationNumber: string`, `addressSelection: {address: string}`, `representativeName: string`을 받는다. 프론트엔드는 [카카오 우편번호 서비스](https://postcode.map.kakao.com/guide) 검색창을 띄우고, 선택 결과의 `userSelectedType`에 해당하는 `roadAddress` 또는 `jibunAddress`를 `addressSelection.address`에 담아 제출한다. 서버는 주소가 빠지거나 비어 있으면 400 `VALIDATION_ERROR`를 반환한다. 병원 등록과 소속 확인은 가입 심사에서 진행한다. 선택한 주소의 서버 확인 방식, 상세주소 입력 및 기존 병원 연결 기준은 D11에서 확정한다.
 - `payoutAccount`는 필수 객체다. 해당 병원 명의의 사업자 계좌를 등록한다. 예금주 확인에는 금융결제원 오픈뱅킹 계좌실명조회 API를 사용한다. 은행·계좌 입력의 구체 필드, 서비스 이용 승인, 개인사업자·법인 계좌의 검증 범위와 조회 불가·명의 불일치 처리는 D02에서 확정한다. 계좌 정보는 ERD의 병원 정산 계좌와 연결한다.
 - `role`은 `CAREGIVER`, `VETERINARIAN`, `ADMIN`이다. 계정 상태와 수의사 면허 심사 상태는 별개다.
 - 비밀번호 입력은 인증·변경 요청으로만 받고 비밀번호와 해시를 API 응답에 포함하지 않는다.

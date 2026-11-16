@@ -82,7 +82,7 @@ targetType별 keyword 대상은 보호자 닉네임, 수의사 이름, 게시글
 | --- | --- | --- | --- | --- | --- | --- |
 | `GET` | `/api/admin/reports/{reportId}` | 관리자 · 신고관리 | `reportId` | `200 ReportDetail` | 404 NOT_FOUND | No. 70, 72, 74, 76 · COM-02 · ADM-01 · D08·D11 |
 
-대상별 원문·작성자·신고자·사유·일시·관련 게시글·댓글·상담·증빙을 승인된 범위에서 제공한다. 상담 완료 시 접수된 보호자 신고는 `relatedConsultationId`와 담당 수의사 `reporter.userId`를 반환한다. 일반 신고의 증빙·관련 상담 연결 범위는 D08에서 확정한다.
+대상별 원문·작성자·신고자·사유·일시·관련 게시글·댓글·상담·증빙을 승인된 범위에서 제공한다. 상담 완료 후 접수된 보호자 신고는 `relatedConsultationId`와 담당 수의사 `reporter.userId`를 반환한다. 일반 신고의 증빙·관련 상담 연결 범위는 D08에서 확정한다.
 
 ### 신고 검토 및 처리
 
@@ -90,7 +90,7 @@ targetType별 keyword 대상은 보호자 닉네임, 수의사 이름, 게시글
 | --- | --- | --- | --- | --- | --- | --- |
 | `PATCH` | `/api/admin/reports/{reportId}/resolution` | 관리자 · 신고처리 | `{"status":"COMPLETED","action":"HIDE","reason":"운영 정책 위반 확인"}` | `200 ReportDetail` | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 INVALID_REPORT_TRANSITION | No. 70, 72, 74, 76 · COM-02 · ADM-01 · D08 |
 
-게시글·댓글의 조치 예시는 HIDE, KEEP, DELETE다. 대상별 조치·상태 전이는 미정이다. 결과·사유·처리자·일시를 기록하고 목록과 상세의 노출 정책을 함께 반영한다.
+게시글·댓글의 조치 예시는 HIDE, KEEP, DELETE다. 게시글 숨김 조치가 적용되면 게시글 노출 상태 변경과 같은 정책을 적용한다. 그 외 대상별 조치·상태 전이는 미정이다. 결과·사유·처리자·일시를 기록하고 목록과 상세의 노출 정책을 함께 반영한다.
 
 ### 상담 목록 조회
 
@@ -160,9 +160,9 @@ targetType별 keyword 대상은 보호자 닉네임, 수의사 이름, 게시글
 
 | Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
 | --- | --- | --- | --- | --- | --- | --- |
-| `PATCH` | `/api/admin/community/posts/{postId}/visibility` | 관리자 · 콘텐츠처리 | `{"visibility":"HIDDEN","reason":"운영 정책 위반"}` | `200 AdminPostSummary` | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 INVALID_CONTENT_TRANSITION | No. 82 · COM-02 · ADM-01 · D08 |
+| `PATCH` | `/api/admin/community/posts/{postId}/visibility` | 관리자 · 콘텐츠처리 | `{"visibility":"HIDDEN","reason":"운영 정책 위반"} (HIDDEN: 숨김, VISIBLE: 복구)` | `200 AdminPostSummary` | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 INVALID_CONTENT_TRANSITION | No. 82 · COM-02 · ADM-01 · D08 |
 
-숨김과 복구를 지원한다. 처리자·시각·사유를 기록한다. 숨김 중 댓글 작성과 일반 조회는 차단한다.
+게시글의 노출 상태 변경과 이력 저장을 함께 반영한다. 이력에는 처리자·시각·사유와 변경 전후 상태를 기록한다. 숨김 중에는 작성자를 포함한 일반 사용자의 게시글·댓글·첨부 접근을 차단한다. 복구하면 숨김 전 보였던 게시글·댓글·첨부를 다시 노출한다. 별도로 삭제·숨김된 항목은 기존 상태를 따른다.
 
 ### 병원 등록
 

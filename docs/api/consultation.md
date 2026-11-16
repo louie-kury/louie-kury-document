@@ -10,7 +10,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | `POST` | `/api/consultations` | 보호자 | `Idempotency-Key 필수. {"petId":"pet-1","veterinarianId":"vet-1","channel":"CHAT","preferredAt":"2026-11-15T14:00:00+09:00","content":"며칠 전부터 구토가 있어요."}` | `201 Consultation (REQUESTED). 동일 요청 재시도 시 최초 결과 반환` | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 INSUFFICIENT_COINS / VETERINARIAN_UNAVAILABLE / IDEMPOTENCY_CONFLICT | No. 25~27 · CON-01·03 · PAY-02 · D03 |
 
-내용은 자유 양식 1,000자 이내다. 본인 반려동물 한 마리, 수의사, 희망 일시와 수단 하나를 지정한다. 서버가 예약 생성과 7,000코인 차감을 한 번에 처리한다. ERD의 필수 상담 제목은 입력 요구사항에 없어 저장 기준 확인이 필요하다.
+`content`는 필수이며 자유 양식 1,000자 이내다. 본인 반려동물 한 마리, 수의사, 희망 일시와 수단 하나를 지정한다. 서버가 예약 생성과 7,000코인 차감을 한 번에 처리한다.
 
 
 ### 위치 기반 즉시 상담 신청
@@ -79,7 +79,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | `GET` | `/api/consultations/{consultationId}` | 상담 당사자 | `consultationId` | `200 Consultation` | 404 NOT_FOUND | No. 41, 43 · CON-01·04 · D05 |
 
-반려동물 이름·종·품종과 보호자가 작성한 상담 내용을 반환한다. 지정 예약 요청 단계의 건강 요약 필드는 D05에서 확정한다. 즉시 상담은 매칭 전 보호자만 이 상세를 조회할 수 있으며, 매칭 후에도 담당 수의사에게 기존 건강 기록과 건강 요약을 제공하지 않는다.
+반려동물 이름·종·품종과 보호자가 작성한 상담 내용을 반환한다. 지정 예약 요청 단계의 건강 요약 필드는 D05에서 확정한다. 상담에 건강 요약을 제공할 때는 삭제된 건강 기록과 첨부를 제외한다. 즉시 상담은 매칭 전 보호자만 이 상세를 조회할 수 있으며, 매칭 후에도 담당 수의사에게 기존 건강 기록과 건강 요약을 제공하지 않는다.
 
 ### 예약 승인
 
@@ -119,23 +119,23 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | `GET` | `/api/consultations/{consultationId}/connections/{connectionId}` | 상담 당사자 | `consultationId, connectionId` | `200 ConsultationConnection` | 404 NOT_FOUND | PRD CON-03 · D06 |
 
-연결 상태가 `FAILED`이거나 연결 요청 자체가 제공사 장애로 실패하면 상담은 완료 처리하지 않는다. 보호자에게 `수의사와 연결하지 못했어요. 다시 연결해 주세요.`를 표시하고 재연결 절차를 제공한다. 재연결 이후 취소가 성립하면 실제 차감 코인을 전액 반환한다.
+제공사 장애를 포함해 연결 시도가 실패하면 연결 결과를 `FAILED`로 기록한다. 연결이 성립하지 않은 상담은 완료할 수 없다. 보호자에게 `수의사와 연결하지 못했어요. 다시 연결해 주세요.`를 표시하고 재연결 절차를 제공한다. 재연결 이후 취소가 성립하면 실제 차감 코인을 전액 반환한다.
 
 ### 상담 완료
 
 | Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
 | --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/consultations/{consultationId}/complete` | 승인된 담당 수의사 | `consultationId, 본문 없음` | `200 Consultation (COMPLETED)` | 404 NOT_FOUND, 409 INVALID_CONSULTATION_STATE | PRD CON-04 · SET-01 · D03·D04·D05 |
+| `POST` | `/api/consultations/{consultationId}/complete` | 승인된 담당 수의사 | `consultationId, 본문 없음` | `200 Consultation (COMPLETED)` | 404 NOT_FOUND, 409 INVALID_CONSULTATION_STATE / JOURNAL_REQUIRED | PRD CON-03·04 · LOG-01 · SET-01 · D03·D04·D05·D06 |
 
-확인창 ‘상담을 무사히 마쳤나요?’에서 담당 수의사가 ‘완료’를 선택할 때 호출한다. 창을 열 때는 상태가 바뀌지 않는다. 두 신청 유형 모두 사용을 확정하고 정산에 한 번만 반영한다. 완료 즉시 해당 상담의 건강 기록 권한을 종료하고 일지 작성 화면으로 이동한다. 같은 완료 재시도는 기존 결과를 반환한다.
+실제 상담을 마치고 일지를 저장한 담당 수의사가 호출한다. 서버는 연결이 성립하고 완료 가능한 상담인지 확인한 뒤, 해당 상담에 유효한 일지 본문이 저장되어 있는지 확인한다. 연결이 성립하지 않았으면 `INVALID_CONSULTATION_STATE`, 일지가 없으면 `JOURNAL_REQUIRED`를 반환한다. 완료 시 코인 사용을 확정하고 정산에 한 번만 반영하며, 해당 상담의 건강 기록 열람 권한을 종료한다. 같은 완료 재시도는 기존 결과를 반환한다.
 
-### 보호자 신고로 상담 완료
+### 완료된 상담의 보호자 신고
 
 | Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
 | --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/consultations/{consultationId}/complete-with-report` | 상담을 담당한 수의사 | `Idempotency-Key 필수. 신고 사유·입력 필드는 D04 미정` | `200 {"consultationId":"con-1","status":"COMPLETED","reportId":"report-1"}` | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 INVALID_CONSULTATION_STATE / IDEMPOTENCY_CONFLICT | PRD CON-04 · COM-02 · SET-01 · D04·D05 |
+| `POST` | `/api/consultations/{consultationId}/reports` | 완료된 상담의 담당 수의사 | `Idempotency-Key 필수. 신고 사유·입력 필드는 D04 미정` | `201 {"consultationId":"con-1","reportId":"report-1","status":"RECEIVED"}` | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 INVALID_CONSULTATION_STATE / IDEMPOTENCY_CONFLICT | PRD CON-04 · COM-02 · D04 |
 
-완료 확인창의 ‘보호자 신고’ 선택 후 제출할 때 호출한다. 신고 대상과 신고자는 서버가 해당 상담의 보호자와 담당 수의사로 결정하고 상담과 연결한다. 신고 접수와 상담 완료는 한 번에 반영한다. 접수가 실패하면 상담 완료·정산 확정도 발생하지 않는다. 일반 완료와 경합해도 코인 사용 확정·정산은 한 번만 성립한다. 성공하면 일지 작성 화면으로 이동한다. 신고 사유·입력값·실패 화면은 D04에서 확정한다.
+서버는 상담이 `COMPLETED` 상태일 때만 접수한다. 신고 대상과 신고자는 해당 상담의 보호자와 담당 수의사로 결정하고 신고를 상담에 연결한다. 신고 접수 결과와 별개로 기존 상담 상태·코인 원장·정산을 유지한다. 신고 사유·입력값·실패 화면은 D04에서 확정한다.
 
 
 ### 상담 중 반려동물 건강 기록 목록
@@ -144,7 +144,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | `GET` | `/api/consultations/{consultationId}/health-records` | 승인된 지정 예약의 담당 수의사 | `date, type, page, size` | `200 Page<HealthRecordSummary>` | 400 VALIDATION_ERROR, 403 HEALTH_ACCESS_DENIED, 404 NOT_FOUND | PRD CON-02·04 · HLT-02 · D05 |
 
-상담에 연결된 반려동물로 조회 범위를 결정한다. 즉시 상담은 매칭 후에도 이 경로와 파일 경로의 건강 기록 열람 권한을 부여하지 않는다. 완료된 해당 상담으로는 열람 권한을 얻을 수 없다. 접종·진료·미디어·복수 승인 예약은 D05에서 확정한다.
+상담에 연결된 반려동물로 조회 범위를 결정한다. 이전에 공유했거나 승인 예약이 남아 있어도 삭제된 기록과 첨부는 목록과 페이지 집계에서 제외한다. 즉시 상담은 매칭 후에도 이 경로와 파일 경로의 건강 기록 열람 권한을 부여하지 않는다. 완료된 해당 상담으로는 열람 권한을 얻을 수 없다. 접종·진료·미디어·복수 승인 예약은 D05에서 확정한다.
 
 ### 상담 중 반려동물 건강 기록 상세
 
@@ -152,15 +152,15 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | `GET` | `/api/consultations/{consultationId}/health-records/{recordId}` | 승인된 지정 예약의 담당 수의사 | `consultationId, recordId` | `200 HealthRecord` | 403 HEALTH_ACCESS_DENIED, 404 NOT_FOUND | PRD CON-02·04 · HLT-01·04 · D05 |
 
-기록이 상담에 연결된 반려동물의 기록인지 검증한다. 응답의 첨부 범위는 D05에서 확정한다.
+기록이 상담에 연결된 반려동물의 기록인지 검증한다. 삭제된 기록의 ID로 조회하면 `404 NOT_FOUND`를 반환한다. 삭제되지 않은 기록의 첨부 범위는 D05에서 확정한다.
 
 ### 상담 일지 작성
 
 | Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
 | --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/consultations/{consultationId}/journal` | 완료한 담당 수의사 | `{"content":"보호자가 설명한 상태와 상담 내용을 기록했습니다."}` | `201 Journal` | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 INVALID_CONSULTATION_STATE / JOURNAL_ALREADY_EXISTS | No. 44 · LOG-01 · D07 |
+| `POST` | `/api/consultations/{consultationId}/journal` | 상담을 마친 담당 수의사 | `{"content":"보호자가 설명한 상태와 상담 내용을 기록했습니다."}` | `201 Journal` | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 INVALID_CONSULTATION_STATE / JOURNAL_ALREADY_EXISTS | No. 44 · CON-04 · LOG-01 · D07 |
 
-완료된 담당 상담에만 작성한다. ERD의 상담당 일지 필드 1개를 반영한 초안이다. 공개 절차와 작성 기한은 미정이다.
+연결이 성립한 본인 담당 상담을 실제로 마친 뒤, 완료 처리 전에 작성한다. `content`는 비어 있지 않은 필수 본문이다. 일지 저장은 상담 완료의 선행 조건이며, 완료 처리는 별도의 완료 요청에서 수행한다. 공개 절차와 작성 기한은 미정이다.
 
 ### 상담 일지 조회
 
@@ -168,7 +168,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | `GET` | `/api/consultations/{consultationId}/journal` | 해당 보호자·담당 수의사 | `consultationId` | `200 Journal` | 404 NOT_FOUND | PRD LOG-01 · D05·D07 |
 
-보호자는 공개된 일지를 조회한다. 일지 조회 권한은 비공개 건강 기록이나 첨부의 권한을 부여하지 않는다.
+담당 수의사는 자신이 작성한 일지를 확인할 수 있다. 보호자는 상담이 완료되고 일지가 공개된 뒤 조회할 수 있다. 일지 조회 권한은 비공개 건강 기록이나 첨부의 권한을 부여하지 않는다.
 
 ### 상담 일지 수정
 

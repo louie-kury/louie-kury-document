@@ -2,8 +2,8 @@
 
 루이쿠리의 현재 ERD 초안을 도메인별로 정리했다. 첨부 SQL을 바탕으로 작성했으며, [PRD](prd.md) 변경분(`5f03d5b`)을 반영했다. 추가·변경된 컬럼과 관계는 설계 초안이다.
 
-- `PK`는 다이어그램에 표시한 기본키이며, `NULL` 표기가 없는 컬럼은 `NOT NULL`이다.
-- 점선은 첨부 SQL과 PRD를 바탕으로 표시한 참조 관계다. 관계의 개수는 참조 컬럼의 NULL 허용 여부를 바탕으로 표시했다. 첨부 SQL에는 FK와 UNIQUE 제약 선언이 없다.
+- `PK`는 기본키, `UK`는 설계에 명시한 유일성 제약이다. `NULL` 표기가 없는 컬럼은 `NOT NULL`이다.
+- 점선은 첨부 SQL과 PRD를 바탕으로 표시한 참조 관계다. 관계의 개수는 참조 컬럼의 NULL 허용 여부와 유일성을 반영한다. 첨부 SQL에는 FK와 UNIQUE 제약 선언이 없다.
 - 다른 도메인의 참조 대상은 해당 다이어그램에 이름만 표시한다.
 
 ## 엔티티 목록
@@ -46,6 +46,7 @@
 | 커뮤니티 | `카테고리` |
 | 커뮤니티 | `게시글` |
 | 커뮤니티 | `게시글 미디어` |
+| 커뮤니티 | `게시글 노출 변경 이력` |
 | 커뮤니티 | `게시글 좋아요` |
 | 커뮤니티 | `댓글` |
 | 커뮤니티 | `댓글 좋아요` |
@@ -205,7 +206,7 @@ erDiagram
     }
 ```
 
-ACC-02에 따라 수의사 가입에는 소속 병원과 해당 병원 명의의 사업자 계좌가 필요하다. 계좌 입력 항목과 검증 결과의 저장 방식은 D02에서 확정한다. 병원 주소는 주소 검색 결과를 사용하며 상세주소 입력 방식은 D11에서 확정한다.
+ACC-02에 따라 수의사 가입에는 소속 병원과 해당 병원 명의의 사업자 계좌가 필요하다. 계좌 입력 항목과 검증 결과의 저장 방식은 D02에서 확정한다. 수의사 가입 시 카카오 우편번호 서비스에서 선택한 주소를 병원 기본 주소에 사용한다. 상세주소 입력 방식은 D11에서 확정한다.
 
 `수의사`에는 `hospital_id`와 `hospital_uuid`가 함께 있다. `수의사 약관 동의.veterinarian_uuid`는 `BIGINT`이고 `수의사.uuid`는 `VARCHAR`다. `veterinarian_uuid`와 `id2`의 참조 대상 컬럼을 확인해야 한다.
 
@@ -220,6 +221,7 @@ erDiagram
     "반려동물" ||..o{ "미디어" : "pet_id"
     "반려동물" ||..o{ "건강기록" : "pet_uuid"
     "반려동물" ||..o{ "예방접종" : "pet_id"
+    "접종명" ||..o{ "예방접종" : "vaccine_name_id"
     "반려동물" ||..o{ "병원진료" : "pet_id"
     "건강기록" ||..o{ "건강기록상세" : "health_record_id"
     "건강기록" ||..o{ "건강기록미디어" : "health_record_id"
@@ -268,6 +270,7 @@ erDiagram
         DATETIME evented_at
         DATETIME created_at
         DATETIME updated_at
+        DATETIME deleted_at "NULL · 소프트 삭제 시각"
     }
     "건강기록상세" {
         VARCHAR(255) id PK
@@ -297,7 +300,7 @@ erDiagram
         DATETIME updated_at
     }
     "접종명" {
-        VARCHAR(255) id PK
+        BIGINT id PK
         VARCHAR(255) name
         VARCHAR(255) created_at
     }
@@ -313,7 +316,9 @@ erDiagram
     }
 ```
 
-`예방접종.vaccine_name_id`의 참조 후보는 `접종명.id`다. 두 타입이 각각 `BIGINT`와 `VARCHAR(255)`이므로 연결 전에 참조 키와 타입을 확인해야 한다.
+건강 기록을 삭제하면 `건강기록.deleted_at`에 삭제 시각을 남긴다. 상세 행과 첨부 행·파일은 보관한다. 조회에는 삭제되지 않은 건강 기록만 포함하며, 상세나 첨부를 직접 조회할 때도 상위 건강 기록의 `deleted_at`을 함께 검사한다. 첨부 자체의 삭제 여부는 `건강기록미디어.deleted_at`으로 확인한다.
+
+`예방접종.vaccine_name_id`는 `접종명.id`를 참조한다. 두 컬럼의 타입은 `BIGINT`다.
 
 ## 4. 상담 · 일지 · 후기
 
@@ -326,7 +331,7 @@ erDiagram
 
     "상담" {
         BIGINT id PK
-        VARCHAR uuid
+        VARCHAR uuid UK
         VARCHAR caregiver_uuid
         VARCHAR veterinarian_uuid "NULL · 지정 예약은 필수, 즉시 상담은 매칭 확정 시 설정"
         VARCHAR pet_uuid
@@ -334,9 +339,9 @@ erDiagram
         VARCHAR channel "채팅, 화상통화, 안심번호 전화"
         INTEGER fee_coin_amount "신청 시 적용한 상담 요금(코인)"
         VARCHAR status "지정 예약 상태와 즉시 상담 매칭 결과를 표현"
-        VARCHAR consultation_title
-        VARCHAR consultation_content
-        VARCHAR consultation_record "내용만 작성"
+        VARCHAR consultation_title "NULL · 현재 신청 API에서 입력받지 않음"
+        VARCHAR consultation_content "NULL · 지정 예약은 필수, 즉시 상담은 선택"
+        VARCHAR consultation_record "NULL · 담당 수의사가 완료 전에 일지를 작성하면 저장"
         DOUBLE rating "NULL"
         VARCHAR review_content "NULL"
         DATETIME created_at
@@ -349,7 +354,7 @@ erDiagram
     "상담 연결" {
         BIGINT id PK
         BIGINT consultation_id
-        VARCHAR status "연결·실패 결과"
+        VARCHAR status "연결 결과 · 연결 실패는 FAILED"
         VARCHAR external_connection_id "NULL · 외부 연동 식별자"
         DATETIME created_at
     }
@@ -357,7 +362,9 @@ erDiagram
 
 CON-01·CON-03·CON-05에 따라 즉시 상담은 `created_at`부터 최대 60초 동안 매칭을 기다린다. 최초 수락자 한 명을 확정할 때 담당 수의사 지정과 코인 차감이 한 번만 성립해야 한다. 미매칭과 매칭 전 취소에는 차감이 발생하지 않는다. 즉시 상담은 매칭 후에도 기존 건강 기록 열람 권한을 부여하지 않는다. 대기 화면과 단계별 요청 전달의 저장 방식은 D15·D17에서, 상태 변경 이력과 내부 상태값은 상담 상태 상세 설계에서 확정한다.
 
-상담 연결 시도는 상담과 연결하며 담당 수의사와 수단은 상담에서 확인한다. 수단 변경 및 연결 이력 보관은 D06에서 확정한다. 상담 일지와 후기는 `상담.consultation_record`, `rating`, `review_content`, `reviewed_at`에 담는다.
+상담 신청 시 제목은 입력받지 않으므로 `consultation_title`은 비워 둔다. 지정 예약은 상담 내용이 필수이며, 즉시 상담에서 내용을 생략하면 `consultation_content`는 NULL이다. 담당 수의사가 실제 상담을 마치고 일지를 작성하면 `consultation_record`를 채운다. 연결이 성립하고 일지 본문이 저장된 상담만 완료 상태로 전환할 수 있다.
+
+상담 연결 시도는 상담과 연결하며 담당 수의사와 수단은 상담에서 확인한다. 수단 변경 및 연결 이력 보관은 D06에서 확정한다. 후기는 `rating`, `review_content`, `reviewed_at`에 담는다.
 
 ## 5. 코인 · 결제 · 정산
 
@@ -369,9 +376,9 @@ erDiagram
     "코인 충전 주문" ||..o{ "코인 결제" : "charge_order_id"
     "코인 지갑" ||..o{ "코인 내역" : "wallet_id"
     "코인 지갑" ||..o{ "상담 코인 홀드" : "wallet_id"
-    "상담" ||..o{ "상담 코인 홀드" : "consultation_uuid"
+    "상담" ||..o| "상담 코인 홀드" : "consultation_uuid"
     "보호자" ||..o{ "상담 코인 홀드" : "caregiver_uuid"
-    "상담 코인 홀드" ||..o{ "수의사 정산" : "consultation_hold_id"
+    "상담 코인 홀드" ||..o| "수의사 정산" : "consultation_hold_id"
     "수의사" ||..o{ "수의사 정산" : "veterinarian_UUID"
     "병원 정산 계좌" |o..o{ "수의사 정산" : "payout_account_id"
 
@@ -426,7 +433,7 @@ erDiagram
     "상담 코인 홀드" {
         BIGINT id PK
         BIGINT wallet_id
-        VARCHAR consultation_uuid
+        VARCHAR consultation_uuid UK
         VARCHAR caregiver_uuid
         INTEGER hold_coint_amount
         VARCHAR status "ENUM(HEILD, RELEASED, USED)"
@@ -436,7 +443,7 @@ erDiagram
     }
     "수의사 정산" {
         BIGINT id PK
-        BIGINT consultation_hold_id
+        BIGINT consultation_hold_id UK
         VARCHAR veterinarian_UUID
         BIGINT payout_account_id "NULL · 이체 요청 시 필수"
         INTEGER coin_amount "사용 확정 코인 수"
@@ -452,6 +459,9 @@ erDiagram
 
 PAY-01·PAY-02에 따라 7,700원 결제 성공 시 7,000코인을 지급한다. 두 유형 모두 상담 1건당 7,000코인을 차감하며, 지정 예약은 신청 시, 즉시 상담은 매칭 확정 시 `상담 코인 홀드`에 실제 차감량을 기록한다.
 
+- 상담 1건에 차감 홀드는 0~1건이다. 즉시 상담의 미매칭·매칭 전 취소에는 홀드가 0건이다. 지정 예약 신청 후 거절되면 이미 생성한 홀드에 반환 상태(`RELEASED`)를 남기며 정산은 생성하지 않는다.
+- 홀드 1건에 수의사 정산은 0~1건이다. 완료된 유료 상담의 사용 확정 홀드만 정산에 1회 반영한다. 홀드는 `상담.uuid`를, 정산은 `상담 코인 홀드.id`를 참조한다.
+
 SET-01에 따라 완료 상담 1건의 정산 기준액은 7,000원이며 플랫폼 수수료는 20%인 1,400원, 수의사 배분액은 5,600원이다. 부가세 700원은 배분에서 제외한다. 매월 25일 정산 후 등록된 병원 명의 계좌로 이체를 요청하고 성공을 확인한 뒤 지급 완료로 기록한다. 소속·계좌 변경 시 기존 상담에 적용할 계좌와 이체 실패 재시도 절차는 D02에서 확정한다.
 
 `코인 결제.original_transaction_id`의 원본 주석은 결제 자기 참조를 가리킨다. 이 컬럼은 `INTEGER`이고 `코인 결제.id`는 `BIGINT`다. `pg_payment_key`의 유일성은 주석에 기재돼 있다. `코인 내역.related_type`과 `related_id`의 대상 테이블은 유형별로 확인해야 한다.
@@ -463,6 +473,8 @@ erDiagram
     "게시판" ||..o{ "게시글" : "board_id"
     "카테고리" ||..o{ "게시글" : "category_id"
     "게시글" ||..o{ "게시글 미디어" : "post_id"
+    "게시글" ||..o{ "게시글 노출 변경 이력" : "post_id"
+    "관리자" ||..o{ "게시글 노출 변경 이력" : "admin_id"
     "게시글" ||..o{ "게시글 좋아요" : "post_id"
     "게시글" ||..o{ "댓글" : "post_id"
     "댓글" |o..o{ "댓글" : "parent_comment_id"
@@ -490,6 +502,7 @@ erDiagram
         BIGINT user_uuid
         VARCHAR title
         VARCHAR content
+        VARCHAR visibility "VISIBLE 또는 HIDDEN"
         INTEGER like_count "NULL"
         INTEGER view_count "NULL"
         INTEGER commnet_count "NULL"
@@ -497,6 +510,15 @@ erDiagram
         DATETIME created_at
         DATETIME updated_at "NULL"
         DATETIME deleted_at "NULL"
+    }
+    "게시글 노출 변경 이력" {
+        BIGINT id PK
+        BIGINT post_id
+        BIGINT admin_id
+        VARCHAR previous_visibility "VISIBLE 또는 HIDDEN"
+        VARCHAR new_visibility "VISIBLE 또는 HIDDEN"
+        VARCHAR reason
+        DATETIME created_at
     }
     "게시글 미디어" {
         BIGINT id PK
@@ -545,6 +567,8 @@ erDiagram
 ```
 
 게시글과 댓글의 `user_uuid`는 `BIGINT`이고 `유저정보.user_uuid`와 좋아요 테이블의 사용자 UUID는 `VARCHAR`다. 작성자와 좋아요 사용자에 각각 어떤 식별자를 저장할지 확인해야 한다.
+
+게시글 숨김과 복구는 `visibility`를 변경하고 처리자·시각·사유를 이력에 남긴다. `deleted_at`은 기존 삭제 상태를 표현한다. 숨김 중에는 작성자를 포함한 일반 사용자의 게시글·댓글·첨부 접근을 차단한다. 댓글과 첨부의 개별 상태는 유지해 복구하면 숨김 전에 보였던 항목을 다시 노출한다.
 
 ## 7. 관리자 · 신고
 
@@ -603,7 +627,7 @@ erDiagram
     }
 ```
 
-CON-04의 보호자 신고는 기존 `신고`에 기록한다. 해당 상담과 담당 수의사를 연결하고, 신고 대상은 그 상담의 보호자로 제한한다. 신고 사유·입력 항목은 D04에서 확정한다.
+CON-04의 보호자 신고는 상담이 완료된 뒤 기존 `신고`에 기록한다. 완료된 상담과 신고한 담당 수의사를 연결하고, 신고 대상은 그 상담의 보호자로 제한한다. 신고 사유·입력 항목은 D04에서 확정한다.
 
 `신고.target_uuid`는 `target_type`에 따라 참조 대상이 달라진다. 게시글과 댓글에는 첨부본 기준 `BIGINT id`가 있어 신고 대상 식별 방식과 `reviewer_user_id`의 참조 대상을 확인해야 한다.
 
