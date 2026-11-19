@@ -1,60 +1,43 @@
-# API 계약 — 반려동물
+# 반려동물 등록 관리
 
-공통 응답 형식은 [API 명세 안내](README.md)를 참고한다.
+**우선 개발.** PRD `PET-01`, `MED-01`, `D11·D12·D18`, 요구사항정의서 `(필수3)` C18:H22 기준. 반려동물·소유 관계·종/품종은 MongoDB, 파일 메타데이터는 공통 미디어 저장소에서 관리한다.
 
----
+[공통 계약](README.md#공통-계약)을 함께 적용한다. 아래 경로·필드·오류 코드는 API 설계 초안이며 미정 정책은 마지막 절에서 추적한다.
 
-### 반려동물 목록 조회
+## 데이터 모델
 
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/pets` | 보호자 본인 | `없음` | `200 [{"petId":"pet-1","name":"루이","species":{"speciesId":1,"name":"강아지"},"breed":{"breedId":2,"name":"푸들"},"profileImageUrl":null,"ageYears":3,"sex":"MALE"}]` | 공통 인증·권한 오류 | No. 10, 25 · PET-01 |
+| 모델 | 필드 |
+| --- | --- |
+| PetWrite | `name:string`, `speciesId:string`, `breedId:string 또는 null`, `profileMediaId:string 또는 null`, `birth:date 또는 null`, `sex:string`, `isNeutered:boolean 또는 null`, `weight:number 또는 null`, `basicVaccinationCompleted:boolean 또는 null` |
+| PetSummary | `petId:string`, `name:string`, `species:{speciesId,name}`, `breed:{breedId,name} 또는 null`, `profileMedia:MediaRef 또는 null`, `age:Age 또는 null`, `sex:string` |
+| PetDetail | PetSummary 필드 + `birth:date 또는 null`, `isNeutered:boolean 또는 null`, `weight:number 또는 null`, `basicVaccinationCompleted:boolean 또는 null`, `createdAt:timestamp`, `updatedAt:timestamp` |
+| Age | `years:integer`, `months:integer`. 산정 기준은 D12 확정 후 적용 |
+| Species | `speciesId:string`, `name:string`, `breeds:[{breedId:string,name:string}]` |
 
-본인 소유만 반환한다. 생년월일 미상인 경우 ageYears는 null이다. 상담 시 이 목록에서 한 마리를 선택한다.
+PetWrite는 입력 가능한 전체 필드를 나열한 것이다. 생성 시 필수 여부와 null 허용은 D12 확정 후 구현한다. `name` 등 문자열을 빈 값으로 받는 정책도 함께 정한다. `sex`의 외부 값은 `MALE`, `FEMALE` 설계안이며 원문 BOOLEAN의 실제 의미는 D18에서 확인한다. 체중 단위·정밀도·범위를 아직 고정하지 않는다.
 
-### 반려동물 상세 조회
+## 엔드포인트
 
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/pets/{petId}` | 보호자 본인 | `petId` | `200 PetDetail` | 404 NOT_FOUND | No. 11 · PET-01 |
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
+| `GET /api/pets` | 필수 | `page,size` | `Page<PetSummary>` / 200 | 공통 오류 |
+| `GET /api/pets/{petId}` | 필수 | 경로 petId | `PetDetail` / 200 | 404 NOT_FOUND |
+| `POST /api/pets` | 필수 | JSON `PetWrite` | `PetDetail` / 201 | 400 VALIDATION_ERROR, 404 MEDIA_NOT_FOUND, 409 MEDIA_NOT_READY |
+| `PATCH /api/pets/{petId}` | 필수 | JSON PetWrite의 변경 필드 | `PetDetail` / 200 | 400 EMPTY_UPDATE, 404 NOT_FOUND, 409 MEDIA_NOT_READY |
+| `DELETE /api/pets/{petId}` | 필수 | 경로 petId | 본문 없음 / 204 | 404 NOT_FOUND, 409 PET_STATE_CONFLICT |
+| `GET /api/pet-species` | 필수 | 없음 | `Species[]` / 200 | 503 REFERENCE_DATA_UNAVAILABLE |
 
-타임라인은 같은 petId의 건강 기록 목록에서 조회한다.
+## 처리 규칙
 
-### 반려동물 등록
+- 보호자는 인증된 계정에서 결정한다. 요청에 `caregiverId`를 받아 타인 동물로 저장하지 않는다. 목록은 본인 소유의 삭제되지 않은 동물만 반환한다.
+- `speciesId`와 `breedId`가 일치하는지 확인한다. 종·품종 목록도 MongoDB 기준 데이터이며 접종명 MySQL과 구분한다.
+- 프로필 파일은 [미디어 업로드](media.md) 후 받은 `mediaId`로 연결한다. 파일 존재·완료·소유·사용처 권한을 확인하고 부모 저장이 실패하면 기존 프로필을 유지한다.
+- PATCH의 생략은 유지다. 허용된 필드의 null만 해제를 뜻한다. 응답에 요청으로 보내지 않은 타인 정보나 MongoDB 내부 문서를 그대로 노출하지 않는다.
+- 삭제는 소프트 삭제다. 목록·상세·수정·기존 프로필 파일 직접 조회의 현재 접근 정책에 반영한다. 다른 공개 사용처가 같은 미디어를 사용하는 경우 그 사용처 권한은 별도로 검사한다.
+- 생성 중복 방지는 공통 Idempotency-Key 제안을 따른다. 재시도로 동물이 여러 건 생기지 않게 한다.
 
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/pets` | 보호자 본인 | `multipart/form-data. data: {"name":"루이","speciesId":1,"breedId":2,"birthDate":"2023-05-01","sex":"MALE","neutered":true,"weight":4.2,"basicVaccinated":null}, profileImage(선택, 파일 1개)` | `201 PetDetail` | 400 VALIDATION_ERROR, 404 NOT_FOUND, 413 FILE_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 503 STORAGE_UNAVAILABLE | No. 12 · PET-01 · D12 |
+## 구현 전 확인
 
-`data`의 name, speciesId, breedId, sex는 필수 초안이다. 나머지 JSON 필드는 선택·nullable 초안이다. 품종은 같은 종에 속해야 한다. 체중 단위·범위는 미정이다. 프로필 사진을 받으면 생성한 반려동물 ID로 기존 반려동물 미디어에 연결한다.
-
-### 반려동물 정보 수정
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `PATCH` | `/api/pets/{petId}` | 보호자 본인 | `multipart/form-data. data: 등록 JSON 필드 중 변경할 값과 removeProfileImage(선택, true), profileImage(선택, 파일 1개)` | `200 PetDetail` | 400 VALIDATION_ERROR, 404 NOT_FOUND, 413 FILE_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 503 STORAGE_UNAVAILABLE | No. 13 · PET-01 · D12 |
-
-종과 품종의 조합을 최종 값 기준으로 검증한다. 프로필 체중과 체중 기록의 동기화 정책은 미정이다.
-
-`profileImage`를 보내면 대표 사진을 교체한다. `removeProfileImage: true`는 대표 사진 연결을 해제한다. 둘을 함께 보내면 400이며, 둘 다 생략하면 기존 사진을 유지한다.
-
-### 반려동물 삭제
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `DELETE` | `/api/pets/{petId}` | 보호자 본인 | `petId` | `204 본문 없음` | 404 NOT_FOUND, 409 PET_HAS_OPEN_CONSULTATION | No. 14 · PET-01 · D11 |
-
-요구사항은 소프트 삭제다. 진행 중 상담과 기록의 조회·보존 기준은 미정이다.
-
-### 종·품종 목록 조회
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/pet-species` | 보호자 | `없음` | `200 [{"speciesId":1,"name":"강아지","breeds":[{"breedId":2,"name":"푸들"}]}]` | 공통 인증·권한 오류 | No. 12, 13 · PET-01 |
-
-등록·수정 화면에서 선택할 종·품종이다.
-
-## 응답 필드와 데이터 정책
-
-- `PetDetail` = 목록 항목 + `birthDate: date?`, `neutered: boolean?`, `weight: number?`, `basicVaccinated: boolean?`. `sex`는 `MALE`, `FEMALE` 초안이다.
-- `petId`는 문자열, `speciesId`와 `breedId`는 정수다. 응답은 접근 검사를 거치는 `profileImageUrl`을 반환한다.
+- D12 — 생성 필수값, 생일을 모르는 경우, 나이 산식·기준일, 중성화·기본 접종 값, 체중 단위·범위, 프로필 선택 여부.
+- D11 — 진행 중 상담이 있는 동물 삭제의 허용 조건과 연결 이력 보관.
+- D18 — MongoDB 식별자·소유 관계·종/품종 문서 구조. 이 API의 필드가 DB 컬럼 설계를 확정하는 것은 아니다.

@@ -1,138 +1,66 @@
-# API 계약 — 커뮤니티·신고
+# 커뮤니티·신고
 
-공통 응답 형식은 [API 명세 안내](README.md)를 참고한다.
+**우선 개발.** PRD `COM-01·COM-02`, `NTF-01`, `MED-01`, `D08`, 요구사항정의서 C90:H103 기준. 게시글·댓글·반응·신고는 MySQL, 작성자 프로필은 MongoDB에서 조회한다.
 
-관리자가 숨긴 게시글은 작성자 본인을 포함한 일반 사용자의 목록에서 제외한다. 숨김 게시글과 그 댓글·대댓글에 ID나 URL로 접근하면 `404 NOT_FOUND`를 반환한다. [첨부파일 직접 조회](media.md#첨부파일-조회)에도 게시글의 현재 노출 상태를 적용한다. 복구 후에는 기존 권한 범위에서 숨김 전에 보이던 게시글·댓글·첨부를 다시 반환한다. 별도로 삭제·숨김된 항목은 제외한다.
+[공통 계약](README.md#공통-계약)을 함께 적용한다. 아래 경로·필드·오류 코드는 API 설계 초안이며 미정 정책은 마지막 절에서 추적한다.
 
----
+## 데이터 모델
 
-### 게시글 목록 조회
+| 모델 | 필드 |
+| --- | --- |
+| Author | `memberId:string`, `nickname:string`, `profileMedia:MediaRef 또는 null` |
+| Board | `boardId:string`, `name:string` |
+| Category | `categoryId:string`, `name:string` |
+| PostWrite | `boardId:string`, `categoryId:string`, `title:string`, `content:string`, `mediaIds:string[]` |
+| PostSummary | `postId:string`, `boardId:string`, `category:Category`, `title:string`, `author:Author`, `likeCount:integer`, `viewCount:integer`, `commentCount:integer`, `likedByMe:boolean 또는 null`, `createdAt:timestamp`, `updatedAt:timestamp 또는 null` |
+| PostDetail | PostSummary + `content:string`, `media:MediaRef[]` |
+| Comment | `commentId:string`, `postId:string`, `parentCommentId:string 또는 null`, `depth:integer`, `author:Author 또는 null`, `content:string 또는 null`, `deleted:boolean`, `likeCount:integer`, `replyCount:integer`, `likedByMe:boolean 또는 null`, `createdAt:timestamp`, `updatedAt:timestamp 또는 null` |
+| Reaction | `liked:boolean`, `likeCount:integer` |
+| ReportReason | `reasonCode:string`, `name:string` |
+| ReportWrite | `targetType:string`, `targetId:string`, `reasonCodes:string[]`, `content:string`, `contextPostId?:string` (MEMBER 신고에서 필요) |
+| ReportReceipt | `reportId:string`, `receivedAt:timestamp` |
 
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/community/posts` | 보호자·활동 가능한 수의사 | `boardId, categoryId, page, size` | `200 Page<PostSummary>` | 400 VALIDATION_ERROR | No. 46 · COM-01 · D08 |
+게시글 생성에 boardId는 서버가 제공한 유일한 초기 게시판을 사용한다. 게시판은 이후 확장을 지원한다. 생성 필드 필수값·길이, 신고 사유·본문 필수 여부는 D08에서 확정한다. 비회원의 `likedByMe`는 null이며 회원의 실제 상태를 임의로 false 처리하지 않는다. 삭제 댓글은 본문 null과 deleted=true로 반환하고 화면에서 “삭제된 댓글입니다”로 표시한다.
 
-일반 화면에는 노출 가능한 게시글만 반환한다. 비로그인 열람 및 게시판별 권한은 미정이다.
+## 엔드포인트
 
-### 게시글 상세 조회
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
+| `GET /api/boards` | 공개 | 없음 | `Board[]` / 200 | 공통 오류 |
+| `GET /api/boards/{boardId}/categories` | 공개 | 경로 boardId | `Category[]` / 200 | 404 NOT_FOUND |
+| `GET /api/posts` | 공개 | `boardId,categoryId?,page,size` | `Page<PostSummary>` / 200 | 400 INVALID_FILTER, 404 NOT_FOUND |
+| `GET /api/posts/{postId}` | 공개 | 경로 postId | `PostDetail` / 200 | 404 NOT_FOUND |
+| `POST /api/posts` | 필수 | JSON `PostWrite` | `PostDetail` / 201 | 400 VALIDATION_ERROR, 409 MEDIA_NOT_READY, 422 ATTACHMENT_LIMIT_EXCEEDED |
+| `PATCH /api/posts/{postId}` | 필수·작성자 | JSON `title?,content?,mediaIds?` | `PostDetail` / 200 | 400 EMPTY_UPDATE, 404 NOT_FOUND, 422 ATTACHMENT_LIMIT_EXCEEDED |
+| `DELETE /api/posts/{postId}` | 필수·작성자 | 경로 postId | 본문 없음 / 204 | 404 NOT_FOUND |
+| `PUT /api/posts/{postId}/like` | 필수 | 본문 없음 | `Reaction` / 200 | 404 NOT_FOUND |
+| `DELETE /api/posts/{postId}/like` | 필수 | 본문 없음 | `Reaction` / 200 | 404 NOT_FOUND |
+| `GET /api/posts/{postId}/comments` | 공개 | `page,size` 최상위만 | `Page<Comment>` / 200 | 404 NOT_FOUND |
+| `GET /api/comments/{commentId}/replies` | 필수 | `page,size` 직계 답글 | `Page<Comment>` / 200 | 404 NOT_FOUND |
+| `POST /api/posts/{postId}/comments` | 필수 | JSON `content:string,parentCommentId?:string` | `Comment` / 201 | 400 INVALID_PARENT, 409 COMMENT_DEPTH_EXCEEDED, 404 NOT_FOUND |
+| `PATCH /api/comments/{commentId}` | 필수·작성자 | JSON `content:string` | `Comment` / 200 | 404 NOT_FOUND, 409 COMMENT_HAS_REPLIES |
+| `DELETE /api/comments/{commentId}` | 필수·작성자 | 경로 commentId | 본문 없음 / 204 | 404 NOT_FOUND |
+| `PUT /api/comments/{commentId}/like` | 필수 | 본문 없음 | `Reaction` / 200 | 404 NOT_FOUND |
+| `DELETE /api/comments/{commentId}/like` | 필수 | 본문 없음 | `Reaction` / 200 | 404 NOT_FOUND |
+| `GET /api/report-reasons` | 필수 | `targetType:POST 또는 COMMENT 또는 MEMBER` | `ReportReason[]` / 200 | 400 INVALID_TARGET_TYPE |
+| `POST /api/reports` | 필수 | JSON `ReportWrite` | `ReportReceipt` / 201 | 400 INVALID_REPORT_REASON, 404 NOT_FOUND |
+| `GET /api/members/{memberId}/profile` | 필수 | 경로 memberId | `{memberId,nickname,profileMedia}` / 200 | 404 NOT_FOUND |
 
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/community/posts/{postId}` | 보호자·활동 가능한 수의사 | `postId` | `200 Post` | 404 NOT_FOUND | No. 47 · COM-01 · D08 |
+## 처리 규칙
 
-댓글은 같은 postId의 댓글 목록 API에서 조회한다.
+- 공개 게시글의 목록·상세·미디어·최상위 댓글은 비회원 열람이 가능하다. 글쓰기·좋아요·답글 조회·신고는 인증이 필요하다. 프런트의 로그인 안내와 서버의 401 검사를 함께 적용한다.
+- 공개 Author에는 닉네임·프로필만 담고 이메일·전화번호·로그인 ID를 노출하지 않는다. 사용자 프로필 단독 조회의 비회원 허용 여부는 D08에서 정하며 현재 경로는 로그인 설계안이다.
+- parentCommentId가 없으면 depth=1이다. 부모와 같은 postId인지 확인하고 부모 depth+1이 4를 넘으면 거절한다. 대댓글 조회에서도 원본 게시글의 공개·삭제 상태를 확인한다.
+- 하위 답글의 존재 검사와 댓글 수정은 경쟁 요청에서도 일관되게 처리한다. 하위 답글이 있으면 수정 불가다. 삭제 댓글 중 답글이 남은 노드는 자리 표시를 유지하고, 답글이 없는 노드는 목록에서 숨긴다. 깊이와 부모 관계를 임의로 재배치하지 않는다.
+- 게시글·댓글의 삭제·숨김은 직접 URL 접근과 관련 첨부에 반영한다. 삭제·숨김 글에 신규 댓글과 반응을 추가할 수 없다. 작성자만 수정·삭제한다.
+- 좋아요 PUT/DELETE는 목표 상태를 지정한다. 중복·동시 요청으로 동일 반응이나 수가 증가하지 않으며 응답 카운트는 반영 결과와 일치한다.
+- 게시글 PATCH의 mediaIds는 최종 첨부 목록이다. 생략하면 유지, 빈 배열이면 전부 제거다. 저장 실패 시 기존 첨부를 보존한다.
+- 댓글 생성 성공과 연결된 알림 이벤트를 유실 없이 전달하고 재시도 시 중복 알림을 만들지 않는다. 대댓글은 직접 답글 대상 댓글 작성자에게 알린다. 자기 댓글·자기 대댓글 세부는 [알림 명세](notifications.md)를 따른다.
+- ReportWrite의 targetType은 POST, COMMENT, MEMBER 설계안이며 대댓글도 COMMENT다. MEMBER는 게시글 작성자 신고를 뜻하며 접근 가능한 게시글 ID를 `contextPostId`로 함께 제출하는 안을 적용한다. 서버는 그 게시글 작성자가 targetId와 일치하는지 검증한다. 신고자는 인증 주체에서 결정한다.
+- 신고 생성에는 공통 Idempotency-Key 제안을 적용한다. 같은 제출 재시도는 같은 접수 결과를 반환한다. 신고자·운영 처리 내용을 공개 프로필·댓글·알림에 노출하지 않는다.
 
-### 게시글 작성
+## 구현 전 확인
 
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/community/posts` | 보호자·활동 가능한 수의사 | `multipart/form-data. data: {"boardId":1,"categoryId":2,"title":"루이 산책","content":"오늘 산책을 다녀왔어요."}, files(선택, 파일마다 같은 파트 이름 반복)` | `201 Post` | 400 VALIDATION_ERROR, 403 FORBIDDEN, 404 NOT_FOUND, 413 FILE_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 503 STORAGE_UNAVAILABLE | No. 48 · COM-01 · D08 |
-
-title·content는 필수다. 사진과 동영상은 생성한 게시글 ID로 기존 게시글 미디어에 연결한다. 게시판·카테고리 필수 여부와 첨부 제한은 미정이다.
-
-### 게시글 수정
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `PATCH` | `/api/community/posts/{postId}` | 작성자 | `multipart/form-data. data: {title?,content?,retainedMediaIds?}, files(선택, 파일마다 같은 파트 이름 반복)` | `200 Post` | 400 VALIDATION_ERROR, 403 FORBIDDEN, 404 NOT_FOUND, 413 FILE_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 503 STORAGE_UNAVAILABLE | No. 49 · COM-01 · D08 |
-
-`retainedMediaIds`를 생략하면 기존 첨부를 모두 유지한다. 배열을 보내면 현재 게시글에 이미 연결된 ID만 지정할 수 있으며, 지정한 첨부만 유지한다. 빈 배열은 기존 첨부를 모두 해제한다. 새 `files`는 유지한 첨부에 추가한다.
-
-### 게시글 삭제
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `DELETE` | `/api/community/posts/{postId}` | 작성자 | `postId` | `204 본문 없음` | 403 FORBIDDEN, 404 NOT_FOUND | No. 50 · COM-01 · D08 |
-
-요구사항은 소프트 삭제다. 삭제된 글은 일반 조회와 신규 댓글 작성 대상에서 제외된다. 댓글·첨부 보존은 미정이다.
-
-### 게시글 좋아요 표시
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `PUT` | `/api/community/posts/{postId}/likes/me` | 보호자·활동 가능한 수의사 | `postId, 본문 없음` | `200 {"likeCount":1,"likedByMe":true}` | 404 NOT_FOUND | No. 51 · COM-01 · D08 |
-
-동일 사용자의 중복 요청으로 수가 증가하지 않는다.
-
-### 게시글 좋아요 취소
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `DELETE` | `/api/community/posts/{postId}/likes/me` | 보호자·활동 가능한 수의사 | `postId` | `204 본문 없음` | 404 NOT_FOUND | No. 51 · COM-01 · D08 |
-
-취소 API는 초안이다. 취소 가능 여부 및 운영 정책은 미정이다.
-
-### 댓글·대댓글 목록 조회
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/community/posts/{postId}/comments` | 보호자·활동 가능한 수의사 | `postId, page, size` | `200 Page<Comment>` | 400 VALIDATION_ERROR, 404 NOT_FOUND | No. 47, 52, 54 · COM-01 · D08 |
-
-parentCommentId로 계층을 연결한다. 요구사항의 삭제 표시 문구는 “삭제된 댓글입니다”다. 부모 삭제 후 대댓글 표시와 페이지 경계 규칙은 미정이다.
-
-### 댓글·대댓글 작성
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/community/posts/{postId}/comments` | 보호자·활동 가능한 수의사 | `{"content":"산책 좋죠!","parentCommentId":null}` | `201 Comment` | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 COMMENTS_CLOSED | No. 52 · COM-01 · D08 |
-
-content는 필수다. parentCommentId는 선택이며 같은 글에 속해야 한다. 최대 깊이와 삭제된 부모에 대한 답글 허용은 미정이다.
-
-### 댓글 수정
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `PATCH` | `/api/community/posts/{postId}/comments/{commentId}` | 작성자 | `{"content":"산책하기 좋은 날이네요."}` | `200 Comment` | 400 VALIDATION_ERROR, 403 FORBIDDEN, 404 NOT_FOUND | No. 53 · COM-01 · D08 |
-
-작성자와 게시글-댓글 관계를 검사한다.
-
-### 댓글 삭제
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `DELETE` | `/api/community/posts/{postId}/comments/{commentId}` | 작성자 | `postId, commentId` | `204 본문 없음` | 403 FORBIDDEN, 404 NOT_FOUND | No. 54 · COM-01 · D08 |
-
-삭제 표시를 반환하는 경우 원문은 일반 응답에서 제외한다.
-
-### 댓글 좋아요 표시
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `PUT` | `/api/community/posts/{postId}/comments/{commentId}/likes/me` | 보호자·활동 가능한 수의사 | `postId, commentId, 본문 없음` | `200 {"likeCount":1,"likedByMe":true}` | 404 NOT_FOUND | No. 55 · COM-01 · D08 |
-
-동일 사용자의 중복 요청으로 수가 증가하지 않는다.
-
-### 댓글 좋아요 취소
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `DELETE` | `/api/community/posts/{postId}/comments/{commentId}/likes/me` | 보호자·활동 가능한 수의사 | `postId, commentId` | `204 본문 없음` | 404 NOT_FOUND | No. 55 · COM-01 · D08 |
-
-취소 API는 초안이다. 취소 가능 여부 및 운영 정책은 미정이다.
-
-### 신고 사유 목록 조회
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/reports/reasons` | 보호자·활동 가능한 수의사 | `targetType 필수(CAREGIVER, VETERINARIAN, POST, COMMENT)` | `200 [{"code":"SPAM","name":"광고 또는 도배"}]` | 400 VALIDATION_ERROR | No. 56~58 · COM-02 · D08 |
-
-신고 대상에 활성화된 사유만 반환한다. 예시 코드는 실제 운영 분류와 함께 확정한다.
-
-### 게시글·댓글·사용자 신고 접수
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/reports` | 보호자·활동 가능한 수의사 | `{"targetType":"POST","targetId":"21","reasonCodes":["SPAM"],"content":"반복 광고입니다.","evidenceMediaIds":[]}` | `201 {"reportId":"report-1","status":"RECEIVED"}` | 400 VALIDATION_ERROR, 403 FORBIDDEN, 404 NOT_FOUND | No. 56~58 · COM-02 · D08 |
-
-targetType과 targetId의 조합으로 대상을 검증한다. 신고 대상에게 신고자 정보를 공개하지 않는다. 일반 신고의 중복 처리와 증빙 범위는 D08에서 확정한다. 완료된 상담에 보호자 신고를 연결하려면 [상담 신고 API](consultation.md#완료된-상담의-보호자-신고)를 사용한다.
-
-## 응답 필드와 데이터 정책
-
-| 응답 타입 | 필드 |
-|---|---|
-| Author | `userId: string`, `displayName: string`, `veterinarianBadge: boolean` |
-| PostSummary | `postId: integer`, `author: Author`, `title: string`, `createdAt: datetime`, `likeCount: integer`, `likedByMe: boolean`, `commentCount: integer` |
-| Post | PostSummary + `content: string`, `updatedAt: datetime?`, `boardId: integer`, `categoryId: integer`, `media: MediaRef[]` |
-| Comment | `commentId: integer`, `parentCommentId: integer?`, `author: Author?`, `content: string`, `deleted: boolean`, `createdAt: datetime`, `updatedAt: datetime?`, `likeCount: integer`, `likedByMe: boolean` |
-
-수의사 표시는 승인 상태에 따라 결정한다. 신고 요청의 `targetId`는 문자열이다. 게시글·댓글에는 해당 정수 ID의 문자열 표현을 사용한다. API의 `POST` 대상과 ERD의 `BOARD` 상태명 매핑은 확인 대상이다. `targetType`, `targetId`, `reasonCodes`는 필수 초안이며 `content`와 `evidenceMediaIds`는 선택 초안이다.
+- D08 — 게시글/댓글 길이·필수값, 신고 입력·사유, 중복 신고 정책, 목록 정렬, 프로필 공개 범위와 팔로우 목록의 비회원 접근.
+- D15 — 자기 대댓글 알림과 이벤트 중복 방지·재전달 기준.
+- D18·D19 — 작성자 UUID 타입 정합성, 부모/깊이·삭제 표시, 미디어 연결과 제한 설정.

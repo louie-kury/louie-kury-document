@@ -1,199 +1,87 @@
-# API 계약 — 상담·일지·후기
+# 실시간 상담·일지·후기 API
 
-공통 응답 형식은 [API 명세 안내](README.md)를 참고한다.
+**후순위 설계 초안**이다. [PRD](../prd.md)의 `CON-01`~`CON-05`, `VET-01`, `LOG-01`, `REV-01`과 요구사항정의서 `(필수3)요구사항정의서` 42~48행을 근거로 한다. 보호자는 위치 기반 매칭으로 채팅·화상 상담을 신청하고 진행·종료·이력을 확인한다.
 
----
+[공통 계약](README.md)을 적용한다. 아래 모델은 성공 응답 `data`이며 모든 ID는 문자열이다. HTTP 경로·상태 코드·내부 상태의 영문 표기는 이번 설계안이다. 가용 정보·수락·상담 연결·일지의 외부 제공 계약은 `D04`~`D07`·`D17`에서 확인한다.
 
-### 지정 수의사 예약 요청
+## 데이터 모델
 
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/consultations` | 보호자 | `Idempotency-Key 필수. {"petId":"pet-1","veterinarianId":"vet-1","channel":"CHAT","preferredAt":"2026-11-15T14:00:00+09:00","content":"며칠 전부터 구토가 있어요."}` | `201 Consultation (REQUESTED). 동일 요청 재시도 시 최초 결과 반환` | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 INSUFFICIENT_COINS / VETERINARIAN_UNAVAILABLE / IDEMPOTENCY_CONFLICT | No. 25~27 · CON-01·03 · PAY-02 · D03 |
-
-`content`는 필수이며 자유 양식 1,000자 이내다. 본인 반려동물 한 마리, 수의사, 희망 일시와 수단 하나를 지정한다. 서버가 예약 생성과 7,000코인 차감을 한 번에 처리한다.
-
-
-### 위치 기반 즉시 상담 신청
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/consultations/instant` | 보호자 | `Idempotency-Key 필수. {"petId":"pet-1","channel":"VIDEO","location":{"latitude":37.5,"longitude":127.0},"content":"구토가 있어요."}` | `201 Consultation (MATCHING). matchExpiresAt 포함, veterinarian은 null` | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 IDEMPOTENCY_CONFLICT | PRD CON-03·05 · PAY-02 · D05·D15·D17 |
-
-`petId`는 보호자 본인 반려동물, `channel`은 세 수단 중 하나다. `location` 좌표 입력과 `content`(선택)는 계약 초안이다. 위치 확인·권한 거부 대응은 D17에서 확정한다. 서버가 요청 접수 시각부터 60초 기한을 계산한다. 신청과 탐색에는 코인을 차감하지 않는다. 미매칭 안내창을 닫을 때 서버 상태는 그대로이며 다시 신청하면 새 멱등 키로 새 매칭을 시작한다.
-
-### 즉시 상담 대기 시작
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/consultations/instant/wait-sessions` | 상담 제공이 가능한 수의사 | `본문 없음` | `201 {"waitSessionId":"wait-1"}` | 409 VETERINARIAN_BUSY | PRD CON-05 · D15·D17 |
-
-대기 화면을 띄운 상태에서 시작하는 세션 초안이다. 서버는 현재 대기 중인 수의사에게만 새 요청을 전달한다. 다른 탭을 보거나 화면이 잠겨 있으면 대기에서 제외한다. 세션의 연결 유지·만료·화면 활성 상태 확인 방식은 D15·D17에서 확정한다.
-
-### 즉시 상담 대기 목록 구독
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/consultations/instant/wait-sessions/{waitSessionId}/requests` | 본인 대기 세션의 수의사 | `waitSessionId` | `200 실시간 목록 스트림. 초기 스냅샷과 추가·제거 갱신에 InstantOffer 사용` | 404 NOT_FOUND | PRD CON-05 · D05·D15·D17 |
-
-초기 목록과 실시간 갱신에는 수락 가능한 요청만 포함한다. 한 요청이 여러 단계에 걸쳐도 같은 수의사 목록에는 한 건만 유지한다. 매칭·미매칭·매칭 전 취소 시 즉시 제거하며 경쟁 수락자에게 매칭 결과를 알린다. 전송 프로토콜, 이벤트 형식·재동기화·정렬은 D15에서 확정한다.
-
-### 즉시 상담 대기 종료
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `DELETE` | `/api/consultations/instant/wait-sessions/{waitSessionId}` | 본인 대기 세션의 수의사 | `waitSessionId` | `204 본문 없음` | 404 NOT_FOUND | PRD CON-05 · D15·D17 |
-
-대기 화면을 벗어난 세션은 새 요청 전달 대상에서 제외한다. 화면을 벗어나기 전 이미 받은 요청의 수락 조건은 D17에서 확정한다.
-
-### 즉시 상담 수락
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/consultations/{consultationId}/accept` | 상담 제공이 가능하고 해당 요청을 전달받은 수의사 | `Idempotency-Key 필수. 본문 없음` | `200 Consultation (MATCHED)` | 404 NOT_FOUND, 409 MATCH_ALREADY_RESOLVED / VETERINARIAN_BUSY / INSUFFICIENT_COINS / IDEMPOTENCY_CONFLICT | PRD CON-05 · PAY-02 · D15·D17 |
-
-지정 예약 또는 즉시 상담을 진행 중인 수의사는 수락할 수 없다. 기한과 요청 상태를 서버에서 확인하고 담당 수의사 확정과 7,000코인 차감을 한 번에 처리한다. 최초 유효 수락만 성립하며 나머지 수락에는 종료 결과를 반환한다. 잔액 부족 시 매칭을 확정하지 않고 보호자에게 `코인이 부족해 상담을 연결할 수 없어요.`를 표시한다. 잔액 부족 이후 탐색·요청의 처리와 보호자 전달 채널은 D15·D17에서 확정한다. 매칭된 두 당사자는 신청 시 선택한 수단의 연결 흐름으로 이어진다. 매칭 결과만으로 연결 성공을 표시하지 않는다. 수락 후에도 기존 건강 기록이나 요약에 대한 접근 권한은 생기지 않는다.
-
-#### 즉시 상담 탐색 일정
-
-| 접수 후 경과 | 탐색 반경 |
+| 모델 | 필드 |
 | --- | --- |
-| 0초 | 500m |
-| 10초 | 1km |
-| 20초 | 1.5km |
-| 30초 | 5km |
-| 40초부터 60초 직전까지 | 10km |
+| ConsultationInput | `petId:string`, `channel:CHAT 또는 VIDEO`, `symptom:string`, `mediaIds:string[]`, `location:{latitude:number,longitude:number}` |
+| VeterinarianInfo | `veterinarianId:string`, `name:string`, `hospital:{hospitalId:string,name:string}`, `profileMedia:MediaRef?`, `introduction:string?`, `averageRating:number?`, `reviewCount:integer?` |
+| ConsultationItem | `consultationId:string`, `pet:{petId:string,name:string}`, `veterinarian:VeterinarianInfo?`, `channel:string`, `status:string`, `requestedAt:datetime` |
+| ConsultationDetail | ConsultationItem + `symptom:string`, `media:MediaRef[]`, `matchedAt:datetime?`, `startedAt:datetime?`, `endedAt:datetime?`, `durationSeconds:integer?`, `journalAvailability:string` |
+| MatchingStatus | `consultationId:string`, `status:string`, `requestedAt:datetime`, `expiresAt:datetime?`, `elapsedSeconds:integer`, `veterinarian:VeterinarianInfo?` |
+| Connection | `connectionId:string`, `channel:string`, `status:string`, `expiresAt:datetime?`, `access:{url:string?,token:string?}` |
+| EndAcceptance | `actionId:string`, `consultationId:string`, `status:ACCEPTED`, `requestedAt:datetime` |
+| JournalResult | `availability:AVAILABLE 또는 NOT_WRITTEN`, `journal:{content:string,media:MediaRef[],updatedAt:datetime}?` |
+| ReviewInput | `rating:number`, `content?:string` |
+| Review | `reviewId:string`, `consultationId:string`, `rating:number`, `content:string?`, `createdAt:datetime` |
+| ConsultationEvent | `eventId:string`, `type:string`, `consultationId:string`, `occurredAt:datetime`, `data:object` |
 
-각 단계에서 보호자 위치를 기준으로 대상 병원을 찾고, 해당 병원에 소속된 대기 수의사에게 동시에 전달한다. 새로 대상에 포함된 수의사에게만 추가 전송한다. 매칭 확정 시 즉시 탐색을 끝낸다. 기한까지 미매칭이면 코인 변동 없이 `UNMATCHED`로 종료한다. 보호자 상세 조회에서 종료 상태를 확인할 수 있으며 보호자에게 `지금 바로 상담할 수 있는 수의사를 찾지 못했어요.`를 표시한다. 보호자에게 결과를 실시간 전달하는 채널은 D15에서 확정한다.
+- 신청의 `petId`·`channel`·`location`은 매칭을 위한 설계 입력이다. 증상·첨부의 필수 여부와 길이·개수, 위치 권한 거부 시 대체 입력은 `D05`·`D17`·`D19` 확정 후 고정한다.
+- 외부 응답과 DB enum을 그대로 노출하지 않는다. 화면 상태의 코드 초안은 `MATCHING`, `MATCHED`, `CONNECTING`, `IN_PROGRESS`, `ENDED`, `COMPLETED`, `CANCELLED`, `EXPIRED`, `CONNECTION_FAILED`다. `ENDED`와 `COMPLETED`의 구분·전이 조건은 `D04`에서 정한다.
+- 매칭 전 수의사·병원 정보는 `null`이다. 아직 시작·종료하지 않은 시각과 상담 시간도 `null`이며 0초로 대체하지 않는다.
+- 프로필 사진·소개·평점·후기 수는 제공 범위에 따라 조회할 선택 정보다. `D16` 확정 전 해당 필드의 제공을 보장하지 않는다. 평가가 없는 경우의 평균은 `null`로 표현하는 초안이다.
+- Connection의 외부 접속 정보는 채팅·화상 업체 계약에 따라 구체화한다. 임의 URL·토큰을 본문으로 받아 연결 대상으로 신뢰하지 않는다.
 
-### 내 상담 목록 조회
+## 엔드포인트
 
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/consultations` | 보호자·수의사 | `requestType(선택), status(선택), page, size` | `200 Page<ConsultationSummary>` | 400 VALIDATION_ERROR | No. 40, 42 · CON-01·04 |
+모든 API는 Bearer 인증이 필요하며 로그인 사용자의 상담에 한정한다.
 
-보호자는 자신이 요청한 건, 수의사는 담당 건을 조회한다. 수의사의 지정 예약 신규 탭은 `RESERVATION`과 `REQUESTED`, 완료 탭은 `COMPLETED`로 조회한다. 수락 전 즉시 상담 요청은 전용 대기 목록에서 조회한다.
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
+| 실시간 상담 신청 | `POST /api/consultations` | Body `ConsultationInput`, Header `Idempotency-Key` | `ConsultationDetail`, 201 | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 MEDIA_NOT_READY·IDEMPOTENCY_CONFLICT, 503 UPSTREAM_UNAVAILABLE | CON-01·CON-05 |
+| 내 상담 목록 | `GET /api/consultations` | Query `petId?:string`, `status?:string`, `page`, `size` | `Page<ConsultationItem>`, 200 | 400 VALIDATION_ERROR, 404 NOT_FOUND | CON-04 |
+| 상담 상세 | `GET /api/consultations/{consultationId}` | 없음 | `ConsultationDetail`, 200 | 404 NOT_FOUND | CON-04 |
+| 매칭 진행·결과 | `GET /api/consultations/{consultationId}/matching` | 없음 | `MatchingStatus`, 200 | 404 NOT_FOUND | CON-02·CON-05 |
+| 매칭·상담 상태 구독 | `GET /api/consultations/{consultationId}/stream` | Header `Last-Event-ID?:string` | `ConsultationEvent` 스트림, 200 | 404 NOT_FOUND, 503 UPSTREAM_UNAVAILABLE | CON-02·CON-05 |
+| 상담 취소 | `POST /api/consultations/{consultationId}/cancellation` | Body `{reason?:string}` | `ConsultationDetail`, 200 | 404 NOT_FOUND, 409 STATE_CONFLICT | CON-02·CON-04 |
+| 상담 연결 | `POST /api/consultations/{consultationId}/connections` | Header `Idempotency-Key`, 본문 없음 | `Connection`, 201 | 404 NOT_FOUND, 409 STATE_CONFLICT·IDEMPOTENCY_CONFLICT, 503 UPSTREAM_UNAVAILABLE | CON-03 |
+| 상담 종료 요청 | `POST /api/consultations/{consultationId}/termination` | Header `Idempotency-Key`, 본문 없음 | `EndAcceptance`, 202 | 404 NOT_FOUND, 409 STATE_CONFLICT·IDEMPOTENCY_CONFLICT, 503 UPSTREAM_UNAVAILABLE | CON-03·CON-04 |
+| 제공된 상담 일지 | `GET /api/consultations/{consultationId}/journal` | 없음 | `JournalResult`, 200 | 404 NOT_FOUND, 503 UPSTREAM_UNAVAILABLE | LOG-01 |
+| 매칭 상대 정보 | `GET /api/consultations/{consultationId}/veterinarian` | 없음 | `VeterinarianInfo`, 200 | 404 NOT_FOUND, 409 STATE_CONFLICT, 503 UPSTREAM_UNAVAILABLE | VET-01 |
+| 완료 상담 평가 | `POST /api/consultations/{consultationId}/reviews` | Body `ReviewInput`, Header `Idempotency-Key` | `Review`, 201 | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 STATE_CONFLICT·IDEMPOTENCY_CONFLICT | REV-01 |
+| 내 상담 평가 조회 | `GET /api/consultations/{consultationId}/reviews` | Query `page`, `size` | `Page<Review>`, 200 | 404 NOT_FOUND | REV-01 |
 
-### 내 상담 상세 조회
+상태 구독은 SSE 방식의 설계 제안이며 `D17`의 전달 방식 확정 후 적용한다. 스트림은 JSON 래퍼를 사용하지 않으며 `id`에 `eventId`, `event`에 `type`, `data`에 ConsultationEvent JSON을 보낸다. 연결 이후 오류·종료·재연결 계약은 전달 채널과 함께 확정한다. Bearer 헤더를 지원하는 클라이언트 수신 방식을 정하고 접근 토큰을 URL 쿼리로 전달하지 않는다.
 
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/consultations/{consultationId}` | 상담 당사자 | `consultationId` | `200 Consultation` | 404 NOT_FOUND | No. 41, 43 · CON-01·04 · D05 |
+## 신청·매칭 처리
 
-반려동물 이름·종·품종과 보호자가 작성한 상담 내용을 반환한다. 지정 예약 요청 단계의 건강 요약 필드는 D05에서 확정한다. 상담에 건강 요약을 제공할 때는 삭제된 건강 기록과 첨부를 제외한다. 즉시 상담은 매칭 전 보호자만 이 상세를 조회할 수 있으며, 매칭 후에도 담당 수의사에게 기존 건강 기록과 건강 요약을 제공하지 않는다.
+1. 신청한 동물의 소유권·삭제 상태, 채널과 위치, 제출한 미디어의 완료·접근 권한을 검사한다. 작성자와 상담 주체는 인증 정보에서 얻는다.
+2. 요청을 매칭 대기로 저장하고 가까운 병원부터 탐색한다. 원본 SQL의 수의사 필수 컬럼과 매칭 전 상대 미정 상태는 `D18`에서 저장 구조를 맞춘다.
+3. 수락 결과와 취소·만료 이벤트가 경합해도 한 최종 상태만 반영한다. 취소·만료된 요청은 뒤늦은 수락으로 연결하지 않는다. 한 요청은 한 수의사에게만 확정한다.
+4. 매칭 성공·미매칭·취소를 상태 조회와 실시간 전달에 동일하게 반영한다. 이벤트는 중복·순서 변경 가능성을 고려해 버전 또는 순번을 포함할지 `D17`에서 정한다. 클라이언트는 재연결 후 상태 API로 최신 결과를 재조회한다.
 
-### 예약 승인
+`Idempotency-Key`는 같은 주체·동작·같은 입력의 재시도에 기존 결과를 반환한다. 같은 키로 다른 입력을 제출하면 409다. 멱등성 키 저장과 신청 상태가 분리되어 중복 신청되는 경우를 방지하고, 키 보관 기간은 구현 전에 정한다.
 
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/consultations/{consultationId}/approve` | 승인된 담당 수의사 | `consultationId, 본문 없음` | `200 Consultation (APPROVED)` | 404 NOT_FOUND, 409 INVALID_CONSULTATION_STATE | PRD CON-02 · D03·D05 |
+기존 반경·전체 60초 합의의 최신 적용 여부는 `D17` 미정이다. 응답 `expiresAt`은 서버가 확정한 기한이 있을 때만 제공한다. 클라이언트가 임의로 반경·만료를 확정하지 않도록 한다.
 
-지정 예약 요청 상태에서 승인한다. 코인 차감 상태를 유지하고 해당 상담에 따른 건강 기록 열람 권한을 부여한다.
+## 연결·취소·종료
 
-### 예약 거절
+- 취소는 매칭 대기 중 보호자에게 허용한다. 같은 취소 재시도는 기존 취소 결과를 반환한다. 매칭 후 허용 시점은 `D04`·`D17`을 확정한 뒤 적용하며 허용되지 않는 현재 상태에는 409를 반환한다.
+- 연결 요청은 매칭된 본인 상담에 한정한다. 같은 키의 재시도로 새 세션을 여러 개 만들지 않는다. 외부 생성 성공 후 내부 저장 실패가 생기면 기존 세션을 재사용하거나 정리·재처리할 수 있게 식별자를 기록한다.
+- 종료 요청 접수 202는 연결 종료의 성공 확정을 뜻하지 않는다. 실제 종료 이벤트·업무 완료 상태는 상세 조회·스트림으로 확인한다. 종료 이벤트가 중복되어도 종료 시각·완료 상태를 중복 반영하거나 되돌리지 않는다.
+- 외부 연결이 성립하지 않았으면 정상 완료로 표시하지 않는다. 연결 실패를 기록하고 재연결 안내를 제공한다. 연결 정보·토큰·파일은 상담 당사자만 받을 수 있다.
+- 매칭만으로 반려동물의 기존 건강 기록 열람 권한을 부여하지 않는다. 제출한 증상·이미지와 기존 건강 기록은 별도 접근 대상으로 취급한다.
 
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/consultations/{consultationId}/reject` | 승인된 담당 수의사 | `consultationId, 본문 없음` | `200 Consultation (REJECTED)` | 404 NOT_FOUND, 409 INVALID_CONSULTATION_STATE | PRD CON-02 · PAY-02 · D04·D05·D06 |
+## 일지·평가
 
-지정 예약 요청 상태에서 거절한다. 해당 예약에서 차감한 코인을 한 번만 전액 반환한다. 이후 기록과 연결 권한은 미정이다.
+- 상담 내역과 종료 결과는 일지가 없어도 조회한다. 외부 제공자가 미작성을 정상 응답으로 확인한 경우 `{"availability":"NOT_WRITTEN","journal":null}`을 반환한다.
+- 제공된 일지가 있으면 `availability:AVAILABLE`과 본문·첨부를 반환한다. 원본 제공자의 장애·타임아웃은 503이며 미작성으로 바꾸지 않는다. 일지·첨부 직접 URL에도 해당 상담 보호자의 접근 권한을 검사한다.
+- 평가는 본인 완료 상담에만 작성하며 `rating`은 필수, `content`는 선택이다. 별점 범위·상담당 평가 수·수정/삭제·집계 범위는 `D16`에서 정한다. 현재 목록 응답은 허용 평가 수를 하나로 확정하지 않도록 Page 모델을 사용하는 설계안이다.
+- 동일 평가 요청의 재시도는 같은 평가를 반환하고 평균·개수 집계를 중복 증가시키지 않는다. 평가 등록 후 표시하는 집계의 반영 시점·실패 복구는 상세 설계에서 정한다.
 
-### 상담 취소
+## 구현 전 확인
 
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/consultations/{consultationId}/cancel` | 매칭 전 즉시 상담은 요청 보호자. 그 외 주체 미정 | `consultationId, 본문 없음` | `200 Consultation (CANCELLED)` | 403 FORBIDDEN, 404 NOT_FOUND, 409 INVALID_CONSULTATION_STATE | PRD CON-04·05 · PAY-02 · D04·D05·D06·D17 |
+| PRD 항목 | 확인 내용 |
+| --- | --- |
+| D04·D07 | 연결 종료·업무 완료·일지 제공 관계, 취소·중단·재시도와 완료 오처리 |
+| D05·D19 | 증상·이미지의 후보/확정 상대 전달과 취소·종료 후 파일 접근 |
+| D06 | 채팅·화상 업체, 연결/종료 이벤트, 세션 만료·재연결·이력 보관 |
+| D16 | 상대 프로필·평가 범위·횟수·집계 |
+| D17 | 가용 상태·수락 제공 주체·인증, 위치·거리·탐색 순서·반경·기한·전달 채널 |
+| D18 | MySQL 상담과 MongoDB 반려동물의 식별자 연결·상태 저장·멱등성 제약 |
 
-즉시 상담 매칭 전 취소는 잔액을 유지하고 대기 목록에서 즉시 제거한다. 지정 예약 및 즉시 상담 매칭 후 취소가 성립하면 실제 차감 코인을 한 번 전액 반환한다. 승인·수락과 취소가 경합해도 상담 상태와 원장 결과가 일치해야 한다. 취소 주체·기한·매칭 이후 허용 조건과 후속 권한은 D04·D05·D06·D17에서 확정한다.
-
-### 상담 연결 요청
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/consultations/{consultationId}/connections` | 상담 당사자. 안심번호 발신은 담당 수의사 | `Idempotency-Key 필수. consultationId, 본문 없음` | `202 ConsultationConnection` | 403 FORBIDDEN, 404 NOT_FOUND, 409 INVALID_CONSULTATION_STATE / IDEMPOTENCY_CONFLICT, 503 PROVIDER_UNAVAILABLE | No. 27 · CON-03·05 · D06 |
-
-승인된 지정 예약 또는 매칭된 즉시 상담에서 서버가 신청 시 선택한 수단으로 연결한다. 제3자 참여를 차단한다. 안심번호는 담당 수의사가 보호자에게 발신하며 양쪽 실제 번호를 공개하지 않는다. 전화 통화 시간에 따른 추가 차감과 고정 자동 종료는 없다. 채팅·화상 참여 정보, 제공 업체, 수단 변경 및 재연결 허용 상태는 D06에서 확정한다. 새 연결 시도는 새 멱등 키를 사용한다.
-
-### 상담 연결 상태 조회
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/consultations/{consultationId}/connections/{connectionId}` | 상담 당사자 | `consultationId, connectionId` | `200 ConsultationConnection` | 404 NOT_FOUND | PRD CON-03 · D06 |
-
-제공사 장애를 포함해 연결 시도가 실패하면 연결 결과를 `FAILED`로 기록한다. 연결이 성립하지 않은 상담은 완료할 수 없다. 보호자에게 `수의사와 연결하지 못했어요. 다시 연결해 주세요.`를 표시하고 재연결 절차를 제공한다. 재연결 이후 취소가 성립하면 실제 차감 코인을 전액 반환한다.
-
-### 상담 완료
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/consultations/{consultationId}/complete` | 승인된 담당 수의사 | `consultationId, 본문 없음` | `200 Consultation (COMPLETED)` | 404 NOT_FOUND, 409 INVALID_CONSULTATION_STATE / JOURNAL_REQUIRED | PRD CON-03·04 · LOG-01 · SET-01 · D03·D04·D05·D06 |
-
-실제 상담을 마치고 일지를 저장한 담당 수의사가 호출한다. 서버는 연결이 성립하고 완료 가능한 상담인지 확인한 뒤, 해당 상담에 유효한 일지 본문이 저장되어 있는지 확인한다. 연결이 성립하지 않았으면 `INVALID_CONSULTATION_STATE`, 일지가 없으면 `JOURNAL_REQUIRED`를 반환한다. 완료 시 코인 사용을 확정하고 정산에 한 번만 반영하며, 해당 상담의 건강 기록 열람 권한을 종료한다. 같은 완료 재시도는 기존 결과를 반환한다.
-
-### 완료된 상담의 보호자 신고
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/consultations/{consultationId}/reports` | 완료된 상담의 담당 수의사 | `Idempotency-Key 필수. 신고 사유·입력 필드는 D04 미정` | `201 {"consultationId":"con-1","reportId":"report-1","status":"RECEIVED"}` | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 INVALID_CONSULTATION_STATE / IDEMPOTENCY_CONFLICT | PRD CON-04 · COM-02 · D04 |
-
-서버는 상담이 `COMPLETED` 상태일 때만 접수한다. 신고 대상과 신고자는 해당 상담의 보호자와 담당 수의사로 결정하고 신고를 상담에 연결한다. 신고 접수 결과와 별개로 기존 상담 상태·코인 원장·정산을 유지한다. 신고 사유·입력값·실패 화면은 D04에서 확정한다.
-
-
-### 상담 중 반려동물 건강 기록 목록
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/consultations/{consultationId}/health-records` | 승인된 지정 예약의 담당 수의사 | `date, type, page, size` | `200 Page<HealthRecordSummary>` | 400 VALIDATION_ERROR, 403 HEALTH_ACCESS_DENIED, 404 NOT_FOUND | PRD CON-02·04 · HLT-02 · D05 |
-
-상담에 연결된 반려동물로 조회 범위를 결정한다. 이전에 공유했거나 승인 예약이 남아 있어도 삭제된 기록과 첨부는 목록과 페이지 집계에서 제외한다. 즉시 상담은 매칭 후에도 이 경로와 파일 경로의 건강 기록 열람 권한을 부여하지 않는다. 완료된 해당 상담으로는 열람 권한을 얻을 수 없다. 접종·진료·미디어·복수 승인 예약은 D05에서 확정한다.
-
-### 상담 중 반려동물 건강 기록 상세
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/consultations/{consultationId}/health-records/{recordId}` | 승인된 지정 예약의 담당 수의사 | `consultationId, recordId` | `200 HealthRecord` | 403 HEALTH_ACCESS_DENIED, 404 NOT_FOUND | PRD CON-02·04 · HLT-01·04 · D05 |
-
-기록이 상담에 연결된 반려동물의 기록인지 검증한다. 삭제된 기록의 ID로 조회하면 `404 NOT_FOUND`를 반환한다. 삭제되지 않은 기록의 첨부 범위는 D05에서 확정한다.
-
-### 상담 일지 작성
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/consultations/{consultationId}/journal` | 상담을 마친 담당 수의사 | `{"content":"보호자가 설명한 상태와 상담 내용을 기록했습니다."}` | `201 Journal` | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 INVALID_CONSULTATION_STATE / JOURNAL_ALREADY_EXISTS | No. 44 · CON-04 · LOG-01 · D07 |
-
-연결이 성립한 본인 담당 상담을 실제로 마친 뒤, 완료 처리 전에 작성한다. `content`는 비어 있지 않은 필수 본문이다. 일지 저장은 상담 완료의 선행 조건이며, 완료 처리는 별도의 완료 요청에서 수행한다. 공개 절차와 작성 기한은 미정이다.
-
-### 상담 일지 조회
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/consultations/{consultationId}/journal` | 해당 보호자·담당 수의사 | `consultationId` | `200 Journal` | 404 NOT_FOUND | PRD LOG-01 · D05·D07 |
-
-담당 수의사는 자신이 작성한 일지를 확인할 수 있다. 보호자는 상담이 완료되고 일지가 공개된 뒤 조회할 수 있다. 일지 조회 권한은 비공개 건강 기록이나 첨부의 권한을 부여하지 않는다.
-
-### 상담 일지 수정
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `PATCH` | `/api/consultations/{consultationId}/journal` | 작성한 담당 수의사 | `{"content":"상담 내용을 보완했습니다."}` | `200 Journal (updatedAt 포함)` | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 JOURNAL_NOT_EDITABLE | No. 45 · LOG-01 · D07 |
-
-요구사항의 마지막 수정 시각을 반환한다. 수정 권한·기한 및 ERD 저장 필드는 미정이다.
-
-### 상담 후기 작성
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/consultations/{consultationId}/reviews` | 완료된 상담의 보호자 | `Idempotency-Key 필수. {"rating":5,"content":null}` | `201 {"consultationId":"con-1","rating":5,"content":null,"createdAt":"2026-11-15T15:00:00+09:00"}` | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 INVALID_CONSULTATION_STATE / IDEMPOTENCY_CONFLICT | PRD REV-01 · D16 |
-
-별점 필수, 텍스트 선택이다. 별점 범위와 상담당 허용 수·공개 정책은 미정이다. 5는 형식 예시이며 범위를 정하지 않는다.
-
-## 응답 필드와 데이터 정책
-
-| 응답 타입 | 필드 |
-|---|---|
-| ConsultationSummary | `consultationId: string`, `requestType: string`, `channel: string`, `feeCoins: integer`, `status: string`, `pet: {petId,name,speciesName,breedName}`, `veterinarian: {veterinarianId,name}?`, `preferredAt: datetime?`, `createdAt: datetime`, `matchedAt: datetime?`, `matchExpiresAt: datetime?` |
-| Consultation | ConsultationSummary + `content: string?`, `completedAt: datetime?`, `cancelledAt: datetime?` |
-| InstantOffer | `consultationId: string`(수락 식별자), `channel: string`, `species: string`(강아지·고양이), `matchExpiresAt: datetime`(60초 기준 남은 시간 계산용). 거리·보호자 정보·건강 정보는 제외한다. |
-| ConsultationConnection | `connectionId: string`, `channel: string`, `status: string`(`PENDING`, `CONNECTED`, `FAILED` 초안), `createdAt: datetime`. 외부 연결 식별자와 실제 번호는 서버 내부에 둔다. |
-| Journal | `consultationId: string`, `content: string`, `updatedAt: datetime?` |
-
-`requestType`은 `RESERVATION`·`INSTANT`, `channel`은 `CHAT`·`VIDEO`·`MASKED_CALL` 초안이다. `feeCoins`는 신청에 적용한 요금 7,000코인이며 실제 차감 시점은 유형에 따라 다르다. `preferredAt`은 지정 예약에 필수다. `matchedAt`은 즉시 상담이 매칭될 때, `matchExpiresAt`은 즉시 상담에만 설정한다. 즉시 상담은 매칭 전 `veterinarian`이 null이다. API 상태는 지정 예약의 `REQUESTED`·`APPROVED`·`REJECTED`, 즉시 상담의 `MATCHING`·`MATCHED`·`UNMATCHED`, 공통 `CANCELLED`·`COMPLETED`를 사용하는 초안이다. 내부 상태와 전이 세부 조건은 D03·D04·D17에서 확정한다. 요약 및 상세는 양측 실제 번호를 포함하지 않는다. `completedAt` 및 일지 수정 시각의 저장 위치는 확인 대상이다. 건강 기록 응답 타입은 [건강 기록](health.md)을 따른다.
+수락·종료·일지 제공 이벤트의 내부 연동 API는 제공 주체와 인증 계약을 정한 뒤 명세화한다. 현재 문서는 보호자 API 초안이며 실제 상담 제공 업체·서버·DB 연동 검증은 수행하지 않았다.

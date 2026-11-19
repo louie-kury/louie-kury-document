@@ -1,99 +1,68 @@
-# API 계약 — 건강 기록
+# 건강 기록·병원진료 API
 
-공통 응답 형식은 [API 명세 안내](README.md)를 참고한다.
+**후순위 설계 초안**이다. [PRD](../prd.md)의 `HLT-01`~`HLT-04`, `PET-03`과 요구사항정의서의 `(필수3)요구사항정의서` 29~33행·37~41행을 따른다. 건강 기록·진료 이력은 MongoDB에 저장한다. 요청 경로·모델 이름은 이번 API 설계안이며 필수값·단위·범위는 `D12` 확정 후 검증 규칙에 반영한다.
 
----
+[공통 계약](README.md)을 적용한다. 아래 JSON은 성공 응답의 `data`다. `Page<T>`는 공통 목록 모델이며 모든 ID는 문자열이다.
 
-### 건강 기록 목록 조회
+## 데이터 모델
 
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/pets/{petId}/health-records` | 보호자 본인 | `date(YYYY-MM-DD, 선택), type(선택), page, size` | `200 Page<HealthRecordSummary>` | 400 VALIDATION_ERROR, 404 NOT_FOUND | No. 18 · HLT-02 · D12 |
+| 모델 | 필드 |
+| --- | --- |
+| HealthRecordInput | `type:string`, `observedAt:datetime`, `details:HealthDetails`, `mediaIds:string[]` |
+| HealthRecordItem | `recordId:string`, `petId:string`, `type:string`, `observedAt:datetime`, `summary:string`, `media:MediaRef[]` |
+| HealthRecordDetail | HealthRecordItem + `details:HealthDetails`, `createdAt:datetime`, `updatedAt:datetime` |
+| HealthCalendarDay | `date:date`, `recordCount:integer` |
+| VisitInput | `visitedAt:date`, `hospitalName:string`, `category:string`, `reason:string`, `diagnosis:string`, `treatment:string`, `medicationInstructions:string`, `cost:decimal`, `nextVisitDate:date?`, `memo:string` |
+| VisitItem | `visitId:string`, `petId:string`, `visitedAt:date`, `hospitalName:string`, `category:string` |
+| VisitDetail | VisitItem + `reason:string?`, `diagnosis:string?`, `treatment:string?`, `medicationInstructions:string?`, `cost:decimal?`, `nextVisitDate:date?`, `memo:string?`, `createdAt:datetime`, `updatedAt:datetime` |
 
-같은 날짜와 반려동물로 조회한 달력과 목록은 동일한 기록을 반영한다. 삭제된 기록은 목록과 페이지 집계에서 제외한다.
+입력 모델 표는 **입력 후보 필드 전체**를 나열한다. 공통 선택 표기와 별도로 HealthRecordInput·VisitInput의 필드별 필수성·NULL 허용은 `D12` 미정이다. PATCH는 변경 필드만 보내며 누락은 유지한다. 허용된 필드의 명시적 NULL 해제 규칙도 `D12`에서 정한다. 수정 요청의 `petId` 변경은 받지 않으며 대상은 경로로 결정한다.
 
-### 건강 기록 달력 조회
+건강 유형의 기술 코드 초안은 다음과 같다. 제품 요구의 확정 범위와 각 유형의 상세 입력을 구분한다.
 
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/pets/{petId}/health-records/calendar` | 보호자 본인 | `month(YYYY-MM, 필수)` | `200 {"dates":["2026-11-10","2026-11-12"]}` | 400 VALIDATION_ERROR, 404 NOT_FOUND | No. 18 · HLT-02 · D12 |
+| type 초안 | 제품 유형 | HealthDetails의 입력 후보 |
+| --- | --- | --- |
+| STOOL | 변 상태 | `shape:string?`, `color:string?`, `memo:string?` |
+| WOUND | 상처 | `location:string?`, `memo:string?` |
+| MEDICATION | 복용약 | `name:string?`, `takenAt:datetime?`, `amount:decimal?`, `unit:string?`, `memo:string?` |
+| MEAL_WATER | 식사·음수 | `kind:string?`, `amount:decimal?`, `unit:string?`, `memo:string?` |
+| VOMIT | 구토 | `color:string?`, `memo:string?` |
+| ACTIVITY | 활동 변화 | `memo:string?` |
+| WEIGHT | 체중 | `value:decimal?`, `unit:string?` |
+| OTHER | 기타 | `memo:string?` |
 
-삭제되지 않은 기록이 있는 날짜만 오름차순으로 반환한다. 빈 달은 dates가 빈 배열이다.
+상세 필드·코드·단위는 설계 후보이며 아직 입력 범위가 확정된 enum이 아니다. 복용 시각과 관찰 시각, 서버 작성 시각은 구분한다. 진료비 `cost`의 통화 단위·음수/0 허용도 `D12`에서 확정한다.
 
-### 건강 기록 상세 조회
+## 엔드포인트
 
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/pets/{petId}/health-records/{recordId}` | 보호자 본인 | `petId, recordId` | `200 HealthRecord` | 404 NOT_FOUND | No. 19 · HLT-01·02 · D12 |
+모든 API는 Bearer 인증이 필요하다. `{petId}`는 로그인 사용자의 현재 관리 대상 반려동물이어야 한다.
 
-기록이 지정한 반려동물에 속해야 한다. 삭제된 기록의 ID로 조회하면 `404 NOT_FOUND`를 반환한다.
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
+| 건강 기록 목록 | `GET /api/pets/{petId}/health-records` | Query `date?:date`, `type?:string`, `page`, `size` | `Page<HealthRecordItem>`, 200 | 400 VALIDATION_ERROR, 404 NOT_FOUND | HLT-02 |
+| 달력 표시 | `GET /api/pets/{petId}/health-records/calendar` | Query `month:YYYY-MM` | `{"month":"2026-11","days":[{"date":"2026-11-19","recordCount":2}]}`, 200 | 400 VALIDATION_ERROR, 404 NOT_FOUND | HLT-02 |
+| 건강 기록 상세 | `GET /api/pets/{petId}/health-records/{recordId}` | 없음 | `HealthRecordDetail`, 200 | 404 NOT_FOUND | HLT-01 |
+| 건강 기록 등록 | `POST /api/pets/{petId}/health-records` | Body `HealthRecordInput` | `HealthRecordDetail`, 201 | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 MEDIA_NOT_READY | HLT-01·HLT-04 |
+| 건강 기록 수정 | `PATCH /api/pets/{petId}/health-records/{recordId}` | Body 변경할 HealthRecordInput 필드 | `HealthRecordDetail`, 200 | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 MEDIA_NOT_READY | HLT-01·HLT-04 |
+| 건강 기록 삭제 | `DELETE /api/pets/{petId}/health-records/{recordId}` | 없음 | 본문 없음, 204 | 404 NOT_FOUND | HLT-01 |
+| 병원진료 목록 | `GET /api/pets/{petId}/visits` | Query `page`, `size` | `Page<VisitItem>`, 200 | 404 NOT_FOUND | PET-03 |
+| 병원진료 상세 | `GET /api/pets/{petId}/visits/{visitId}` | 없음 | `VisitDetail`, 200 | 404 NOT_FOUND | PET-03 |
+| 병원진료 등록 | `POST /api/pets/{petId}/visits` | Body `VisitInput` | `VisitDetail`, 201 | 400 VALIDATION_ERROR, 404 NOT_FOUND | PET-03 |
+| 병원진료 수정 | `PATCH /api/pets/{petId}/visits/{visitId}` | Body 변경할 VisitInput 필드 | `VisitDetail`, 200 | 400 VALIDATION_ERROR, 404 NOT_FOUND | PET-03 |
+| 병원진료 삭제 | `DELETE /api/pets/{petId}/visits/{visitId}` | 없음 | 본문 없음, 204 | 404 NOT_FOUND | PET-03 |
 
-### 건강 기록 등록
+## 처리 규칙
 
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/pets/{petId}/health-records` | 보호자 본인 | `multipart/form-data. data: {"type":"WOUND","observedAt":"2026-11-12T09:00:00+09:00","details":[{"subType":null,"textValue":"왼쪽 앞발 상처","numericValue":null}]}, files(선택, 파일마다 같은 파트 이름 반복)` | `201 HealthRecord` | 400 VALIDATION_ERROR, 404 NOT_FOUND, 413 FILE_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 503 STORAGE_UNAVAILABLE | No. 20 · HLT-01·04 · D12 |
+- 반려동물과 각 기록의 소유권·연결 관계를 모두 검사한다. `{petId}`를 바꿔 다른 동물의 `{recordId}`·`{visitId}`를 조회하거나 수정할 수 없다. 존재하지 않음·타인 소유·삭제 상태는 404로 통일한다.
+- 목록은 발생 시각 내림차순·동률 식별자 순으로 정렬하는 설계안이다. 서버는 서버 작성 시각을 별도로 기록한다. 달력은 삭제되지 않은 기록이 있는 날짜만 반환하며 빈 달은 `days:[]`다.
+- 기록을 삭제하면 원본과 첨부를 보관하면서 달력·목록·상세 및 기존 공유 경로에서 제외한다. 같은 날짜에 다른 기록이 있으면 해당 날짜 표시를 유지한다.
+- 미디어는 [공통 미디어](media.md)로 먼저 업로드한 식별자를 연결한다. 저장 전 존재·완료·권한을 검사하고 저장 실패 시 기존 첨부를 유지한다. 파일 직접 조회에도 원본 기록의 현재 권한·삭제 상태를 적용한다.
+- 새 등록 요청의 중복 처리 정책은 공통 멱등성 계약을 적용한다. 저장과 미디어 연결이 나뉘면 보상·재처리 방식을 정하여 한쪽만 성공한 상태를 복구한다.
 
-type, observedAt는 필수 초안이다. 유형별 입력값과 첨부 제한은 미정이다. 첨부는 생성한 건강 기록 ID로 기존 건강기록미디어에 연결한다.
+## 구현 전 확인
 
-### 건강 기록 수정
+- `D12` — 유형별 필수값·코드·단위·정밀도·날짜·변경 범위, 프로필 체중 연계, 같은 시각 다건 처리
+- `D11`·`D19` — 반려동물 삭제에 따른 기록·파일 접근과 보관·파기, 파일 제한
+- `D18` — MongoDB 문서·인덱스와 미디어 식별자 연결, 달력 날짜 경계와 조회 정렬
 
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `PATCH` | `/api/pets/{petId}/health-records/{recordId}` | 보호자 본인 | `multipart/form-data. data: 등록 JSON 필드 중 변경할 값과 retainedMediaIds(선택, 기존 첨부 ID 배열), files(선택, 파일마다 같은 파트 이름 반복)` | `200 HealthRecord` | 400 VALIDATION_ERROR, 404 NOT_FOUND, 413 FILE_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 503 STORAGE_UNAVAILABLE | No. 21 · HLT-01·04 · D12 |
-
-수정 허용 범위와 수의사 공유 반영 방식(D05)은 미정이다.
-
-`retainedMediaIds`를 생략하면 기존 첨부를 모두 유지한다. 배열을 보내면 현재 기록에 이미 연결된 ID만 지정할 수 있으며, 지정한 첨부만 유지한다. 빈 배열은 기존 첨부를 모두 해제한다. 새 `files`는 유지한 첨부에 추가한다.
-
-### 건강 기록 삭제
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `DELETE` | `/api/pets/{petId}/health-records/{recordId}` | 보호자 본인 | `petId, recordId` | `204 본문 없음` | 404 NOT_FOUND | No. 22 · HLT-01·04 · D05·D12 |
-
-`deleted_at`에 삭제 시각을 기록하고 본문·상세·첨부 원본은 보관한다. 삭제가 성공하면 보호자의 달력·목록·상세와 수의사의 상담 조회·공유 요약에서 기록과 첨부를 제외한다. 삭제된 기록이나 해당 첨부의 기존 ID·URL로 요청하면 `404 NOT_FOUND`를 반환한다. 기록과 파일의 보관 기간은 미정이다.
-
-### 예방접종 이력 조회
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/pets/{petId}/vaccinations` | 보호자 본인 | `page, size` | `200 Page<Vaccination>` | 400 VALIDATION_ERROR, 404 NOT_FOUND | PRD HLT-03 · D12 |
-
-기본 예방접종 여부는 반려동물 프로필의 별도 항목이다.
-
-### 예방접종 이력 등록
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/pets/{petId}/vaccinations` | 보호자 본인 | `{"vaccineNameId":1,"vaccinatedAt":"2026-11-12T09:00:00+09:00"}` | `201 Vaccination` | 400 VALIDATION_ERROR, 404 NOT_FOUND | PRD HLT-03 · D12 |
-
-`vaccineNameId`는 접종명 목록의 정수 ID다. 필수 항목, 접종명 선택지 공급, 수정·삭제 범위는 미정이다.
-
-### 병원 진료 이력 조회
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/pets/{petId}/clinic-visits` | 보호자 본인 | `page, size` | `200 Page<ClinicVisit>` | 400 VALIDATION_ERROR, 404 NOT_FOUND | PRD HLT-03 · D12 |
-
-방문 시각을 기준으로 조회한다.
-
-### 병원 진료 이력 등록
-
-| Method | URL | 인증 | 요청 | 성공 응답 | 오류 응답 | Spec |
-| --- | --- | --- | --- | --- | --- | --- |
-| `POST` | `/api/pets/{petId}/clinic-visits` | 보호자 본인 | `{"visitedAt":"2026-11-12T09:00:00+09:00","type":"외래","content":"정기 검진"}` | `201 ClinicVisit` | 400 VALIDATION_ERROR, 404 NOT_FOUND | PRD HLT-03 · D12 |
-
-필수 항목과 진료 유형·수정·삭제 범위는 미정이다.
-
-## 응답 필드와 데이터 정책
-
-| 응답 타입 | 필드 |
-|---|---|
-| HealthRecordSummary | `recordId: integer`, `type: string`, `observedAt: datetime`, `summary: string?` |
-| HealthRecord | HealthRecordSummary + `petId: string`, `details: Detail[]`, `media: MediaRef[]`, `createdAt: datetime`, `updatedAt: datetime` |
-| Detail | `subType: string?`, `textValue: string?`, `numericValue: number?` |
-| Vaccination | `vaccinationId: string`, `vaccineNameId: integer`, `vaccineName: string`, `vaccinatedAt: datetime` |
-| ClinicVisit | `visitId: string`, `visitedAt: datetime`, `type: string`, `content: string` |
-
-유형 초안은 `STOOL`(변 상태), `WOUND`, `MEDICATION`, `FOOD`, `WATER`, `VOMIT`, `ACTIVITY_CHANGE`, `WEIGHT`, `OTHER`다. 복용약에는 복용 시각이 필요하다. 복용약·활동 변화·기타는 요구사항 시트에 있으며 PRD·ERD 기존 유형에 추가 합의가 필요하다. 복용 시각이 관찰 시각과 다른 경우의 입력 구조 및 상세 유형별 단위는 D12에서 정한다.
+후순위 초안의 경로와 모델은 위 정책을 확정한 뒤 구현 계약으로 고정한다. 실제 API·MongoDB 실행 검증은 아직 수행하지 않았다.

@@ -1,145 +1,151 @@
 # 루이쿠리 API 명세
 
-요구사항정의서 세 번째 시트의 No. 1~87, [PRD](../prd.md), [ERD](../erd.md)를 기준으로 작성한 API 설계 초안이다. 표의 구성은 [FinPlay API 계약](https://github.com/finplay-team/finplay-backend/tree/dev/docs/api)을 따른다. `No.`는 요구사항정의서 번호다. PRD 기능 ID와 `Dxx`는 제품 정책과 미결정 항목을 가리킨다.
+현재 [PRD](../prd.md), 최신 요구사항정의서 `(필수3)요구사항정의서`와 사용자가 확정한 저장소 구분에 맞춰 새로 작성한 **검토용 API 설계 초안**이다. 기준일은 2026-11-19이다. 기능별 계약을 먼저 읽고 필요한 공통 규칙만 참고한다.
 
-반영 기준 커밋은 PRD `5f03d5b`(수의사 가입과 상담·정산 정책 갱신), ERD `1970283`(최신 PRD 변경 사항을 ERD에 반영)이다. 기존 시트와 충돌하는 소속 병원 선택 및 전화 전용 상담 항목은 최신 PRD 기준으로 갱신했다.
+제품 정책은 PRD가 aou기준이며 API의 경로·DTO 필드명·상태코드·기술 코드는 이번 설계 제안이다. D 항목의 미정값은 본문에 표시했다. 구현된 서버의 라우트나 실제 연동 성공을 뜻하지 않는다.
 
-## 도메인별 명세
+## 문서와 개발 우선순위
 
-| 문서 | 엔드포인트 수 |
-| --- | --- |
-| [계정·인증](auth.md) | 13 |
-| [반려동물](pet.md) | 6 |
-| [건강 기록](health.md) | 10 |
-| [수의사·병원 탐색](veterinarian.md) | 5 |
-| [상담·일지·후기](consultation.md) | 21 |
-| [미디어](media.md) | 2 |
-| [커뮤니티·신고](community.md) | 15 |
-| [결제·코인·정산](payment.md) | 8 |
-| [관리자](admin.md) | 29 |
-
-## 공통 계약 초안
-
-- 경로는 `/api`를 사용한다. 역할이 지정된 요청은 `Authorization: Bearer <accessToken>`을 사용하고 서버가 계정 역할과 리소스 권한을 확인한다. OAuth 콜백과 재설정처럼 별도 인증이 필요한 요청은 표에 표시한다.
-- 성공 표의 JSON과 응답 타입은 공통 성공 응답의 `data`다. 예를 들어 `{"data":{"balanceCoins":7000}}`으로 응답한다. 204, 본문 없음으로 표시한 202, 파일 응답, 302 리다이렉트에는 JSON 래퍼를 사용하지 않는다.
-- 오류 응답의 예시는 `{"code":"VALIDATION_ERROR","message":"요청 값이 올바르지 않습니다."}`다. 인증 실패는 401 `UNAUTHORIZED`, 역할·행위 권한 부족은 403 `FORBIDDEN`이다. 본인 소유 또는 당사자만 조회 가능한 객체는 타인의 ID와 없는 ID에 같은 404 `NOT_FOUND`를 반환한다. 표에는 공통 오류 외에 각 API의 주요 오류를 적었다.
-- JSON 예시의 입력 필드는 별도 언급이 없으면 필수 초안이다. 요청 필드 이름 뒤 `?`는 생략 가능, 타입 뒤 `?`는 응답에서 `null` 허용을 뜻한다. PATCH에서 생략한 값은 유지하고, 명시적 `null`은 해제가 허용되는 필드만 받는다. 변경할 필드와 파일이 모두 없으면 400이다.
-- 날짜는 `YYYY-MM-DD`, 시각은 오프셋을 포함한 ISO 8601 형식을 사용한다. 달력의 날짜 경계는 `Asia/Seoul` 초안이다. 예시의 문자열 ID는 불투명 식별자다. 게시글·댓글·종·품종 등 정수 식별자는 해당 문서에 표시한다.
-- `Page<T>`는 `{content:T[],page:integer,size:integer,totalElements:integer,totalPages:integer,hasNext:boolean}`이다. `page`는 기본 0, `size`는 기본 20 및 1~100 범위가 초안이다. 빈 목록은 200과 빈 배열을 반환한다.
-- `MediaRef`는 `{mediaId:string,url:string,contentType:string}`이다. 파일 URL에서도 현재 접근 권한을 검사한다.
-- 서비스 데이터 삭제는 소프트 삭제로 처리한다. 조회에는 삭제 상태를 반영하고 원본 데이터와 파일은 보관한다. 구체적인 보관 기간과 파기 기준은 미정이다.
-- `Idempotency-Key`가 필수인 API는 호출자와 경로 범위에서 같은 키·같은 입력에 기존 결과를 반환하고, 같은 키에 다른 입력을 쓰면 409 `IDEMPOTENCY_CONFLICT`를 반환한다. 키 보관 기간은 구현 전에 확정한다.
-
-### 파일과 함께 저장
-
-- 반려동물·건강 기록·게시글의 생성과 수정은 `multipart/form-data`를 사용한다. `data`는 필수 JSON 파트(`Content-Type: application/json`)이고, 새 파일은 각 API의 파일 파트로 보낸다. 파일 없이 저장할 때는 파일 파트를 생략한다. 첨부만 바꾸는 PATCH의 `data`에는 첨부 관련 필드를 담거나, 새 파일만 보내면 `{}`를 사용한다.
-- 파일과 데이터의 유효성, 수정 대상의 권한을 확인한 후 저장한다. 파일 업로드가 실패하면 본문과 첨부 변경을 반영하지 않는다. DB 저장이 실패하면 이번 요청에서 새로 올린 파일을 정리하고, 정리 실패 시 재시도할 수 있게 기록한다. 수정 실패 시 기존 첨부는 유지한다.
-
-## 정책과 ERD 확인 항목
-
-| 영역 | 확인할 내용 |
-| --- | --- |
-| 인증·관리자 | 시트의 로그인·소셜 가입·복구 요건은 D11과 함께 확정한다. 시트의 관리자 고정 자격증명 및 관리자 상세 비밀번호 항목은 계약에서 제외했다. 비밀번호 복구는 계정 소유 확인 후 진행한다. |
-| 건강 기록 | 삭제 시각을 기록하고 삭제된 기록·첨부는 보호자 조회와 상담 공유에서 제외한다. 복용약·활동 변화·기타 유형, 관찰 시각과 복용 시각, 타입별 필수값은 D12에서 확인한다. |
-| 상담·일지 | 지정 예약과 위치 기반 즉시 상담의 권한·차감 시점을 구분한다. 상담 수단 연동·알림·위치 정책은 D05·D06·D15·D17, 보호자 신고 입력과 일지 수정·삭제는 D04·D07에서 확정한다. |
-| 수의사·병원 | 병원 정보·병원 명의 사업자 계좌·면허는 수의사 가입에 필수다. 가입 화면의 주소 검색은 카카오 우편번호 서비스를 사용한다. 상세주소 입력·소속 확인은 D11, 계좌 입력·실명조회 검증 범위는 D02에서 확정한다. |
-| 커뮤니티·신고 | 삭제 표시와 신고 조치 범위는 D08에서 확정한다. 상담 보호자 신고는 완료 후에 접수하고 완료된 상담과 담당 수의사를 연결한다. 일반 신고 증빙과 게시글·댓글 작성자 키는 추가 확인이 필요하다. |
-| 결제·정산 | 7,700원으로 7,000코인을 충전한다. 상담 1건당 7,000코인, 정산 기준 7,000원, 수수료 20%(1,400원), 병원 계좌 지급 5,600원을 적용한다. 외부 통지·환불·지급 실패는 D01·D02·D10에서 확정한다. |
-
-## 최신 PRD에서 추가된 흐름
-
-- [즉시 상담 신청](consultation.md#위치-기반-즉시-상담-신청), [수의사 대기 목록 구독](consultation.md#즉시-상담-대기-목록-구독), [즉시 상담 수락](consultation.md#즉시-상담-수락)
-- [상담 연결](consultation.md#상담-연결-요청), [상담 일지 작성](consultation.md#상담-일지-작성), [상담 완료](consultation.md#상담-완료), [완료된 상담의 보호자 신고](consultation.md#완료된-상담의-보호자-신고)
-- [병원 소속 수의사 가입](auth.md#수의사-가입-및-면허-제출), [병원 명의 계좌 정산](payment.md#내-수의사-정산-목록)
-
-## 요구사항 추적표
-
-| No. | 기능 | 명세 |
+| 문서 | 개발 구분 | HTTP 계약 수 |
 | --- | --- | --- |
-| 1 | 메인페이지ui | 서비스 소개 UI |
-| 2 | 레이아웃 | 헤더 UI와 지도 API. Shop은 v2, [`GET /api/hospitals`](veterinarian.md#지도-병원-목록-조회), [`GET /api/hospitals/{hospitalId}`](veterinarian.md#지도-병원-상세-조회) |
-| 3 | 레이아웃 | 푸터와 정적 링크 UI |
-| 4 | 일반 로그인 | [`POST /api/auth/login`](auth.md#일반-로그인) |
-| 5 | 소셜 로그인 | [`GET /api/auth/oauth/{provider}/authorize`](auth.md#소셜-로그인-시작), [`GET /api/auth/oauth/{provider}/callback`](auth.md#소셜-로그인-콜백) |
-| 6 | 아이디찾기 | [`POST /api/auth/login-id/recovery-requests`](auth.md#아이디-찾기-요청) |
-| 7 | 비밀번호찾기 | [`POST /api/auth/password/reset-requests`](auth.md#비밀번호-재설정-요청), [`POST /api/auth/password/resets`](auth.md#비밀번호-재설정) |
-| 8 | 일반 회원가입 | [`POST /api/auth/caregivers`](auth.md#보호자-일반-가입) |
-| 9 | 소셜 회원가입 | [`GET /api/auth/oauth/{provider}/authorize`](auth.md#소셜-로그인-시작), [`GET /api/auth/oauth/{provider}/callback`](auth.md#소셜-로그인-콜백), [`POST /api/auth/oauth/registrations`](auth.md#소셜-가입-완료) |
-| 10 | 반려동물 목록 조회 | [`GET /api/pets`](pet.md#반려동물-목록-조회) |
-| 11 | 반려동물 상세 조회 | [`GET /api/pets/{petId}`](pet.md#반려동물-상세-조회), [`GET /api/media/{mediaId}/file`](media.md#첨부파일-조회) |
-| 12 | 반려동물 등록 | [`POST /api/pets`](pet.md#반려동물-등록), [`GET /api/pet-species`](pet.md#종품종-목록-조회) |
-| 13 | 반려동물 정보 수정 | [`PATCH /api/pets/{petId}`](pet.md#반려동물-정보-수정), [`GET /api/pet-species`](pet.md#종품종-목록-조회) |
-| 14 | 반려동물 삭제 | [`DELETE /api/pets/{petId}`](pet.md#반려동물-삭제) |
-| 15 | 회원 상세 정보 조회 | [`GET /api/members/me`](auth.md#내-회원-상세-조회) |
-| 16 | 회원 정보 수정 | [`PATCH /api/members/me`](auth.md#내-회원-정보-수정), [`PUT /api/members/me/password`](auth.md#내-비밀번호-변경) |
-| 17 | 회원 탈퇴 | [`DELETE /api/members/me`](auth.md#내-회원-탈퇴) |
-| 18 | 건강 기록 목록 조회 | [`GET /api/pets/{petId}/health-records`](health.md#건강-기록-목록-조회), [`GET /api/pets/{petId}/health-records/calendar`](health.md#건강-기록-달력-조회) |
-| 19 | 건강 기록 상세 조회 | [`GET /api/pets/{petId}/health-records/{recordId}`](health.md#건강-기록-상세-조회), [`GET /api/media/{mediaId}/file`](media.md#첨부파일-조회) |
-| 20 | 일자 및 상태 기록 | [`POST /api/pets/{petId}/health-records`](health.md#건강-기록-등록) |
-| 21 | 건강 기록 정보 수정 | [`PATCH /api/pets/{petId}/health-records/{recordId}`](health.md#건강-기록-수정) |
-| 22 | 건강 기록 삭제 | [`DELETE /api/pets/{petId}/health-records/{recordId}`](health.md#건강-기록-삭제) |
-| 23 | 수의사 목록 조회 | [`GET /api/veterinarians`](veterinarian.md#수의사-목록-조회) |
-| 24 | 수의사 상세 조회 | [`GET /api/veterinarians/{veterinarianId}`](veterinarian.md#수의사-상세-조회), [`GET /api/hospitals/{hospitalId}`](veterinarian.md#지도-병원-상세-조회) |
-| 25 | 반려동물 선택 | [`GET /api/pets`](pet.md#반려동물-목록-조회), [`POST /api/consultations`](consultation.md#지정-수의사-예약-요청) |
-| 26 | 상담 내용 작성 | [`POST /api/consultations`](consultation.md#지정-수의사-예약-요청) |
-| 27 | 상담 신청 및 수단 선택 | [`POST /api/consultations`](consultation.md#지정-수의사-예약-요청), [`POST /api/consultations/{consultationId}/connections`](consultation.md#상담-연결-요청) |
-| 28 | 메인페이지ui | 서비스 소개 UI |
-| 29 | 레이아웃 | 수의사 헤더 UI |
-| 30 | 레이아웃 | 푸터와 정적 링크 UI |
-| 31 | 로그인 | [`POST /api/auth/login`](auth.md#일반-로그인) |
-| 32 | 아이디찾기 | [`POST /api/auth/login-id/recovery-requests`](auth.md#아이디-찾기-요청) |
-| 33 | 비밀번호 찾기 | [`POST /api/auth/password/reset-requests`](auth.md#비밀번호-재설정-요청), [`POST /api/auth/password/resets`](auth.md#비밀번호-재설정) |
-| 34 | 회원가입 정보 입력 | [`POST /api/auth/veterinarians`](auth.md#수의사-가입-및-면허-제출) |
-| 35 | 병원정보 등록 | [`POST /api/auth/veterinarians`](auth.md#수의사-가입-및-면허-제출), [`POST /api/admin/hospitals`](admin.md#병원-등록) |
-| 36 | 수의사 면허 등록 | [`POST /api/auth/veterinarians`](auth.md#수의사-가입-및-면허-제출) |
-| 37 | 회원 상세 정보 조회 | [`GET /api/members/me`](auth.md#내-회원-상세-조회) |
-| 38 | 회원 정보 수정 | [`PATCH /api/members/me`](auth.md#내-회원-정보-수정), [`PUT /api/members/me/password`](auth.md#내-비밀번호-변경) |
-| 39 | 회원 탈퇴 | [`DELETE /api/members/me`](auth.md#내-회원-탈퇴) |
-| 40 | 신규 상담 요청 목록 조회 | [`GET /api/consultations`](consultation.md#내-상담-목록-조회) |
-| 41 | 신규 상담 요청 상세 조회 | [`GET /api/consultations/{consultationId}`](consultation.md#내-상담-상세-조회) |
-| 42 | 완료된 상담 목록 조회 | [`GET /api/consultations`](consultation.md#내-상담-목록-조회) |
-| 43 | 완료된 상담 상세 조회 | [`GET /api/consultations/{consultationId}`](consultation.md#내-상담-상세-조회) |
-| 44 | 상담 일지 작성 | [`POST /api/consultations/{consultationId}/journal`](consultation.md#상담-일지-작성) |
-| 45 | 상담 일지 수정 | [`PATCH /api/consultations/{consultationId}/journal`](consultation.md#상담-일지-수정) |
-| 46 | 게시물 목록 조회 | [`GET /api/community/posts`](community.md#게시글-목록-조회) |
-| 47 | 게시물 상세 조회 | [`GET /api/media/{mediaId}/file`](media.md#첨부파일-조회), [`GET /api/community/posts/{postId}`](community.md#게시글-상세-조회), [`GET /api/community/posts/{postId}/comments`](community.md#댓글대댓글-목록-조회) |
-| 48 | 게시물 작성 | [`POST /api/community/posts`](community.md#게시글-작성) |
-| 49 | 게시물 수정 | [`PATCH /api/community/posts/{postId}`](community.md#게시글-수정) |
-| 50 | 게시물 삭제 | [`DELETE /api/community/posts/{postId}`](community.md#게시글-삭제) |
-| 51 | 게시물 좋아요 | [`PUT /api/community/posts/{postId}/likes/me`](community.md#게시글-좋아요-표시), [`DELETE /api/community/posts/{postId}/likes/me`](community.md#게시글-좋아요-취소) |
-| 52 | 댓글 작성 | [`GET /api/community/posts/{postId}/comments`](community.md#댓글대댓글-목록-조회), [`POST /api/community/posts/{postId}/comments`](community.md#댓글대댓글-작성) |
-| 53 | 댓글 수정 | [`PATCH /api/community/posts/{postId}/comments/{commentId}`](community.md#댓글-수정) |
-| 54 | 댓글 삭제 | [`GET /api/community/posts/{postId}/comments`](community.md#댓글대댓글-목록-조회), [`DELETE /api/community/posts/{postId}/comments/{commentId}`](community.md#댓글-삭제) |
-| 55 | 댓글 좋아요 | [`PUT /api/community/posts/{postId}/comments/{commentId}/likes/me`](community.md#댓글-좋아요-표시), [`DELETE /api/community/posts/{postId}/comments/{commentId}/likes/me`](community.md#댓글-좋아요-취소) |
-| 56 | 게시물 신고 | [`GET /api/reports/reasons`](community.md#신고-사유-목록-조회), [`POST /api/reports`](community.md#게시글댓글사용자-신고-접수) |
-| 57 | 댓글 신고 | [`GET /api/reports/reasons`](community.md#신고-사유-목록-조회), [`POST /api/reports`](community.md#게시글댓글사용자-신고-접수) |
-| 58 | 사용자 신고 | [`GET /api/reports/reasons`](community.md#신고-사유-목록-조회), [`POST /api/reports`](community.md#게시글댓글사용자-신고-접수) |
-| 59 | 로그인 | [`POST /api/auth/login`](auth.md#일반-로그인) |
-| 60 | 비밀번호 초기화 | [`POST /api/auth/password/reset-requests`](auth.md#비밀번호-재설정-요청), [`POST /api/auth/password/resets`](auth.md#비밀번호-재설정) |
-| 61 | 전체 상태 요약 | [`GET /api/admin/dashboard`](admin.md#운영-대시보드-조회) |
-| 62 | 일반 회원 목록 조회 | [`GET /api/admin/caregivers`](admin.md#일반-회원-목록-조회) |
-| 63 | 일반 회원 상세 조회 | [`GET /api/admin/caregivers/{caregiverId}`](admin.md#일반-회원-상세-조회) |
-| 64 | 일반 회원 상태 관리 | [`PATCH /api/admin/caregivers/{caregiverId}/status`](admin.md#일반-회원-상태-변경) |
-| 65 | 수의사 인증 관리 | [`GET /api/admin/veterinarians`](admin.md#수의사-목록-조회), [`GET /api/admin/veterinarians/{veterinarianId}`](admin.md#수의사-상세-조회), [`PATCH /api/admin/veterinarians/{veterinarianId}/verification`](admin.md#수의사-인증-심사) |
-| 66 | 수의사 목록 조회 | [`GET /api/admin/veterinarians`](admin.md#수의사-목록-조회) |
-| 67 | 수의사 상세 조회 | [`GET /api/media/{mediaId}/file`](media.md#첨부파일-조회), [`GET /api/admin/veterinarians/{veterinarianId}`](admin.md#수의사-상세-조회) |
-| 68 | 수의사 상태 관리 | [`PATCH /api/admin/veterinarians/{veterinarianId}/status`](admin.md#수의사-계정-상태-변경) |
-| 69 | 사용자 신고 접수 목록 조회 | [`GET /api/admin/reports`](admin.md#신고-접수-목록-조회) |
-| 70 | 사용자 신고 접수 상세 조회 | [`GET /api/admin/reports/{reportId}`](admin.md#신고-접수-상세-조회), [`PATCH /api/admin/reports/{reportId}/resolution`](admin.md#신고-검토-및-처리) |
-| 71 | 수의사 신고 접수 목록 조회 | [`GET /api/admin/reports`](admin.md#신고-접수-목록-조회) |
-| 72 | 수의사 신고 접수 상세 조회 | [`POST /api/media`](media.md#첨부파일-업로드), [`GET /api/media/{mediaId}/file`](media.md#첨부파일-조회), [`GET /api/admin/reports/{reportId}`](admin.md#신고-접수-상세-조회), [`PATCH /api/admin/reports/{reportId}/resolution`](admin.md#신고-검토-및-처리) |
-| 73 | 게시물 신고 접수 목록 조회 | [`GET /api/admin/reports`](admin.md#신고-접수-목록-조회) |
-| 74 | 게시물 신고 접수 상세 조회 | [`POST /api/media`](media.md#첨부파일-업로드), [`GET /api/media/{mediaId}/file`](media.md#첨부파일-조회), [`GET /api/admin/reports/{reportId}`](admin.md#신고-접수-상세-조회), [`PATCH /api/admin/reports/{reportId}/resolution`](admin.md#신고-검토-및-처리) |
-| 75 | 댓글 신고 접수 목록 조회 | [`GET /api/admin/reports`](admin.md#신고-접수-목록-조회) |
-| 76 | 댓글 신고 접수 상세 조회 | [`GET /api/admin/reports/{reportId}`](admin.md#신고-접수-상세-조회), [`PATCH /api/admin/reports/{reportId}/resolution`](admin.md#신고-검토-및-처리) |
-| 77 | 상담 목록 조회 | [`GET /api/admin/consultations`](admin.md#상담-목록-조회) |
-| 78 | 상담 일지 조회 | [`GET /api/admin/consultations/{consultationId}/journal`](admin.md#상담-일지-조회) |
-| 79 | 상담일지 삭제 | [`DELETE /api/admin/consultations/{consultationId}/journal`](admin.md#상담-일지-삭제) |
-| 80 | 게시물 목록 조회 | [`GET /api/admin/community/posts`](admin.md#게시글-관리-목록-조회) |
-| 81 | 게시물 상세 조회 | [`GET /api/media/{mediaId}/file`](media.md#첨부파일-조회), [`GET /api/admin/community/posts/{postId}`](admin.md#게시글-관리-상세-조회), [`GET /api/admin/community/posts/{postId}/comments`](admin.md#게시글-관리-댓글-조회), [`GET /api/admin/community/posts/{postId}/reports`](admin.md#게시글-관리-신고-이력-조회) |
-| 82 | 게시물 상태 관리 | [`PATCH /api/admin/community/posts/{postId}/visibility`](admin.md#게시글-노출-상태-변경) |
-| 83 | 병원 등록 관리 | [`POST /api/admin/hospitals`](admin.md#병원-등록) |
-| 84 | 병원 목록 조회 | [`GET /api/admin/hospitals`](admin.md#병원-관리-목록-조회) |
-| 85 | 병원 상세 조회 | [`GET /api/admin/hospitals/{hospitalId}`](admin.md#병원-관리-상세-조회) |
-| 86 | 병원 정보 수정 | [`PATCH /api/admin/hospitals/{hospitalId}`](admin.md#병원-정보-수정) |
-| 87 | 병원 정보 삭제 | [`DELETE /api/admin/hospitals/{hospitalId}`](admin.md#병원-정보-삭제) |
+| [계정·인증](auth.md) | 가입·로그인·복구 우선 / 내 정보·탈퇴 후순위 | 19 |
+| [반려동물](pet.md) | 우선 | 6 |
+| [예방접종](vaccination.md) | 우선 | 6 |
+| [팔로우·팔로잉](follow.md) | 우선 | 6 |
+| [알림](notifications.md) | 우선 | 5 |
+| [공통 미디어](media.md) | 우선 | 5 |
+| [커뮤니티·신고](community.md) | 우선 | 19 |
+| [건강 기록·병원진료](health.md) | 후순위 | 11 |
+| [실시간 상담·일지·후기](consultation.md) | 후순위 | 12 |
+| [지도·병원 조회](hospital.md) | 후순위 | 2 |
+
+총 **91개 메서드·경로 조합**이다. 하나의 경로에 여러 HTTP 메서드가 있으면 각각 센다. 실시간 채널 제안도 포함한다.
+
+## 저장소 경계
+
+| 데이터 | 저장소 |
+| --- | --- |
+| 일반 회원 프로필, 반려동물·소유 관계·종/품종·건강 기록·접종 이력·병원진료 | MongoDB |
+| 접종명 기준 데이터 | MySQL |
+| 계정·인증, 팔로우·알림·공통 미디어·커뮤니티 등의 관계 데이터 | 현재 [MySQL ERD](../erd.md)를 시작 기준으로 개발 시 구체화 |
+
+API는 저장소의 물리 컬럼·MongoDB 문서 전체를 외부에 노출하지 않는다. 모든 ID는 문자열로 전송한다. MySQL BIGINT도 응답 JSON에서는 문자열이다. MongoDB 이력과 MySQL 기준 데이터의 연결은 애플리케이션에서 검증하며 저장소 간 FK를 가정하지 않는다.
+
+<a id="공통-계약-초안"></a>
+
+## 공통 계약
+
+### 인증과 접근
+
+- 인증이 필요한 요청은 `Authorization: Bearer <accessToken>`을 사용한다. 가입·OAuth·이메일 증명·복구·갱신의 인증 수단은 auth.md의 각 행에 명시했다.
+- 게시글 공개 열람과 공개 첨부는 비회원도 이용할 수 있다. 팔로우 목록·수의 비회원 조회는 D08 미정이므로 잠정 로그인 설계안을 사용한다.
+- 요청자 식별자는 인증에서 결정한다. 클라이언트가 다른 사용자의 식별자를 본문에 넣어 주체를 바꾸지 못한다.
+- 본인 소유·당사자 제한 자원은 타인 ID와 없는 ID를 모두 404 `NOT_FOUND`로 처리한다. 명시적으로 공개된 프로필·콘텐츠는 공개 필드만 반환한다.
+- 파일 조회도 현재 원본 사용처의 권한·삭제·숨김 상태를 검사한다. 파일 식별자나 기존 URL은 추가 조회 권한을 주지 않는다.
+
+### 요청·응답과 타입
+
+JSON 요청은 `Content-Type: application/json`이다. 파일 업로드만 `multipart/form-data`로 처리하며 부모 저장 요청에는 반환된 mediaId를 사용한다.
+
+```json
+{
+  "data": {
+    "petId": "pet_01",
+    "name": "루이"
+  }
+}
+```
+
+```json
+{
+  "code": "VALIDATION_ERROR",
+  "message": "요청 값이 올바르지 않습니다."
+}
+```
+
+- 성공 표의 모델은 `data` 내부다. 201 생성 성공은 새 리소스의 Location을 반환하는 설계안이다. 202는 접수 결과이며 완료 여부는 각 도메인의 조회 API로 확인한다.
+- 204는 본문이 없다. 파일 바이너리·302 리다이렉트·실시간 스트림은 각 전용 형식을 사용한다.
+- `field?` 또는 `field?:type`은 요청 생략 가능, `type?`·`type 또는 null`은 null 허용을 뜻한다. `datetime`·`timestamp`는 오프셋 포함 ISO 8601, `date`는 YYYY-MM-DD다.
+- 별도 설명 없는 필드 표는 제안 스키마다. PRD D12 등에서 미정인 필수값·null 허용·범위·단위는 API 예시만으로 확정하지 않는다. 회원가입 필수값처럼 PRD에 확정된 항목은 그대로 검증한다.
+- 예시의 문자열 ID·시각·숫자는 형태를 설명하는 값이다. 비밀번호·토큰·메일 인증값은 저장 로그와 일반 조회 응답에 노출하지 않는다.
+- PATCH의 생략은 기존 값 유지, 허용된 null은 값 해제다. 변경 필드가 없으면 400 `EMPTY_UPDATE`다. 필드별 null 허용은 해당 모델·D 항목을 따른다.
+- `mediaIds`는 최종 연결 목록이다. 생략은 유지, `[]`는 전체 연결 해제다. 파일이 다른 부모에서도 사용되는 경우의 정리는 D19에서 정한다.
+
+`MediaRef`의 공통 필드는 [미디어 모델](media.md#데이터-모델)에 정의했다. 각 도메인은 같은 파일 식별자·파일명·유형·크기·권한 검사 경로를 사용한다.
+
+### 목록·날짜·읽기 일관성
+
+`Page<T>`는 다음 구조다. 목록 query는 `page`, `size`를 사용하고 page는 0부터, size는 양의 정수인 설계안이다. 기본값·최대값·정렬은 도메인별 미정 항목을 구현 전에 확정한다.
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+- 예시 size=20은 기본값 확정이 아니다. 빈 결과도 200이며 content는 빈 배열이다.
+- 날짜별 건강 기록의 달력 경계·기준 시간대는 D12에서 확정한다. 시각은 명시한 오프셋으로 해석하고 서버 로컬 시간대로 임의 변환하지 않는다.
+- 카운트·목록·상태 응답은 각 조회 시점의 결과다. 동시 변경을 처리하고 재조회로 동기화한다. 별도 시점의 모든 응답이 같은 스냅샷이라고 가정하지 않는다.
+
+### 오류
+
+| HTTP 상태 | 공통 코드 또는 적용 기준 |
+| --- | --- |
+| 400 | VALIDATION_ERROR, EMPTY_UPDATE, 입력·목적·토큰 형식 오류 |
+| 401 | UNAUTHORIZED, INVALID_CREDENTIALS, 인증 증명 부재·실패 |
+| 403 | ACCOUNT_UNAVAILABLE, 인증된 계정의 행위 제한 |
+| 404 | NOT_FOUND, 비공개 자원의 타인 접근 포함 |
+| 409 | 상태 경합, 중복 제약, IDEMPOTENCY_CONFLICT |
+| 413 / 415 / 422 | FILE_TOO_LARGE / UNSUPPORTED_MEDIA_TYPE / ATTACHMENT_LIMIT_EXCEEDED |
+| 429 | RATE_LIMITED. 상세 제한·재시도 간격은 확정 정책 적용 |
+| 500 / 503 | INTERNAL_SERVER_ERROR / 도메인별 일시 장애. 내부 상세 대신 공개 가능한 메시지 |
+
+각 API 표는 공통 오류 외의 주요 실패를 적었다. 존재하지 않는 개인 자원과 외부 의존성 장애를 구분하고, DB·스토리지·연동 실패를 빈 목록·정상 부재로 변환하지 않는다. 오류 본문에 스택·SQL·외부 응답 원문을 담지 않는다.
+
+### 생성 재시도와 부분 실패
+
+- 가입·반려동물·접종·게시글·댓글·신고·건강/진료·상담 생성은 `Idempotency-Key` 헤더를 받는 설계안이다. 아직 자원 ID가 없는 인증 절차는 해당 문서의 challenge/ticket으로 구분한다.
+- 키는 인증 주체와 메서드·경로 범위에 묶는다. 공개 가입은 검증된 가입 절차에 묶는다. 같은 키·같은 입력은 기존 결과 또는 진행 중 상태를 반환하고 같은 키의 다른 입력은 409 `IDEMPOTENCY_CONFLICT`다.
+- 재시도 키의 보관기간·진행 중 응답·원문 비교 방식은 구현 전에 정한다. 키 보관 만료 후까지 중복 방지를 보장한다고 표현하지 않는다.
+- PUT 좋아요·팔로우와 개별 읽음처럼 목표 상태를 지정하는 요청은 같은 요청을 반복해도 수와 알림을 중복 생성하지 않는다. 재팔로우의 별도 이벤트 여부는 D15에서 결정한다.
+- MySQL·MongoDB·파일 저장소·알림 전달이 함께 동작하는 경우 부분 실패를 기록·복구한다. 부모 저장 실패 후 기존 파일 연결을 보존하고, 사용 중 파일을 미사용 파일로 정리하지 않는다.
+- 소프트 삭제는 PRD의 자원별 정책을 따른다. 미사용 미디어의 최종 파기는 D19의 별도 보관·정리 정책을 적용한다.
+
+## PRD 기능 연결
+
+| PRD 기능 | 명세 | 정의서 행 / 개발 구분 |
+| --- | --- | --- |
+| ACC-01 | [계정·인증](auth.md) | 6~11행 우선 / 34~35행 후순위 |
+| ACC-03 | [탈퇴](auth.md#내-회원정보와-탈퇴) | 36행 후순위 |
+| PET-01 | [반려동물](pet.md) | 18~22행 우선 |
+| PET-02 | [예방접종](vaccination.md) | 23~28행 우선 |
+| PET-03 | [병원진료](health.md) | 29~33행 후순위 |
+| HLT-01·HLT-02·HLT-04 | [건강 기록](health.md)·[미디어](media.md) | 37~41행 후순위 |
+| HLT-03 | [예방접종](vaccination.md)·[병원진료](health.md) | PET-02·PET-03으로 이관 |
+| VET-01 | [상담 상대 정보](consultation.md) | 44~48행의 보호자 상담 정보 |
+| CON-01·CON-02·CON-03·CON-04·CON-05 | [실시간 상담](consultation.md) | 42~48행 후순위 |
+| LOG-01·REV-01 | [일지·후기](consultation.md) | 48행·기존 PRD 평가 합의, 후순위 |
+| COM-01·COM-02 | [커뮤니티·신고](community.md) | 90~103행 우선 |
+| COM-03 | [팔로우·팔로잉](follow.md) | 12~17행 우선 |
+| NTF-01 | [알림](notifications.md) | 67~70·72~75행 우선 |
+| MED-01 | [공통 미디어](media.md) | 76~89행 우선 |
+| 지도 화면 | [지도·병원 조회](hospital.md) | 4행·D16 후순위 |
+
+화면 소개·헤더·푸터의 정적 문구는 화면 구현에서 관리한다. 알림 아이콘·접종 동물 선택처럼 기존 API를 조합하는 화면 동작은 별도 중복 엔드포인트를 만들지 않는다.
+
+## 미정 정책 확인 위치
+
+- D11 — 인증·복구·세션·회원 변경·탈퇴. auth.md에 설계 제안을 표시했다.
+- D12 — 반려동물·접종·건강·진료 필수값·단위·범위·날짜. 각 문서 입력 모델은 후보 필드다.
+- D08·D15 — 커뮤니티·팔로우의 공개 범위, 알림 자기 이벤트·재팔로우·전달 방식.
+- D04·D05·D06·D07·D16·D17 — 후순위 상담 상태·자료 공유·연동·일지·후기·지도 경계.
+- D18·D19 — MongoDB/MySQL/미디어 연결, 제약·인덱스, 파일 제한·보관·정리.
+
+검증은 문서의 경로·링크·모델·PRD 연결 확인을 대상으로 한다. 실제 서버·DB·OAuth·메일·파일 저장소·실시간 연동은 구현 이후 검증한다.

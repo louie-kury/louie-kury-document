@@ -4,7 +4,7 @@
 | --- | --- |
 | 프로젝트 이해 | [PRD](../prd.md), 현재 Git 상태 |
 | 프론트엔드·백엔드 작업 폴더 선택 | [서비스 작업 경로](WORKFLOW.md#서비스-작업-경로)에서 기존 클론 또는 새 서비스의 위치를 확인한다. |
-| 제품 기능 설계·구현·검증 | 기능 ID가 없으면 [PRD 기능 목록](../prd.md#6-기능-요구사항과-수용-기준)에서 찾는다. ID를 알면 [6.11 기능 연결표](../prd.md#611-기능공통-정책질문qa-연결표)에서 해당 행을 먼저 찾아 기능 본문과 관련 정책·D 항목·Q 시나리오만 읽는다. API를 구현하거나 연동할 때는 [API 명세](../api/README.md)의 공통 계약과 해당 도메인을 확인한다. |
+| 제품 기능 설계·구현·검증 | 기능 ID가 없으면 [PRD 기능 목록](../prd.md#6-기능-요구사항과-수용-기준)에서 찾는다. ID를 알면 [6.10 기능 연결표](../prd.md#610-기능공통-정책질문qa-연결표)에서 해당 행을 먼저 찾아 기능 본문과 관련 정책·D 항목·Q 시나리오만 읽는다. API를 구현하거나 연동할 때는 [API 명세](../api/README.md)의 공통 계약과 해당 도메인을 확인한다. |
 | 프론트엔드 화면 구현·QA | [PRD 화면 목록](../prd.md#9-기능-기반-화면-목록)과 해당 기능의 수용 기준을 확인한다. |
 | 프론트엔드 코드 작성·리뷰 | [프론트엔드 코드 컨벤션](../convension/FRONTEND_CODE_CONVENTIONS.md)에서 작업에 해당하는 절을 읽는다. |
 | 백엔드 코드 작성·리뷰 | [백엔드 코드 컨벤션](../convension/BACKEND_CODE_CONVENTIONS.md)에서 작업에 해당하는 절만 읽는다. [패키지 구조](../convension/BACKEND_CODE_CONVENTIONS.md#패키지-구조), [의존 방향과 계층별 책임](../convension/BACKEND_CODE_CONVENTIONS.md#의존-방향과-계층별-책임), [네이밍](../convension/BACKEND_CODE_CONVENTIONS.md#네이밍), [영속성과 JPA 엔티티](../convension/BACKEND_CODE_CONVENTIONS.md#영속성과-jpa-엔티티)를 참고한다. |
