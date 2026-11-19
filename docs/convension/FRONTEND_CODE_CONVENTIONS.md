@@ -1,6 +1,6 @@
 # 루이쿠리 프론트엔드 코드 컨벤션
 
-> 상태: 팀 검토용 v1.0 · 적용 대상: `frontend` 레포지토리 · 원본 권장 위치: `document/docs/convention/FRONTEND_CODE_CONVENTION.md`
+> 상태: 팀 검토용 v1.0 · 적용 대상: `frontend` 레포지토리 · 공식 문서 경로(문서 저장소 루트 기준): `docs/convension/FRONTEND_CODE_CONVENTIONS.md`
 
 ## 1. 목적과 적용 원칙
 
@@ -317,7 +317,7 @@ export function Toolbar() {
 
 ## 15. 문서 관리
 
-- 공식 문서는 `document/docs/convention/FRONTEND_CODE_CONVENTION.md`에서 관리한다.
+- 공식 문서는 `louie-kury-document` 저장소의 `docs/convension/FRONTEND_CODE_CONVENTIONS.md`에서 관리한다. `frontend/AGENTS.md`에서 참조하거나 읽기 전용 사본을 동기화할 때는 문서 저장소의 실제 로컬 클론 위치에 맞춰 상대 경로를 조정한다.
 - `frontend/AGENTS.md`는 공식 문서의 경로와 핵심 규칙을 명시한다. Codex 작업 공간에서 `frontend`와 `document`를 함께 열고 실제 읽기 권한을 확인한다.
 - Codex가 별도 `document` 레포지토리를 읽을 수 없는 환경에서는 `frontend/docs/`에 **자동 동기화한 읽기 전용 사본**을 두거나, `AGENTS.md`에 핵심 규칙을 요약한다. 사본을 운영한다면 공식 문서만 수정하고 동기화 절차를 CI 또는 스크립트로 관리한다.
 - 접근 가능 여부를 확인하지 않은 채 AI가 외부 문서를 읽었다고 가정하지 않는다.
