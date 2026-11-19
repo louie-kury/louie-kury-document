@@ -1,46 +1,328 @@
 # 루이쿠리 백엔드 코드 컨벤션
 
-## 1. 적용 범위
+백엔드는 **헥사고날 아키텍처(Ports and Adapters)**로 개발한다. 도메인 규칙과 유스케이스를 중심에 두고, HTTP·DB·외부 서비스는 포트와 어댑터를 통해 연결한다.
 
-### 1.1 적용 대상
+코드 작성과 리뷰는 이 문서를 따른다. 브랜치·커밋·PR 형식은 [Git 컨벤션](GIT_CONVENTIONS.md), 작업 진행은 [워크플로](../ai/WORKFLOW.md), API 계약은 [API 명세](../api/README.md), 데이터 구조는 [ERD](../erd.md)를 참고한다.
 
-- 백엔드 소스 코드와 테스트 코드에 적용한다. DB 마이그레이션, 빌드 설정, 프로젝트 스크립트에는 해당 파일을 다루는 규칙을 적용한다.
-- 자동 생성 코드와 저장소에 포함된 외부 코드는 적용 대상에서 제외한다. 생성 결과를 바꿔야 하면 수정할 수 있는 원본이나 생성 설정에서 변경한다.
+## 적용 범위
 
-### 1.2 적용 시점
+- 백엔드 소스와 테스트 코드에 적용한다. 자동 생성 코드와 외부 코드는 원본 또는 생성 설정에서 관리한다.
+- 새 코드와 이번 작업에서 수정하는 부분에 적용한다. 기존 계층 구조의 전환은 해당 기능의 호출 경로와 데이터 저장 동작을 함께 검증할 수 있는 범위로 진행한다.
+- 아래 규칙을 기본 기준으로 지킨다. 외부 계약·프레임워크 제약·기존 호환성 때문에 예외가 필요하면 규칙, 사유와 적용 범위를 PR에 기록한다.
 
-- 새로 추가하는 코드에는 관련 규칙을 모두 적용한다.
-- 기존 코드에는 이번 변경에서 추가하거나 수정한 부분을 기준으로 적용한다. 파일 이름이나 import 순서처럼 파일 단위로 판단하는 규칙은 해당 변경과 관련된 범위까지 적용한다.
-- 변경 범위를 벗어나는 기존 위반은 별도 변경으로 정리한다.
+## 패키지 구조
 
-### 1.3 강제 수준
+서비스 디렉터리는 `consultation-service`처럼 소문자와 하이픈으로 작성한다. Java 루트 패키지는 `com.louiekury.<서비스명>`이며, 여러 단어의 서비스명은 `medicalrecord`처럼 붙여 쓴다. 실행 클래스는 루트에 둔다.
 
-- **필수** 규칙에 명시된 기준을 지킨다.
-- **금지** 규칙에 명시된 패턴을 사용하지 않는다.
-- **권장** 규칙을 기본으로 따른다. 적용하기 어려우면 리뷰에서 이유를 설명할 수 있다.
-- 필수·금지 규칙 위반은 머지 전에 수정하거나 아래 예외 기준에 따라 처리한다.
+루트 아래에 기능별 패키지를 두고 각 기능 안에서 `domain`, `application`, `adapter`로 나눈다. 아래는 상담 서비스의 예약 기능 예시다. 실제로 필요한 기능과 어댑터만 만든다.
 
-### 1.4 예외
+```text
+com.louiekury.consultation
+├── ConsultationApplication.java
+├── booking
+│   ├── domain
+│   │   ├── Consultation.java
+│   │   └── ConsultationStatus.java
+│   ├── application
+│   │   ├── port
+│   │   │   ├── in
+│   │   │   │   └── CancelConsultationUseCase.java
+│   │   │   └── out
+│   │   │       ├── LoadConsultationPort.java
+│   │   │       └── SaveConsultationPort.java
+│   │   ├── model
+│   │   │   ├── CancelConsultationCommand.java
+│   │   │   └── ConsultationResult.java
+│   │   └── service
+│   │       └── CancelConsultationService.java
+│   └── adapter
+│       ├── in
+│       │   ├── web
+│       │   │   ├── ConsultationController.java
+│       │   │   └── dto
+│       │   │       ├── request
+│       │   │       └── response
+│       │   │           └── ConsultationResponseDto.java
+│       │   └── messaging
+│       └── out
+│           ├── persistence
+│           │   ├── ConsultationPersistenceAdapter.java
+│           │   ├── ConsultationJpaRepository.java
+│           │   ├── ConsultationJpaEntity.java
+│           │   └── ConsultationPersistenceMapper.java
+│           └── client
+├── shared
+│   └── exception
+│       ├── BusinessException.java
+│       └── ErrorCode.java
+└── global
+    ├── config
+    ├── web
+    │   ├── response
+    │   │   └── ApiResponse.java
+    │   └── exception
+    │       ├── GlobalExceptionHandler.java
+    │       └── ErrorCodeHttpMapper.java
+    └── persistence
+        └── BaseEntity.java
+```
 
-- 외부 API 계약, 프레임워크 제약 또는 기존 호환성 때문에 필수·금지 규칙을 그대로 적용하기 어려울 때 예외를 검토한다.
-- 예외는 필요한 범위에 한정한다. 적용할 수 없는 규칙, 사유, 적용 범위를 PR에 적고 리뷰에서 확인한다. 임시 예외라면 해소 조건도 적는다.
+- `shared`에는 여러 기능이 실제로 공유하는 내부 타입을 둔다. Spring·JPA·Jackson·외부 SDK에 의존하지 않는다.
+- `global`에는 서비스 공통의 외부 기술 설정과 어댑터 지원 코드를 둔다. 내부 계층에서 `global`을 참조하지 않는다.
+- 특정 기능에서만 쓰는 설정과 변환기는 그 기능의 어댑터에 둔다.
+- `CommonService`, `Manager`, `Helper`처럼 이름만으로 책임을 알기 어려운 공통 클래스를 만들지 않는다.
 
-## 2. 파일과 코드 서식
+## 의존 방향과 계층별 책임
 
-아래 규칙은 필수로 적용한다. 코드 예시는 Java 문법으로 표기한다.
+소스 코드의 의존 방향은 다음과 같다. 출력 어댑터는 애플리케이션이 정의한 출력 포트를 구현한다.
 
-### 2.1 파일 형식
+```text
+입력 어댑터 → 입력 포트 ← 애플리케이션 서비스 → 출력 포트 ← 출력 어댑터
+                              ↓
+                            도메인
+```
 
-- 텍스트 소스 파일은 UTF-8(BOM 없음)로 저장하고, 줄바꿈은 LF를 사용한다.
-- 비어 있지 않은 파일은 마지막 줄을 개행 하나로 끝낸다. 파일 끝에 빈 줄을 덧붙이지 않는다.
-- 줄 끝의 불필요한 공백과 탭을 제거한다.
+| 구성 요소 | 담당하는 일 | 의존할 수 있는 대상 |
+| --- | --- | --- |
+| 도메인 | 상태, 불변 조건, 업무 계산과 상태 전이 | JDK, 도메인 타입, 기술 독립적인 shared 타입 |
+| 입력 포트 | 외부에서 실행할 유스케이스의 계약 | 애플리케이션 입력·결과 모델 |
+| 애플리케이션 서비스 | 유스케이스 순서, 권한·대상 확인, 트랜잭션 경계, 포트 호출 | 도메인, 포트, 애플리케이션 모델, shared |
+| 출력 포트 | 저장·조회·외부 요청 등 유스케이스가 필요로 하는 기능의 계약 | 도메인, 기술 독립적인 애플리케이션 모델 |
+| 입력 어댑터 | HTTP·메시지·배치 입력 해석, 입력 모델 변환, 입력 포트 호출, 응답 변환 | 입력 포트와 입력·결과 모델, 해당 외부 기술 |
+| 출력 어댑터 | 출력 포트 구현, JPA·Querydsl·외부 SDK 호출과 모델 변환 | 출력 포트, 도메인·애플리케이션 모델, 해당 외부 기술 |
 
-### 2.2 들여쓰기와 공백
+- 포트는 내부 계층이 소유하는 Java 인터페이스다. 필요한 업무 단위로 정의하고 사용하지 않는 범용 CRUD 메서드를 늘리거나 외부 SDK 전체 메서드를 복제하지 않는다.
+- 컨트롤러는 입력 포트를 생성자로 주입받는다. 서비스 구현체나 출력 어댑터를 직접 호출하지 않는다.
+- 애플리케이션 서비스는 입력 포트를 구현하고 출력 포트를 주입받는다. `JpaRepository`, `EntityManager`, HTTP 클라이언트와 외부 SDK를 직접 사용하지 않는다.
+- 포트의 인자와 반환값에 JPA 엔티티, Spring Data `Page`·`Pageable`, `ResponseEntity`, Jackson 타입, 외부 SDK 모델을 사용하지 않는다. 페이지 조건과 결과는 필요한 필드를 가진 애플리케이션 모델로 표현한다.
+- 같은 서비스의 다른 기능은 그 기능의 입력 포트와 공개 입력·결과 모델을 통해 호출한다. 기능 간 순환 의존을 만들지 않는다.
+- 별도 마이크로서비스는 출력 포트와 클라이언트·메시지 어댑터를 통해 연결한다. 다른 서비스의 DB나 내부 구현체에 직접 접근하지 않는다.
+- 프로젝트에서는 애플리케이션 서비스에 `@Service`와 `@Transactional` 사용을 허용한다. 포트·입력·결과 모델과 도메인은 프레임워크 독립적으로 유지한다. 구성·트랜잭션 지원 외의 Spring 기술 타입은 어댑터에서 다룬다.
 
-- 블록이 한 단계 깊어질 때마다 스페이스 4칸으로 들여쓴다. 들여쓰기에 탭을 사용하지 않는다.
-- 대입 및 이항 연산자 양옆과 쉼표 뒤에 공백을 한 칸 넣는다. 쉼표 앞과 소괄호 안쪽에는 공백을 넣지 않는다.
-- `if`, `for`, `while`, `switch`, `catch` 같은 키워드와 여는 소괄호 사이에는 공백을 한 칸 넣는다. 메서드 이름과 여는 소괄호는 붙여 쓴다.
-- 선언이나 대입의 열을 맞추기 위해 공백을 여러 칸 넣지 않는다.
+## 네이밍
+
+| 대상 | 기준과 예시 |
+| --- | --- |
+| 타입과 파일 | `PascalCase`, 공개 타입과 파일 이름 일치 |
+| 메서드·필드·변수 | `lowerCamelCase`, `cancelConsultation`, `veterinarianId` |
+| 상수·오류 코드 | `UPPER_SNAKE_CASE`, `MAX_RETRY_COUNT`, `CONSULTATION_NOT_FOUND` |
+| 도메인 모델 | 도메인 용어, `Consultation` |
+| JPA 엔티티 | 도메인명 + `JpaEntity`, `ConsultationJpaEntity` |
+| 입력 포트 | 행위 + 대상 + `UseCase`, `CancelConsultationUseCase` |
+| 출력 포트 | 목적 + 대상 + `Port`, `LoadConsultationPort` |
+| 유스케이스 구현 | 행위 + 대상 + `Service`, `CancelConsultationService` |
+| 어댑터 | 대상 + 기술/역할 + `Adapter`, `ConsultationPersistenceAdapter` |
+| Spring Data 레포지토리 | 대상 + `JpaRepository`, `ConsultationJpaRepository` |
+| 요청 DTO | 동작 + 대상 + `RequestDto`, `CreateConsultationRequestDto` |
+| 응답 DTO | 대상 + `ResponseDto`, `ConsultationResponseDto` |
+| 목록 항목 DTO | 대상 + `ListItemResponseDto`, `ConsultationListItemResponseDto` |
+| 애플리케이션 모델 | 변경 입력 `Command`, 조회 입력 `Query`, 처리 결과 `Result` |
+
+- 같은 개념에는 같은 용어를 쓴다. 수의사는 `veterinarian`처럼 뜻이 드러나게 쓴다.
+- 약어도 한 단어로 취급한다. `ProductApiClient`, `productId`, `imageUrl`로 쓴다.
+- 반드시 존재해야 하는 단건 조회는 `get`으로 시작하고 없으면 업무 예외를 던진다. 선택적인 조회는 `find`로 시작하고 `Optional` 등으로 부재를 드러낸다. Spring Data 메서드는 기존 명명 규칙을 따른다.
+- 참·거짓 필드는 `active`처럼 상태로 이름 짓고 기본형 `boolean` getter는 `isActive()`로 쓴다.
+- 숫자의 단위가 타입에 드러나지 않으면 `timeoutMillis`처럼 이름에 적는다.
+- Java `record` 타입은 사용하지 않는다.
+
+## DTO와 경계 변환
+
+구체적인 클래스와 호출 흐름은 [상품 등록과 조회 예제](#상품-등록과-조회-예제)를 참고한다.
+
+- 요청·응답 DTO와 애플리케이션 입력·결과 모델은 일반 `class`와 `private final` 필드로 작성한다. DTO 클래스 자체에는 `final`을 붙이지 않는다.
+- 객체 하나를 변환하면 `from`, 필드 값을 조합하면 `of` 정적 팩토리 메서드를 사용한다. DTO 매핑과 생성은 팩토리 내부에서 처리하며 빌더는 비공개로 둔다.
+- `@Getter`, `@RequiredArgsConstructor(access = AccessLevel.PRIVATE)`, `@Builder(access = AccessLevel.PRIVATE)`를 사용한다.
+- JSON 요청 DTO의 `of`에는 `@JsonCreator`, 인자에는 `@JsonProperty`를 붙인다. Bean Validation 제약은 웹 DTO 필드에 작성하며, 어노테이션과 필드를 한 묶음으로 배치한다.
+- 필수 여부와 값의 범위는 API 명세에 맞춘다. 누락을 구분해야 하는 숫자·불리언 입력은 Wrapper 타입을 사용한다. PATCH의 생략과 명시적 `null`을 구분해야 할 때는 웹 어댑터에서 존재 여부도 읽고 명시적인 변경 모델로 전달한다.
+- 컨트롤러는 요청 DTO, 인증된 사용자 식별자와 경로 값을 `Command` 또는 `Query`로 변환한다. 본문의 사용자 ID를 인증된 호출자 정보로 신뢰하지 않는다.
+- 애플리케이션 모델의 팩토리는 웹 DTO를 인자로 받지 않는다. 컨트롤러에서 필요한 값을 추출하여 `Command.of(...)`로 전달한다.
+- 애플리케이션 서비스는 결과 모델을 반환한다. 컨트롤러는 `ResponseDto.from(result)`로 변환한 뒤 `ApiResponse.success(...)`와 HTTP 상태를 지정한다.
+- JPA 엔티티와 도메인 모델은 영속성 어댑터에서 변환한다. 외부 API 모델은 클라이언트 어댑터에서 변환한다.
+
+```text
+HTTP 요청 DTO → Command / Query → 유스케이스 → Result → HTTP 응답 DTO
+                                  ↕
+                               도메인 모델
+                                  ↕
+                         영속성 어댑터의 JPA 엔티티
+```
+
+웹 입력 검증에 더해 유스케이스와 도메인에서도 업무 조건을 검증한다. 메시지·배치에서 같은 입력 포트를 호출해도 동일한 업무 규칙을 적용한다.
+
+## Lombok과 객체 생성
+
+| 대상 | 사용 기준 |
+| --- | --- |
+| 컨트롤러·서비스·어댑터 | `private final` 의존성과 `@RequiredArgsConstructor`로 생성자 주입 |
+| DTO와 애플리케이션 모델 | `@Getter`, 비공개 필수 인자 생성자, 비공개 빌더와 정적 팩토리 |
+| 도메인 모델 | 필요한 getter와 명시적 생성자·상태 변경 메서드 |
+| JPA 엔티티 | `@Getter`, `@Entity`, `@Table`, `@NoArgsConstructor(access = AccessLevel.PROTECTED)` 순으로 선언 |
+| 로그가 필요한 어댑터·서비스 | `@Slf4j` |
+
+- 필드 주입용 `@Autowired`, DTO·도메인·JPA 엔티티의 `@Data`와 클래스 전체 `@Setter`는 금지한다.
+- 필드는 기본 `private`으로 두고 외부에서 필요한 메서드만 공개한다.
+- 도메인과 JPA 엔티티는 필요한 값을 받는 생성자로 초기화한다. DTO의 비공개 빌더 규칙을 엔티티에 적용하지 않는다.
+- 상태 변경은 `cancel`, `complete`처럼 의도가 드러나는 메서드로 표현한다. 도메인이 API DTO나 영속성 모델을 참조하지 않도록 한다.
+
+## 도메인 규칙
+
+- 도메인 모델은 Spring, JPA, Jackson 및 외부 SDK에 의존하지 않는 Java 객체로 작성한다.
+- 생성 시 필수값과 불변 조건을 검증한다. 상태 전이는 현재 상태와 허용 조건을 확인한 뒤 수행한다.
+- 여러 객체의 조회·저장과 외부 요청 순서는 애플리케이션 서비스에서 조정하고, 개별 객체의 업무 판단은 도메인에 둔다.
+- 현재 시각이 업무 판단에 필요하면 애플리케이션에서 `Clock` 등으로 얻어 도메인 메서드에 전달하여 테스트에서 시간을 제어할 수 있게 한다.
+- 날짜와 시각은 의미에 맞는 타입으로 표현한다. API 오프셋·시간대와 DB 시각 변환 기준은 계약과 스키마에 맞춰 어댑터에서 명시한다.
+- 금액·코인 계산은 요구사항의 단위와 반올림 기준을 따른다. 정확한 소수 계산에는 `BigDecimal`, 정수 단위에는 범위를 검토한 정수 타입을 사용한다.
+
+## 영속성과 JPA 엔티티
+
+- `JpaRepository`, Querydsl, JPA 엔티티와 매핑 코드는 `adapter.out.persistence`에 둔다. Spring Data 인터페이스는 `JpaRepository<엔티티, ID>`를 상속하고 `@Repository`를 중복 선언하지 않는다.
+- JPA 엔티티는 DB 매핑을 담당하고, 업무 규칙은 도메인 모델이 담당한다. 테이블·컬럼·식별자 생성 전략·필수값·제약은 ERD와 실제 마이그레이션에 맞춘다.
+- 저장 시 도메인 모델을 JPA 엔티티에 반영하고, 생성된 ID 등 이후 흐름에 필요한 저장 결과를 포트 반환값에 담는다.
+- 도메인 객체의 변경을 영속화할 때는 저장 포트를 명시적으로 호출한다. 도메인 객체는 JPA 변경 감지 대상이 아니다.
+- 기존 데이터를 수정할 때는 식별자, 기존 감사 시각, 삭제 상태와 연관관계를 보존한다. 전달되지 않은 필드를 새 엔티티의 기본값으로 덮어쓰지 않는다.
+- 낙관적 잠금을 사용하면 읽은 버전을 저장 시점까지 전달·검증한다. 최신 엔티티를 다시 읽어 이전 버전을 잃는 매핑으로 충돌 검사를 우회하지 않는다.
+- 어댑터는 포트가 요구하는 데이터를 트랜잭션 안에서 읽어 변환한다. 지연 로딩 프록시나 영속 컬렉션을 내부 계층에 반환하지 않는다.
+
+| 참조 대상 | 매핑 기준 |
+| --- | --- |
+| 같은 서비스에서 객체 탐색이 필요한 데이터 | JPA 엔티티 사이에 연관관계를 매핑하고 지연 로딩을 명시한다. |
+| 같은 서비스에서 식별자만 필요한 데이터 | ID 필드를 사용하고 참조 무결성은 필요한 DB 제약으로 보장한다. |
+| 다른 서비스가 소유한 데이터 | 외부 ID를 저장하고 API·이벤트 출력 포트를 통해 필요한 값을 받는다. |
+
+도메인 모델의 관계는 업무에 필요한 객체·값·식별자로 표현한다. JPA 연관관계 어노테이션은 영속성 어댑터 안에 둔다.
+
+### 연관관계와 ID 참조 예시
+
+같은 서비스의 상품 이미지 JPA 엔티티에서 상품을 탐색해야 하는 경우 다음 필드를 둔다. 아래 코드는 엔티티 필드의 발췌다.
+
+```java
+@ManyToOne(fetch = FetchType.LAZY, optional = false)
+@JoinColumn(name = "product_id", nullable = false)
+private ProductJpaEntity product;
+```
+
+다른 서비스의 상품을 참조하는 주문 항목 JPA 엔티티에는 외부 식별자를 저장한다.
+
+```java
+@Column(name = "product_id", nullable = false)
+private Long productId;
+```
+
+### BaseEntity와 소프트 삭제
+
+[BaseEntity](#베이스-엔티티--baseentityjava)와 [감사 설정](#감사-설정--jpaauditingconfigjava) 예제를 함께 적용한다.
+
+- 공통 JPA 상위 클래스 `BaseEntity`는 `global.persistence`에 둔다. 도메인 모델은 이를 상속하지 않는다.
+- `createdAt`, `updatedAt`, `deletedAt`을 공유하는 테이블만 해당 상위 클래스를 적용한다. 컬럼 구성이 다른 엔티티는 스키마에 맞는 필드를 직접 선언하거나 필요한 감사 필드만 공유한다.
+- JPA Auditing을 사용하는 서비스는 설정에서 `@EnableJpaAuditing`을 활성화하고 생성·수정 시각 저장을 검증한다.
+- 소프트 삭제 시각을 변경하는 저장 동작과 삭제된 데이터를 제외하는 조회 조건을 함께 구현한다. 단건·목록·존재 확인·집계와 관련 첨부 조회에 동일한 접근 정책을 적용한다.
+- 소프트 삭제·보관·파기 정책의 기준은 PRD와 API 명세다. 보관 기간 등 미정 정책은 기능 구현 전에 확인한다.
+
+## Querydsl 사용 기준
+
+- 기본 CRUD와 단순 조회는 Spring Data JPA의 기본 메서드와 쿼리 메서드를 사용한다.
+- 선택 조건 조합, 다중 조인·집계 등 복잡한 조회는 Querydsl로 작성한다. 구현 위치는 영속성 어댑터의 커스텀 조회 구현이다.
+- 목록 조회에서 필요한 데이터를 묶어 읽는다. 연관관계 탐색과 ID별 개별 조회 모두 실제 SQL·외부 호출 횟수를 확인한다.
+- 읽기 전용 목록은 출력 포트가 정의한 조회 결과 모델로 직접 매핑할 수 있다. 웹 응답 DTO를 영속성 조회의 반환 타입으로 사용하지 않는다.
+- 성능 개선을 위해 조회 방식을 바꾸면 실제 SQL, 쿼리 횟수와 필요한 실행 계획을 비교한다.
+
+## 트랜잭션과 외부 연동
+
+- DB 쓰기 유스케이스의 공개 서비스 메서드에 `@Transactional`, DB 조회 전용 유스케이스에 `@Transactional(readOnly = true)`을 적용한다.
+- 하나의 유스케이스에서 원자적으로 처리해야 하는 DB 변경은 같은 트랜잭션에 포함한다. 예외를 삼켜 부분 변경이 커밋되지 않도록 하고, 롤백이 필요한 예외의 동작을 검증한다.
+- 같은 객체 내부 호출로 트랜잭션 프록시를 우회하지 않도록 진입 경로를 확인한다. 동시성 제어는 업무 조건에 따라 DB 제약·조건부 갱신·잠금 등을 선택하고 경쟁 상황을 검증한다.
+- 외부 API, 메시지, 파일 저장은 각각 출력 포트와 어댑터로 연결한다. 타임아웃과 재시도는 연동 계약에 맞추고 중복 실행 가능한 작업인지 먼저 확인한다. 외부 호출 실패를 무시하고 유스케이스를 성공 처리하지 않는다.
+- 로컬 DB 트랜잭션은 외부 시스템의 변경을 함께 롤백하지 않는다. DB 변경과 이벤트 발행의 일관성이 필요하면 아웃박스 등 전달 보장 방법을 정하고, 외부 변경 후 실패할 수 있는 작업은 보상·재시도 경로를 설계한다.
+- 멱등성 키의 범위, 동일 키의 다른 입력 처리, 재시도 시 결과와 보관 기간은 API 계약을 따른다. 소비자는 중복 메시지와 순서 변경에 대한 처리 기준을 갖는다.
+
+## API와 공통 응답
+
+구현 코드는 [공통 API 응답 예제](#공통-api-응답--apiresponsejava)를 참고한다.
+
+- HTTP 경로·메서드·상태·필드·페이지네이션은 [API 공통 계약](../api/README.md#공통-계약-초안)과 해당 도메인 명세를 따른다. 웹 어댑터는 `/api` 경로와 계약의 응답 형식을 구현한다.
+- 컨트롤러에 `@RestController`, 공통 경로에 `@RequestMapping`, 엔드포인트에 HTTP 메서드별 매핑을 사용한다. JSON 본문 검증은 `@Valid @RequestBody`로 수행한다.
+- `ApiResponse<T>`는 `global.web.response`에 둔다. `success(data)`는 성공 본문을, `error(code, message)`는 오류 본문을 만든다. HTTP 상태는 웹 어댑터의 `ResponseEntity`에서 지정한다.
+- 성공은 `{"data":{"balanceCoins":7000}}`, 오류는 `{"code":"VALIDATION_ERROR","message":"요청 값이 올바르지 않습니다."}` 형식을 따른다. 공통 래퍼의 사용하지 않는 필드는 직렬화에서 제외한다.
+- `204`, 본문 없는 `202`, 파일 응답과 `302` 리다이렉트는 API 명세의 본문 규칙을 따른다.
+- 서비스나 포트는 `ApiResponse`, HTTP 상태 또는 웹 응답 DTO를 반환하지 않는다.
+
+## 예외와 오류 처리
+
+[업무 예외](#비즈니스-예외--businessexceptionjava), [오류 코드](#오류-코드--errorcodejava), [HTTP 매핑](#http-오류-매핑--errorcodehttpmapperjava), [전역 핸들러](#전역-예외-핸들러--globalexceptionhandlerjava)의 전체 코드는 공통 클래스 예제에 있다.
+
+- 업무 규칙 위반은 기술 독립적인 `BusinessException`과 `ErrorCode`로 표현한다. 공통 타입은 `shared.exception`에 두고 코드와 공개 가능한 기본 메시지를 관리한다.
+- `BusinessException`은 `RuntimeException`을 상속하고 오류 코드를 보관한다. 기본 메시지, 공개 가능한 사용자 메시지 또는 원인 예외를 지정할 수 있다.
+- `ErrorCode`는 업무 실패의 식별자와 메시지만 가진다. `HttpStatus`와 HTTP 응답 생성 로직은 `global.web.exception.ErrorCodeHttpMapper` 등 웹 계층에서 관리한다.
+- `GlobalExceptionHandler`는 `@RestControllerAdvice`로 업무 예외, 입력 오류, 예상하지 못한 오류를 공통 응답에 매핑한다. 업무 코드별 HTTP 상태는 해당 API 명세에 맞춰 명시적으로 매핑하고 누락을 테스트한다.
+- Spring MVC 요청 오류는 상태와 필요한 헤더를 보존한다. 예상하지 못한 오류는 서버에 원인을 기록하고 클라이언트에는 기본 500 메시지를 반환한다.
+- Spring Security 필터의 인증·인가 오류는 `AuthenticationEntryPoint`, `AccessDeniedHandler`에서 같은 오류 형식으로 반환한다.
+- 출력 어댑터는 처리 가능한 외부 기술 오류를 포트 계약의 실패로 변환한다. 예상하지 못한 장애를 정상적인 조회 부재나 성공으로 바꾸지 않는다.
+- 원인 예외의 메시지, SQL, 외부 응답 본문과 비밀값을 클라이언트 오류 메시지에 그대로 노출하지 않는다.
+
+## 테스트 작성 규칙
+
+| 대상 | 확인할 내용 |
+| --- | --- |
+| 도메인 단위 테스트 | 생성 조건, 상태 전이, 계산과 경계값을 Java 객체로 검증한다. |
+| 유스케이스 단위 테스트 | 입력 포트를 호출하고 출력 포트의 Fake·Mock으로 성공·실패와 권한 조건을 검증한다. |
+| 웹 어댑터 테스트 | 입력 검증, 인증 정보 변환, HTTP 상태·헤더·JSON 필드값과 예외 매핑을 확인한다. |
+| 영속성 통합 테스트 | 실제 대상 DB에서 매핑, 조회 조건, 제약, 저장·롤백·동시성 동작을 확인한다. |
+| 외부 연동 테스트 | 외부 계약, 타임아웃, 오류 변환·재시도·중복 처리를 해당 연동 환경에서 확인한다. |
+
+- 테스트는 대상과 대응하는 패키지에 두고 일반 테스트는 `XxxTest`, 통합 테스트는 `XxxIntegrationTest`로 이름 짓는다.
+- 메서드 이름은 검증 동작이 드러나는 영어로 작성하고, `@DisplayName`에는 조건과 기대 결과를 한글로 적는다.
+- 실제 값을 가진 DTO·결과 모델로 검증하고 구현의 호출 순서를 그대로 복제하는 테스트를 피한다.
+- 정상·빈 입력·경계·실패 사례를 필요한 만큼 구분한다. 버그 수정은 가능한 경우 수정 전 재현과 회귀 검증을 남긴다.
+- Mock·단위 테스트 통과를 실제 DB·외부 API 검증 완료로 표현하지 않는다. 실행한 환경과 미검증 범위를 보고한다.
+
+### 테스트 이름 예시 · ProductTest.java
+
+메서드명과 DisplayName에 조건과 기대 결과를 드러낸다. 다음은 위 상품 도메인의 가격 검증 예제다.
+
+```java
+package com.louiekury.product.catalog.domain;
+
+import com.louiekury.product.shared.exception.BusinessException;
+import com.louiekury.product.shared.exception.ErrorCode;
+import java.math.BigDecimal;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+class ProductTest {
+
+    @Test
+    @DisplayName("가격이 0이면 상품 생성에 실패한다")
+    void rejectsZeroPrice() {
+        BusinessException exception = assertThrows(
+            BusinessException.class,
+            () -> new Product("사료", BigDecimal.ZERO)
+        );
+        assertEquals(ErrorCode.INVALID_PRODUCT, exception.getErrorCode());
+    }
+}
+```
+
+## 코드 서식과 주석
+
+- UTF-8(BOM 없음), LF, 스페이스 4칸을 사용한다. 줄 끝 공백을 제거하고 파일 끝은 개행 하나로 마친다.
+- 한 줄은 들여쓰기를 포함해 120자 이내로 쓴다. URL·외부 계약값처럼 분리할 수 없는 값은 예외로 둔다.
+- 연산자 양옆과 쉼표 뒤에는 공백 한 칸을 둔다. 제어문 키워드와 여는 소괄호 사이는 띄우고 메서드 이름과 소괄호는 붙인다.
+- 여러 줄 인자는 여는 소괄호 다음 줄부터 한 줄에 하나씩 쓰고 4칸 추가 들여쓰기한다. 닫는 소괄호는 시작 줄과 같은 깊이에 둔다. 연쇄 호출은 이어지는 줄 앞에 마침표를 둔다.
+- 조건문·반복문은 한 줄이어도 중괄호를 쓴다. 여는 중괄호는 같은 줄에 두고 `else`, `catch`, `finally`는 앞의 닫는 중괄호와 같은 줄에 둔다.
+- 메서드 사이에는 빈 줄 하나를 둔다. 연속 빈 줄과 블록의 처음·마지막 빈 줄을 피한다.
+- 패키지 선언, import, 타입 선언 순서로 두고 사이에 빈 줄을 둔다. 일반 import 다음 정적 import를 별도 그룹으로 두고 그룹 안은 전체 이름으로 정렬한다. 와일드카드·미사용 import는 금지한다.
+- 클래스 선언 순서는 상수, 필드, 생성자, 메서드, 중첩 타입이다. private 보조 메서드는 호출하는 메서드 가까이에 둘 수 있다.
+- 이름과 구조로 드러나는 동작을 주석으로 반복하지 않는다. 코드만으로 알기 어려운 제약·결정 이유가 있으면 짧게 설명하고, 설계 결정은 관련 ADR에 기록한다.
+- 포매터·정적 분석·테스트 명령은 서비스 저장소의 실제 빌드 설정을 확인해 실행한다.
+
+### 서식 허용 및 위반 예시
+
+각 항목의 첫 번째 코드는 허용 예시, 두 번째 코드는 위반 예시다. 아래 코드는 서식 설명용 발췌다.
+
+#### 들여쓰기와 공백
 
 **허용**
 
@@ -60,11 +342,7 @@ if( petId!=null ) {
 }
 ```
 
-### 2.3 줄 길이와 여러 줄 표현식
-
-- 한 줄은 들여쓰기를 포함해 120자 이내로 작성한다. URL이나 외부 계약에서 정한 값처럼 줄을 나누면 읽기 어렵거나 의미가 달라지는 경우에는 해당 줄의 예외를 허용한다.
-- 호출이나 선언의 인자 목록을 여러 줄로 나눌 때는 여는 소괄호 다음에서 줄을 바꾸고 인자를 한 줄에 하나씩 배치한다. 이어지는 줄은 스페이스 4칸을 추가하고, 닫는 소괄호는 표현식의 시작 줄과 같은 깊이에 둔다.
-- 연쇄 호출을 여러 줄로 나눌 때는 메서드 호출을 한 줄에 하나씩 배치하고, 마침표를 이어지는 줄의 맨 앞에 둔다.
+#### 여러 줄 인자
 
 **허용**
 
@@ -84,11 +362,7 @@ return consultationService.create(petId, veterinarianId,
                                   requestedAt, consultationReason);
 ```
 
-### 2.4 중괄호와 빈 줄
-
-- 여는 중괄호는 선언이나 제어문의 끝에 공백 한 칸을 두고 같은 줄에 쓴다. 닫는 중괄호는 블록을 연 줄과 같은 깊이에 둔다.
-- 본문이 한 줄이어도 조건문과 반복문에는 중괄호를 쓴다. `else`, `catch`, `finally`는 앞 블록의 닫는 중괄호와 같은 줄에 둔다.
-- 메서드와 메서드 사이에는 빈 줄을 한 줄 둔다. 메서드 안에서는 작업 단계가 바뀌는 지점에 빈 줄 한 줄로 구분할 수 있다. 빈 줄을 연속으로 두거나 블록의 첫 줄과 마지막 줄을 비워 두지 않는다.
+#### 중괄호
 
 **허용**
 
@@ -109,12 +383,7 @@ else
     return record.get();
 ```
 
-### 2.5 import와 선언 순서
-
-- 패키지 선언, import 목록, 타입 선언을 순서대로 두고 각 부분 사이에 빈 줄 한 줄을 둔다.
-- import는 일반 import와 정적 import 순서로 그룹을 나눈다. 두 그룹 사이에 빈 줄 한 줄을 두고, 각 그룹 안에서는 전체 이름을 오름차순으로 정렬한다.
-- 와일드카드 import는 사용하지 않는다. 사용하지 않는 import는 제거한다.
-- 클래스 안에서는 상수, 필드, 생성자, 메서드, 중첩 타입 순서로 선언한다. 특정 메서드에서만 호출하는 private 메서드는 호출하는 메서드 가까이에 둘 수 있다.
+#### import 순서
 
 **허용**
 
@@ -133,185 +402,41 @@ import java.util.*;
 import java.time.Instant;
 ```
 
-## 3. 이름 짓기
+## 설정과 로깅
 
-### 3.1 서비스 디렉터리와 패키지
+- 비밀번호·API 키·토큰은 코드나 공유 설정 파일에 저장하지 않는다. 환경 변수 등 서비스의 비밀값 주입 방식으로 전달한다.
+- 외부 기술 설정은 `global.config` 또는 기능별 어댑터 설정에 둔다. 도메인이 환경 변수나 설정 파일을 직접 읽지 않도록 한다.
+- 로그에는 실패 맥락과 추적 식별자를 남기고, 요청·응답 본문과 개인정보·인증 정보를 그대로 기록하지 않는다.
+- 동일한 예외를 여러 계층에서 반복 기록하지 않도록 처리 책임이 있는 경계에서 기록한다.
 
-- 마이크로서비스 프로젝트 디렉터리 이름은 저장소 이름에 맞춰 영문 소문자와 하이픈으로 작성하고, 끝에 `-service`를 붙인다. 예를 들어 `product-service/`, `medical-record-service/`로 쓴다.
-- Java 루트 패키지의 서비스명은 여러 단어여도 소문자로 붙여 쓴다. 예를 들어 `com.louiekury.product`, `com.louiekury.medicalrecord`로 쓴다.
+## 상품 등록과 조회 예제
 
-### 3.2 요청·응답 DTO
+상품은 계층 간 연결을 설명하기 위한 예시다. 아래 클래스는 `com.louiekury.product` 서비스의 `catalog` 기능에 둔다. 실제 서비스의 필드·권한·오류 코드는 해당 API·ERD에 맞춘다. 예제는 Java 17 이상 문법과 Jakarta 기반 Spring, JPA, Validation, Jackson, Lombok을 사용하며 실제 의존성 버전은 서비스 빌드 설정에서 정한다.
 
-- 도메인별 요청·응답 DTO는 일반 `class`로 선언하고, 이름 끝에 `Dto`를 붙인다. 공통 API 응답은 [`ApiResponse<T>`](#71-공통-api-응답--apiresponsejava)로 표기한다.
-- 요청 DTO는 동작, 대상, `RequestDto` 순으로 이름을 짓는다. 예를 들어 `CreateProductRequestDto`, `UpdateProductRequestDto`로 쓴다.
-- 응답 DTO 이름은 응답이 담는 대상을 드러내고 `ResponseDto`로 끝낸다. 예를 들어 `ProductResponseDto`로 쓴다.
-- 목록에서 한 항목을 담는 DTO는 `ListItemResponseDto`로 끝낸다. 예를 들어 상품 목록의 각 항목은 `ProductListItemResponseDto`로 표현한다.
+등록 요청은 컨트롤러에서 Command로 변환되고 입력 포트를 통해 실행된다. 서비스는 도메인을 생성하여 신규 저장 포트를 호출하고 Result를 반환한다. 조회는 삭제되지 않은 상품을 조회하는 출력 포트를 사용한다. 컨트롤러는 Result를 HTTP 응답 DTO로 변환한다.
 
-### 3.3 조회 메서드
+- [웹 컨트롤러](#웹-컨트롤러--productcontrollerjava)
+- [애플리케이션 서비스](#애플리케이션-서비스--productservicejava)
+- [입력 포트](#입력-포트--createproductusecasejava)
+- [출력 포트](#출력-포트--insertproductportjava)
+- [도메인 모델](#도메인-모델--productjava)
+- [영속성 어댑터](#영속성-어댑터--productpersistenceadapterjava)
+- [공통 클래스 예제](#공통-클래스-예제)
 
-- Spring Data 레포지토리의 조회와 존재 확인은 각각 `findById()`, `existsById()` 같은 기존 이름을 따른다.
-- 서비스에서 조회 결과가 반드시 필요할 때는 `getProduct()`처럼 `get`으로 시작하는 이름을 쓰고, 결과가 없으면 예외를 던진다.
+### 웹 컨트롤러 · ProductController.java
 
-### 3.4 도메인 용어와 약어
-
-- 도메인 용어는 뜻을 명확하게 알 수 있도록 풀어 쓴다. 예를 들어 수의사를 나타내는 이름에는 `veterinarian`을 사용한다.
-- 같은 개념은 관련 클래스, 메서드, 변수에서 같은 용어로 표현한다. 예를 들어 `VeterinarianResponseDto`, `findVeterinarian()`, `veterinarianId`로 쓴다.
-- `API`, `ID`, `URL`, `DTO` 같은 약어는 이름을 구성할 때 한 단어로 취급하고, 이름 전체의 대소문자 표기법을 따른다. 예를 들어 `ProductApiClient`, `productId`, `imageUrl`, `ProductResponseDto`로 쓴다.
-
-### 3.5 테스트 이름
-
-- 테스트 메서드 이름은 검증하는 동작이 드러나게 영어로 작성하고, `@DisplayName`에는 테스트 조건과 기대 결과가 드러나는 한글 설명을 작성한다.
+컨트롤러는 두 입력 포트를 주입받는다. HTTP DTO의 값을 Command로 바꾸고 반환된 Result를 응답 DTO로 변환한다.
 
 ```java
-@Test
-@DisplayName("이미 등록된 상품명으로 등록하면 실패한다")
-void rejectsDuplicateProductName() {
-    // 테스트 본문
-}
-```
+package com.louiekury.product.catalog.adapter.in.web;
 
-### 3.6 타입과 파일 이름
-
-- 클래스, 인터페이스, 열거형은 각 단어의 첫 글자를 대문자로 쓰는 `PascalCase`를 사용한다. 공개 타입을 선언한 Java 파일은 타입과 같은 이름을 사용한다.
-- Java `record` 타입 사용은 금지한다.
-- 컨트롤러, 서비스, 레포지토리에는 대상 뒤에 역할을 붙인다. 예를 들어 `ProductController`, `ProductService`, `ProductRepository`로 쓴다.
-- 엔티티는 도메인 용어로 이름을 짓고 `Entity`를 붙이지 않는다. 예를 들어 상품 엔티티는 `entity/Product.java`에 둔다.
-
-### 3.7 정적 팩토리 메서드 이름
-
-- 기존 객체 하나를 받아 변환할 때는 `from`을 쓴다. 예를 들어 `ProductResponseDto.from(product)`로 쓴다.
-- DTO를 만들 때 필요한 필드 값을 직접 전달하는 팩토리 메서드는 `of`로 이름을 짓는다. 예를 들어 `CreateProductRequestDto.of(name, price)`로 쓴다.
-
-### 3.8 메서드, 변수, 상수
-
-- 메서드, 필드, 지역 변수, 매개변수는 `lowerCamelCase`로 쓴다. 메서드는 `updateProductName()`처럼 동작을 드러내고, 변수는 `productName`처럼 담긴 값을 드러낸다.
-- 상수는 단어를 밑줄로 구분한 대문자(`UPPER_SNAKE_CASE`)로 쓴다. 예를 들어 `MAX_RETRY_COUNT`로 쓴다.
-- 숫자 타입에 단위가 드러나지 않으면 이름에 단위를 적는다. 예를 들어 밀리초를 담는 변수는 `timeoutMillis`로 쓴다.
-- 참·거짓을 나타내는 필드는 `active`처럼 상태 이름으로 짓고, 기본형 `boolean`의 getter에는 `is`를 붙인다. 예를 들어 `boolean active`의 getter는 `isActive()`로 쓴다.
-
-### 3.9 업무 예외와 오류 코드
-
-- 업무 규칙에 따른 실패는 공통 예외인 `BusinessException`으로 표현하고, 구체적인 실패 사유를 오류 코드로 구분한다.
-- 오류 코드는 대상과 실패 사유가 드러나도록 `UPPER_SNAKE_CASE`로 쓴다. 예를 들어 상품을 찾을 수 없으면 `PRODUCT_NOT_FOUND`를 사용한다.
-
-```java
-throw new BusinessException(ErrorCode.PRODUCT_NOT_FOUND);
-```
-
-## 4. 패키지와 계층 구조
-
-### 4.1 서비스별 기본 패키지
-
-각 마이크로서비스의 루트 패키지는 `com.louiekury.<서비스명>`으로 구성하고, 실행 클래스는 루트 패키지에 둔다. 루트 아래에 `controller`, `service`, `repository`, `entity`, `dto`를 두고, API 요청과 응답 DTO는 각각 `dto.request`와 `dto.response`에 둔다. 서비스 전역에서 쓰는 코드는 `global`에 둔다.
-
-상담 서비스의 예시는 다음과 같다.
-
-```text
-consultation-service/
-└── src/main/java/com/louiekury/consultation/
-    ├── ConsultationApplication.java
-    ├── controller/
-    ├── service/
-    ├── repository/
-    ├── entity/
-    │   └── Consultation.java
-    ├── dto/
-    │   ├── request/
-    │   │   └── CreateConsultationRequestDto.java
-    │   └── response/
-    │       └── ConsultationResponseDto.java
-    └── global/
-        ├── config/
-        ├── entity/
-        │   └── BaseEntity.java
-        ├── exception/
-        │   ├── BusinessException.java
-        │   ├── ErrorCode.java
-        │   └── GlobalExceptionHandler.java
-        └── response/
-            └── ApiResponse.java
-```
-
-| 패키지 | 배치할 코드 |
-| --- | --- |
-| `controller` | HTTP 요청을 받고 응답을 만드는 코드 |
-| `service` | 상담 요청·취소·완료처럼 유스케이스의 처리 흐름을 담당하는 코드 |
-| `repository` | 서비스가 소유한 데이터의 조회와 저장을 담당하는 코드 |
-| `entity` | `Consultation`처럼 서비스가 저장하고 관리하는 엔티티 |
-| `dto.request` | `CreateConsultationRequestDto` 같은 API 요청 DTO |
-| `dto.response` | `ConsultationResponseDto` 같은 API 응답 DTO |
-| `global` | 서비스 전역의 설정과 공통 응답 처리 |
-| `global.entity` | 공통 엔티티 상위 클래스 `BaseEntity` |
-| `global.response` | 공통 API 응답 타입 `ApiResponse<T>` |
-
-별도 서비스가 책임지는 기능과 데이터는 해당 서비스에 둔다. 하나의 서비스 안에서 기능이 커져 관련 코드의 위치를 구분할 필요가 생기면 기능별 하위 패키지를 둘 수 있다.
-
-### 4.2 응답 DTO 변환
-
-- 서비스는 레포지토리에서 필요한 데이터를 받아 비즈니스 로직을 수행한다. 처리 결과로 응답 DTO를 만들 때는 DTO의 정적 팩토리 메서드를 호출한다.
-- 팩토리 메서드는 변환한 DTO를 서비스에 반환하고, 서비스는 그 DTO를 컨트롤러에 반환한다.
-- 컨트롤러는 서비스가 반환한 DTO를 공통 응답에 담고, `ResponseEntity`로 HTTP 상태와 응답 본문을 함께 반환한다. 서비스 호출 결과를 공통 응답에 한 번만 담을 때는 반환문에서 바로 호출한다.
-
-조회 서비스 코드는 [상품 등록 및 조회 예시](#53-상품-등록-및-조회-예시)를 참고한다.
-
-### 4.3 요청 DTO 전달과 변환
-
-- 컨트롤러는 요청 DTO를 서비스 메서드의 인자로 그대로 전달한다.
-- 서비스는 요청 DTO에서 유스케이스에 필요한 값을 읽는다. 엔티티를 만들 때는 필요한 값을 생성자에 전달한다.
-
-등록 컨트롤러와 서비스 코드는 [상품 등록 및 조회 예시](#53-상품-등록-및-조회-예시)를 참고한다.
-
-### 4.4 서비스와 레포지토리의 의존 방향
-
-- 각 서비스 클래스는 자신이 담당하는 기능의 레포지토리를 사용한다. 다른 기능의 레포지토리를 직접 주입하거나 호출하는 것은 금지한다.
-- 같은 마이크로서비스에서 다른 기능의 데이터나 처리가 필요하면 그 기능을 담당하는 서비스의 공개 메서드를 호출한다. 서비스 클래스 간 호출은 한 방향으로 유지하며 순환 의존은 금지한다.
-- 별도 마이크로서비스가 소유한 데이터는 해당 서비스가 공개한 API나 이벤트를 통해 받는다.
-
-예를 들어 상품과 재고가 같은 마이크로서비스에 있으면 `ProductService`는 `stockService.getQuantity(productId)`를 호출한다. `StockService`가 `StockRepository`에서 재고를 조회해 수량을 반환하고, `ProductService`는 받은 수량으로 상품 응답을 구성한다.
-
-### 4.5 공개 메서드와 반환값
-
-- 다른 클래스가 호출해야 하는 메서드만 공개한다. 클래스 내부에서만 사용하는 보조 메서드는 `private`으로 선언한다.
-- 다른 기능에 공개하는 서비스 메서드는 호출에 필요한 값만 반환한다. 값 하나면 해당 값의 타입으로 반환하고, 관련 값 여러 개를 전달해야 하면 필요한 필드만 담은 DTO를 반환한다.
-- 예를 들어 `StockService.getQuantity(productId)`는 재고 수량을 반환한다. 상품 기능에서 쓰는 공개 메서드의 반환 타입은 필요한 값인 수량을 나타낸다.
-
-## 5. 클래스와 메서드
-
-### 5.1 객체 생성과 변환
-
-- 도메인별 DTO를 만들 때는 정적 팩토리 메서드 `from` 또는 `of`를 호출한다. 공통 API 응답은 [`ApiResponse`의 생성 메서드](#71-공통-api-응답--apiresponsejava)를 사용한다.
-- DTO의 필드 매핑과 객체 생성은 팩토리 메서드에서 처리한다. DTO 빌더는 팩토리 내부에서 사용하도록 `@Builder(access = AccessLevel.PRIVATE)`로 선언한다. 엔티티는 값을 받는 생성자로 초기화한다. 상태 변경이 필요한 필드에는 해당 변경 메서드만 공개한다.
-- HTTP 요청 본문을 역직렬화할 때 Jackson은 요청 DTO의 `@JsonCreator`가 붙은 정적 팩토리 메서드를 호출한다. 서비스는 전달받은 DTO에서 엔티티 생성에 필요한 값을 읽는다.
-
-### 5.2 계층별 어노테이션
-
-| 대상 | 기본 사용 | 필요한 경우 |
-| --- | --- | --- |
-| 컨트롤러 | 클래스에 `@RestController`와 공통 경로를 지정하는 `@RequestMapping`을 붙인다. 엔드포인트에는 `@GetMapping`, `@PostMapping` 등 HTTP 메서드에 맞는 매핑을 하나 붙인다. | 본문 DTO에는 `@Valid @RequestBody`, 경로 변수에는 `@PathVariable`을 붙인다. HTTP 상태와 공통 응답 본문은 `ResponseEntity`에서 지정한다. |
-| 서비스 | 클래스에 `@Service`를 붙인다. | DB 쓰기 유스케이스의 공개 메서드에는 `@Transactional`, DB 조회 전용 유스케이스에는 `@Transactional(readOnly = true)`를 붙인다. |
-| 레포지토리 | Spring Data JPA 인터페이스는 `JpaRepository<엔티티, ID 타입>`를 상속한다. 인터페이스에 `@Repository`를 중복 선언하지 않는다. | 복잡한 조회는 [조회 방식 선택](#102-조회-방식-선택) 기준에 따라 Querydsl로 작성한다. |
-| 요청 DTO | `private final` 필드, `@Getter`, `@RequiredArgsConstructor(access = AccessLevel.PRIVATE)`를 사용한다. `of`와 비공개 빌더로 생성한다. | JSON 본문과 연결하는 `of`에 `@JsonCreator`, 매개변수에 `@JsonProperty`를 붙인다. 입력 제약은 필드 위에 하나씩 한 줄에 쓴다. 각 필드와 그 어노테이션을 한 묶음으로 두고, 묶음 사이에 빈 줄을 한 줄 둔다. |
-| 응답 DTO | 클래스로 선언하고, 필드는 `private final`로 둔다. `@Getter`로 조회 메서드를 만들고, `@RequiredArgsConstructor(access = AccessLevel.PRIVATE)`로 생성자를 만든다. | 단일 엔티티를 변환할 때는 `from`과 비공개 빌더를 쓴다. |
-| 엔티티 | 클래스 어노테이션은 `@Getter`, `@Entity`, `@Table(name = "...")`, `@NoArgsConstructor` 순서로 붙인다. `@Table`에 테이블 이름을 명시하고 식별자 필드에 `@Id`를 붙인다. JPA용 기본 생성자는 `@NoArgsConstructor(access = AccessLevel.PROTECTED)`로 만들고, 값을 초기화하는 생성자는 직접 작성한다. | JPA가 생성하는 식별자에는 `@GeneratedValue(strategy = ...)`로 스키마에 맞는 생성 전략을 명시한다. 컬럼 제약, 연관관계, 읽기 접근자는 필요한 곳에 선언한다. |
-
-- 클래스의 필드는 특별한 이유가 있으면 접근 범위를 넓힐 수 있으며, 기본은 `private`으로 선언한다.
-- 컨트롤러와 서비스의 의존성은 `private final` 필드와 `@RequiredArgsConstructor`로 주입한다. 필드에 `@Autowired`를 붙이는 방식은 금지한다.
-- DTO의 `final`은 필드에만 붙인다.
-- DTO와 엔티티에서 `@Data`와 클래스 전체에 적용하는 `@Setter`는 금지한다.
-
-### 5.3 상품 등록 및 조회 예시
-
-#### 5.3.1 컨트롤러 · ProductController.java
-
-공통 성공 응답은 [`ApiResponse<T>`](#71-공통-api-응답--apiresponsejava)를 사용한다.
-
-```java
-package com.louiekury.product.controller;
-
-import com.louiekury.product.dto.request.CreateProductRequestDto;
-import com.louiekury.product.dto.response.ProductResponseDto;
-import com.louiekury.product.global.response.ApiResponse;
-import com.louiekury.product.service.ProductService;
+import com.louiekury.product.catalog.adapter.in.web.dto.request.CreateProductRequestDto;
+import com.louiekury.product.catalog.adapter.in.web.dto.response.ProductResponseDto;
+import com.louiekury.product.catalog.application.model.CreateProductCommand;
+import com.louiekury.product.catalog.application.model.ProductResult;
+import com.louiekury.product.catalog.application.port.in.CreateProductUseCase;
+import com.louiekury.product.catalog.application.port.in.GetProductUseCase;
+import com.louiekury.product.global.web.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -324,82 +449,39 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/products")
+@RequestMapping("/api/products")
 @RequiredArgsConstructor
 public class ProductController {
 
-    private final ProductService productService;
+    private final CreateProductUseCase createProductUseCase;
+    private final GetProductUseCase getProductUseCase;
 
     @PostMapping
     public ResponseEntity<ApiResponse<ProductResponseDto>> createProduct(
         @Valid @RequestBody CreateProductRequestDto request
     ) {
+        CreateProductCommand command = CreateProductCommand.of(request.getName(), request.getPrice());
+        ProductResult result = createProductUseCase.createProduct(command);
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponse.success(productService.createProduct(request)));
+            .body(ApiResponse.success(ProductResponseDto.from(result)));
     }
 
     @GetMapping("/{productId}")
     public ResponseEntity<ApiResponse<ProductResponseDto>> getProduct(
         @PathVariable("productId") Long productId
     ) {
-        return ResponseEntity.ok(ApiResponse.success(productService.getProduct(productId)));
+        ProductResult result = getProductUseCase.getProduct(productId);
+        return ResponseEntity.ok(ApiResponse.success(ProductResponseDto.from(result)));
     }
 }
 ```
 
-#### 5.3.2 서비스 · ProductService.java
+### 요청 DTO · CreateProductRequestDto.java
+
+JSON 역직렬화용 팩토리와 필드 검증은 웹 DTO에 둔다.
 
 ```java
-package com.louiekury.product.service;
-
-import com.louiekury.product.dto.request.CreateProductRequestDto;
-import com.louiekury.product.dto.response.ProductResponseDto;
-import com.louiekury.product.entity.Product;
-import com.louiekury.product.global.exception.BusinessException;
-import com.louiekury.product.global.exception.ErrorCode;
-import com.louiekury.product.repository.ProductRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-@Service
-@RequiredArgsConstructor
-public class ProductService {
-
-    private final ProductRepository productRepository;
-
-    @Transactional
-    public ProductResponseDto createProduct(CreateProductRequestDto request) {
-        Product product = new Product(request.getName(), request.getPrice());
-        Product savedProduct = productRepository.save(product);
-        return ProductResponseDto.from(savedProduct);
-    }
-
-    @Transactional(readOnly = true)
-    public ProductResponseDto getProduct(Long productId) {
-        Product product = productRepository.findById(productId)
-            .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
-        return ProductResponseDto.from(product);
-    }
-}
-```
-
-#### 5.3.3 레포지토리 · ProductRepository.java
-
-```java
-package com.louiekury.product.repository;
-
-import com.louiekury.product.entity.Product;
-import org.springframework.data.jpa.repository.JpaRepository;
-
-public interface ProductRepository extends JpaRepository<Product, Long> {
-}
-```
-
-#### 5.3.4 요청 DTO · CreateProductRequestDto.java
-
-```java
-package com.louiekury.product.dto.request;
+package com.louiekury.product.catalog.adapter.in.web.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -437,12 +519,14 @@ public class CreateProductRequestDto {
 }
 ```
 
-#### 5.3.5 응답 DTO · ProductResponseDto.java
+### 응답 DTO · ProductResponseDto.java
+
+응답 DTO는 애플리케이션 결과를 변환한다.
 
 ```java
-package com.louiekury.product.dto.response;
+package com.louiekury.product.catalog.adapter.in.web.dto.response;
 
-import com.louiekury.product.entity.Product;
+import com.louiekury.product.catalog.application.model.ProductResult;
 import java.math.BigDecimal;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -458,8 +542,75 @@ public class ProductResponseDto {
     private final String name;
     private final BigDecimal price;
 
-    public static ProductResponseDto from(Product product) {
+    public static ProductResponseDto from(ProductResult result) {
         return ProductResponseDto.builder()
+            .id(result.getId())
+            .name(result.getName())
+            .price(result.getPrice())
+            .build();
+    }
+}
+```
+
+### 입력 모델 · CreateProductCommand.java
+
+애플리케이션 입력은 HTTP와 독립적인 값만 담는다. 업무 값의 유효성은 아래 Product 생성 시 검증한다.
+
+```java
+package com.louiekury.product.catalog.application.model;
+
+import java.math.BigDecimal;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
+@Getter
+@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder(access = AccessLevel.PRIVATE)
+public class CreateProductCommand {
+
+    private final String name;
+
+    private final BigDecimal price;
+
+    public static CreateProductCommand of(
+        String name,
+        BigDecimal price
+    ) {
+        return CreateProductCommand.builder()
+            .name(name)
+            .price(price)
+            .build();
+    }
+}
+```
+
+### 결과 모델 · ProductResult.java
+
+서비스는 도메인에서 필요한 값만 결과에 담는다.
+
+```java
+package com.louiekury.product.catalog.application.model;
+
+import com.louiekury.product.catalog.domain.Product;
+import java.math.BigDecimal;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
+@Getter
+@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder(access = AccessLevel.PRIVATE)
+public class ProductResult {
+
+    private final Long id;
+    private final String name;
+    private final BigDecimal price;
+
+    public static ProductResult from(Product product) {
+        return ProductResult.builder()
             .id(product.getId())
             .name(product.getName())
             .price(product.getPrice())
@@ -468,14 +619,170 @@ public class ProductResponseDto {
 }
 ```
 
-#### 5.3.6 엔티티 · Product.java
+### 입력 포트 · CreateProductUseCase.java
 
-`Product`는 [`BaseEntity`](#75-베이스-엔티티--baseentityjava)를 상속한다. `products` 테이블에는 `created_at`, `updated_at`, `deleted_at` 컬럼을 둔다.
+유스케이스의 입력과 반환 계약을 선언한다.
 
 ```java
-package com.louiekury.product.entity;
+package com.louiekury.product.catalog.application.port.in;
 
-import com.louiekury.product.global.entity.BaseEntity;
+import com.louiekury.product.catalog.application.model.CreateProductCommand;
+import com.louiekury.product.catalog.application.model.ProductResult;
+
+public interface CreateProductUseCase {
+
+    ProductResult createProduct(CreateProductCommand command);
+}
+```
+
+### 입력 포트 · GetProductUseCase.java
+
+유스케이스의 입력과 반환 계약을 선언한다.
+
+```java
+package com.louiekury.product.catalog.application.port.in;
+
+import com.louiekury.product.catalog.application.model.ProductResult;
+
+public interface GetProductUseCase {
+
+    ProductResult getProduct(Long productId);
+}
+```
+
+### 출력 포트 · InsertProductPort.java
+
+새 상품만 저장하는 계약이다. ID가 있는 상품의 수정은 별도 저장 계약으로 구현한다.
+
+```java
+package com.louiekury.product.catalog.application.port.out;
+
+import com.louiekury.product.catalog.domain.Product;
+
+public interface InsertProductPort {
+
+    Product insert(Product product);
+}
+```
+
+### 출력 포트 · LoadProductPort.java
+
+삭제되지 않은 상품만 반환하고 대상이 없으면 Optional.empty()를 반환한다.
+
+```java
+package com.louiekury.product.catalog.application.port.out;
+
+import com.louiekury.product.catalog.domain.Product;
+import java.util.Optional;
+
+public interface LoadProductPort {
+
+    Optional<Product> findActiveById(Long productId);
+}
+```
+
+### 애플리케이션 서비스 · ProductService.java
+
+이 예제에서는 관련된 등록·조회 두 입력 포트를 한 서비스가 구현한다. 유스케이스가 커지면 CreateProductService, GetProductService처럼 분리한다.
+
+```java
+package com.louiekury.product.catalog.application.service;
+
+import com.louiekury.product.catalog.application.model.CreateProductCommand;
+import com.louiekury.product.catalog.application.model.ProductResult;
+import com.louiekury.product.catalog.application.port.in.CreateProductUseCase;
+import com.louiekury.product.catalog.application.port.in.GetProductUseCase;
+import com.louiekury.product.catalog.application.port.out.InsertProductPort;
+import com.louiekury.product.catalog.application.port.out.LoadProductPort;
+import com.louiekury.product.catalog.domain.Product;
+import com.louiekury.product.shared.exception.BusinessException;
+import com.louiekury.product.shared.exception.ErrorCode;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+public class ProductService implements CreateProductUseCase, GetProductUseCase {
+
+    private final InsertProductPort insertProductPort;
+    private final LoadProductPort loadProductPort;
+
+    @Override
+    @Transactional
+    public ProductResult createProduct(CreateProductCommand command) {
+        Product product = new Product(command.getName(), command.getPrice());
+        Product savedProduct = insertProductPort.insert(product);
+        return ProductResult.from(savedProduct);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductResult getProduct(Long productId) {
+        Product product = loadProductPort.findActiveById(productId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+        return ProductResult.from(product);
+    }
+}
+```
+
+### 도메인 모델 · Product.java
+
+생성자는 이름과 가격의 업무 조건을 검증한다. 영속성 복원용 팩토리는 저장된 식별자를 함께 받는다.
+
+```java
+package com.louiekury.product.catalog.domain;
+
+import com.louiekury.product.shared.exception.BusinessException;
+import com.louiekury.product.shared.exception.ErrorCode;
+import java.math.BigDecimal;
+import java.util.Objects;
+
+public class Product {
+
+    private final Long id;
+    private final String name;
+    private final BigDecimal price;
+
+    public Product(String name, BigDecimal price) {
+        this(null, name, price);
+    }
+
+    private Product(Long id, String name, BigDecimal price) {
+        if (name == null || name.isBlank() || price == null || price.signum() <= 0) {
+            throw new BusinessException(ErrorCode.INVALID_PRODUCT);
+        }
+        this.id = id;
+        this.name = name;
+        this.price = price;
+    }
+
+    public static Product restore(Long id, String name, BigDecimal price) {
+        return new Product(Objects.requireNonNull(id, "id"), name, price);
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public BigDecimal getPrice() {
+        return price;
+    }
+}
+```
+
+### JPA 엔티티 · ProductJpaEntity.java
+
+products 테이블의 매핑을 담당한다. 이 예제의 테이블에는 BaseEntity의 created_at, updated_at, deleted_at 컬럼도 둔다.
+
+```java
+package com.louiekury.product.catalog.adapter.out.persistence;
+
+import com.louiekury.product.global.persistence.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -491,7 +798,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "products")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Product extends BaseEntity {
+public class ProductJpaEntity extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -503,40 +810,101 @@ public class Product extends BaseEntity {
     @Column(nullable = false)
     private BigDecimal price;
 
-    public Product(String name, BigDecimal price) {
+    public ProductJpaEntity(String name, BigDecimal price) {
         this.name = name;
         this.price = price;
     }
 }
 ```
 
-### 5.4 추가로 정할 항목
+### Spring Data 레포지토리 · ProductJpaRepository.java
 
-- 클래스의 책임과 분리 기준
-- 매개변수 개수, 분기 복잡도
-- 상태 변경, 불변성, 부수 효과
-- 조건문, 반복문, 조기 반환, 중복 코드
-- 널, 빈 값, 컬렉션 반환값
-
-## 6. 도메인 로직
-
-- 객체 생성과 유효성 검증 위치
-- 비즈니스 제약과 상태 전이
-- 식별자, 값 객체, 열거형의 사용 범위
-- 시간대, 날짜·시간, 수량·금액 계산
-
-## 7. 공통 컨벤션
-
-사용자가 공통 클래스 적용을 요청하면 이 절의 Java 파일 예시를 서비스 레포에 복사한다. 예시의 서비스 루트 패키지와 해당 import를 서비스에 맞추고, 클래스명과 공통 동작은 예시대로 적용한다.
-
-### 7.1 공통 API 응답 · ApiResponse.java
-
-서비스별 `global.response` 패키지에 둔다. 컨트롤러는 성공 데이터를 `ApiResponse.success(data)`로 감싸고, 예외 핸들러는 `ApiResponse.error(code, message)`로 오류 본문을 만든다. HTTP 상태 코드는 `ResponseEntity`에서 지정한다.
-
-[API 공통 계약](../api/README.md#공통-계약-초안)에 따라 성공 본문은 `{"data":{"balanceCoins":7000}}`, 오류 본문은 `{"code":"VALIDATION_ERROR","message":"요청 값이 올바르지 않습니다."}` 형태로 반환한다. `204`, 본문 없는 `202`, 파일 응답, `302` 리다이렉트는 래퍼 없이 반환한다.
+조회 메서드에 삭제 상태 조건을 포함한다.
 
 ```java
-package com.louiekury.product.global.response;
+package com.louiekury.product.catalog.adapter.out.persistence;
+
+import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface ProductJpaRepository extends JpaRepository<ProductJpaEntity, Long> {
+
+    Optional<ProductJpaEntity> findByIdAndDeletedAtIsNull(Long productId);
+}
+```
+
+### 영속성 매퍼 · ProductPersistenceMapper.java
+
+신규 저장용 변환은 ID가 없는 모델만 허용한다. 기존 엔티티 수정은 필요한 필드만 반영하는 별도 변환으로 구현하고 감사·삭제·버전 정보를 보존한다.
+
+```java
+package com.louiekury.product.catalog.adapter.out.persistence;
+
+import com.louiekury.product.catalog.domain.Product;
+
+public final class ProductPersistenceMapper {
+
+    private ProductPersistenceMapper() {
+    }
+
+    public static ProductJpaEntity toNewEntity(Product product) {
+        if (product.getId() != null) {
+            throw new IllegalArgumentException("신규 상품만 저장할 수 있습니다.");
+        }
+        return new ProductJpaEntity(product.getName(), product.getPrice());
+    }
+
+    public static Product toDomain(ProductJpaEntity entity) {
+        return Product.restore(entity.getId(), entity.getName(), entity.getPrice());
+    }
+}
+```
+
+### 영속성 어댑터 · ProductPersistenceAdapter.java
+
+출력 포트를 구현하고 JPA 엔티티를 도메인으로 변환한다. 트랜잭션은 이 어댑터를 호출하는 유스케이스가 시작한다.
+
+```java
+package com.louiekury.product.catalog.adapter.out.persistence;
+
+import com.louiekury.product.catalog.application.port.out.InsertProductPort;
+import com.louiekury.product.catalog.application.port.out.LoadProductPort;
+import com.louiekury.product.catalog.domain.Product;
+import java.util.Optional;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
+
+@Repository
+@RequiredArgsConstructor
+public class ProductPersistenceAdapter implements InsertProductPort, LoadProductPort {
+
+    private final ProductJpaRepository productJpaRepository;
+
+    @Override
+    public Product insert(Product product) {
+        ProductJpaEntity entity = ProductPersistenceMapper.toNewEntity(product);
+        ProductJpaEntity savedEntity = productJpaRepository.save(entity);
+        return ProductPersistenceMapper.toDomain(savedEntity);
+    }
+
+    @Override
+    public Optional<Product> findActiveById(Long productId) {
+        return productJpaRepository.findByIdAndDeletedAtIsNull(productId)
+            .map(ProductPersistenceMapper::toDomain);
+    }
+}
+```
+
+## 공통 클래스 예제
+
+아래 코드는 상품 예제와 같은 서비스 루트를 사용한다. 다른 서비스에 적용할 때 패키지와 업무 오류 코드를 해당 서비스에 맞춘다. API 응답과 HTTP 예외 처리는 웹 계층, 업무 예외는 shared, 감사 필드는 영속성 계층에 둔다.
+
+### 공통 API 응답 · ApiResponse.java
+
+success와 error 정적 팩토리를 사용하고 비공개 빌더로 생성한다.
+
+```java
+package com.louiekury.product.global.web.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.Objects;
@@ -570,12 +938,12 @@ public class ApiResponse<T> {
 }
 ```
 
-### 7.2 비즈니스 예외 · BusinessException.java
+### 비즈니스 예외 · BusinessException.java
 
-서비스는 업무 규칙 위반을 해당 `ErrorCode`로 표현한다. 기본 메시지를 사용하거나, 클라이언트에 공개할 메시지 또는 원인 예외를 지정할 수 있다. [FinPlay BusinessException](https://github.com/finplay-team/finplay-backend/blob/dev/src/main/java/com/finplay/api/global/exception/BusinessException.java)
+업무 코드, 공개 가능한 메시지와 원인 예외를 보관한다.
 
 ```java
-package com.louiekury.product.global.exception;
+package com.louiekury.product.shared.exception;
 
 import lombok.Getter;
 
@@ -600,16 +968,72 @@ public class BusinessException extends RuntimeException {
 }
 ```
 
-### 7.3 전역 예외 핸들러 · GlobalExceptionHandler.java
+### 오류 코드 · ErrorCode.java
 
-`@RestControllerAdvice`에서 업무 예외, 검증 오류, 인증·인가 실패를 처리한다. 업무 예외는 `ErrorCode`의 HTTP 상태와 예외에 지정한 공개 메시지를 반환한다. Spring MVC 요청 오류는 기존 HTTP 상태와 헤더를 전달하고, 예상하지 못한 예외는 서버 로그에 기록한 뒤 기본 500 메시지로 응답한다. [FinPlay GlobalExceptionHandler](https://github.com/finplay-team/finplay-backend/blob/dev/src/main/java/com/finplay/api/global/exception/GlobalExceptionHandler.java)
-
-Spring Security 필터에서 발생한 인증·인가 실패는 각각 `AuthenticationEntryPoint`, `AccessDeniedHandler`에서 같은 오류 본문 형식으로 반환한다.
+HTTP 상태를 필드에 포함하지 않는다. 아래 코드는 예제용이며 실제 업무 코드는 API 명세에 맞춘다.
 
 ```java
-package com.louiekury.product.global.exception;
+package com.louiekury.product.shared.exception;
 
-import com.louiekury.product.global.response.ApiResponse;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
+@Getter
+@RequiredArgsConstructor
+public enum ErrorCode {
+
+    // 참고용 예시 코드입니다.
+    VALIDATION_ERROR("요청 값이 올바르지 않습니다."),
+    UNAUTHORIZED("인증이 필요합니다."),
+    FORBIDDEN("접근 권한이 없습니다."),
+    NOT_FOUND("대상을 찾을 수 없습니다."),
+    METHOD_NOT_ALLOWED("지원하지 않는 요청 방식입니다."),
+    INTERNAL_SERVER_ERROR("서버 내부 오류가 발생했습니다."),
+    PRODUCT_NOT_FOUND("상품을 찾을 수 없습니다."),
+    INVALID_PRODUCT("상품 이름과 가격이 올바르지 않습니다.");
+
+    private final String message;
+}
+```
+
+### HTTP 오류 매핑 · ErrorCodeHttpMapper.java
+
+업무 코드의 HTTP 표현을 웹 계층에서 정한다. 모든 상수를 명시적으로 매핑한다.
+
+```java
+package com.louiekury.product.global.web.exception;
+
+import com.louiekury.product.shared.exception.ErrorCode;
+import org.springframework.http.HttpStatus;
+
+public final class ErrorCodeHttpMapper {
+
+    private ErrorCodeHttpMapper() {
+    }
+
+    public static HttpStatus toStatus(ErrorCode code) {
+        return switch (code) {
+            case VALIDATION_ERROR, INVALID_PRODUCT -> HttpStatus.BAD_REQUEST;
+            case UNAUTHORIZED -> HttpStatus.UNAUTHORIZED;
+            case FORBIDDEN -> HttpStatus.FORBIDDEN;
+            case NOT_FOUND, PRODUCT_NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case METHOD_NOT_ALLOWED -> HttpStatus.METHOD_NOT_ALLOWED;
+            case INTERNAL_SERVER_ERROR -> HttpStatus.INTERNAL_SERVER_ERROR;
+        };
+    }
+}
+```
+
+### 전역 예외 핸들러 · GlobalExceptionHandler.java
+
+업무 예외와 Spring MVC 오류를 공통 오류 본문으로 변환한다. Spring Security 필터에서 발생한 실패는 별도 AuthenticationEntryPoint·AccessDeniedHandler에서도 같은 ApiResponse.error 형식을 사용한다.
+
+```java
+package com.louiekury.product.global.web.exception;
+
+import com.louiekury.product.global.web.response.ApiResponse;
+import com.louiekury.product.shared.exception.BusinessException;
+import com.louiekury.product.shared.exception.ErrorCode;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -627,7 +1051,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException exception) {
         ErrorCode code = exception.getErrorCode();
-        return ResponseEntity.status(code.getHttpStatus())
+        return ResponseEntity.status(ErrorCodeHttpMapper.toStatus(code))
             .body(ApiResponse.error(code.name(), exception.getMessage()));
     }
 
@@ -674,7 +1098,7 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ApiResponse<Void>> build(ErrorCode code) {
-        return ResponseEntity.status(code.getHttpStatus()).body(errorBody(code));
+        return ResponseEntity.status(ErrorCodeHttpMapper.toStatus(code)).body(errorBody(code));
     }
 
     private ApiResponse<Void> errorBody(ErrorCode code) {
@@ -683,48 +1107,18 @@ public class GlobalExceptionHandler {
 }
 ```
 
-### 7.4 오류 코드 · ErrorCode.java
+### 베이스 엔티티 · BaseEntity.java
 
-`global.exception`에 두며, 각 상수에 HTTP 상태와 기본 메시지를 지정한다. API 응답의 `code`에는 상수 이름을 사용한다. 아래 상수는 이 문서의 핸들러와 상품 예제에 쓰는 참고용이다. 각 서비스는 해당 API 명세에 따라 업무 오류 코드를 정의한다.
-
-```java
-package com.louiekury.product.global.exception;
-
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-
-@Getter
-@RequiredArgsConstructor
-public enum ErrorCode {
-
-    // 참고용 예시 코드입니다.
-    VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다."),
-    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),
-    FORBIDDEN(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
-    NOT_FOUND(HttpStatus.NOT_FOUND, "대상을 찾을 수 없습니다."),
-    METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "지원하지 않는 요청 방식입니다."),
-    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다."),
-    PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "상품을 찾을 수 없습니다.");
-
-    private final HttpStatus httpStatus;
-    private final String message;
-}
-```
-
-### 7.5 베이스 엔티티 · BaseEntity.java
-
-서비스별 `global.entity`에 둔다. 상속하는 엔티티의 테이블에는 `created_at`, `updated_at`, `deleted_at` 컬럼을 두고, 식별자는 각 엔티티에 정의한다. `deleted_at`은 활성 상태일 때 `NULL`이고, 소프트 삭제 시 삭제 시각을 저장한다. [참고 저장소 BaseEntity](https://github.com/nongbu24/team3-plus-spring/blob/main/src/main/java/com/example/team3plusspring/global/entity/BaseEntity.java)
-
-서비스의 JPA 설정에 `@EnableJpaAuditing`을 적용한다. 기본 설정에서는 등록할 때 두 시각을 채우고, 수정할 때 `updatedAt`을 갱신한다.
+삭제 유스케이스의 저장 어댑터는 관리 중인 JPA 엔티티에 markDeleted를 호출할 수 있다. 실제 삭제 허용 조건은 유스케이스·도메인이 판단하고, 조회에는 삭제 제외 조건을 적용한다.
 
 ```java
-package com.louiekury.product.global.entity;
+package com.louiekury.product.global.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import lombok.Getter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -745,119 +1139,32 @@ public abstract class BaseEntity {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
+    public void markDeleted(LocalDateTime deletedAt) {
+        if (this.deletedAt == null) {
+            this.deletedAt = Objects.requireNonNull(deletedAt, "deletedAt");
+        }
+    }
 }
 ```
 
-## 8. API와 데이터 계약
+### 감사 설정 · JpaAuditingConfig.java
 
-- 리소스 경로, HTTP 메서드, 상태 코드
-- 요청·응답 필드 이름, 타입, 필수 여부
-- 입력 검증, 직렬화, 날짜·시간 표현
-- 목록의 페이지네이션, 정렬, 필터링
-- 응답 스키마, 버전, 호환성, API 명세 동기화
-
-## 9. 예외와 오류 응답
-
-- 입력 오류, 도메인 오류, 인프라 오류 구분
-- 예외의 생성·변환·처리 위치
-- 오류 코드, 메시지, 응답 형식
-- 실패 전파, 재시도, 복구와 오류 로그
-
-## 10. 데이터베이스와 트랜잭션
-
-### 10.1 엔티티 연관관계와 ID 참조
-
-| 상황 | 구현 기준 | 예시 |
-| --- | --- | --- |
-| 같은 마이크로서비스가 두 데이터를 소유하고, 업무 로직에서 여러 행이 참조하는 상위 엔티티를 객체로 다뤄야 한다. | `@ManyToOne`으로 연관관계를 매핑한다. | 상품 이미지 여러 장이 하나의 상품에 속하고, 이미지 등록에서 상품 상태를 검사한다. |
-| 같은 마이크로서비스 안에서 상대 객체를 탐색할 필요가 없고, 식별자만으로 업무를 처리할 수 있다. | ID 필드를 사용한다. 같은 DB에서 참조 무결성이 필요하면 외래 키로 보장할 수 있다. | 상품 조회 기록을 상품 ID로 집계한다. |
-| 대상 데이터를 별도 마이크로서비스가 소유한다. | 외부 서비스의 ID를 저장하고, 필요한 데이터는 그 서비스의 API나 이벤트로 받는다. | 주문 서비스의 주문 항목에 상품 서비스의 `productId`를 저장한다. |
-
-**연관관계 예시 · 상품 이미지 엔티티**
+서비스에서 감사 기능을 활성화한다. 시각의 저장·변환 기준은 실제 DB와 API 계약에 맞춰 설정한다.
 
 ```java
-@ManyToOne(fetch = FetchType.LAZY, optional = false)
-@JoinColumn(name = "product_id", nullable = false)
-private Product product;
+package com.louiekury.product.global.config;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+
+@Configuration
+@EnableJpaAuditing
+public class JpaAuditingConfig {
+}
 ```
 
-**ID 참조 예시 · 주문 항목 엔티티**
+## 참고 자료
 
-```java
-@Column(name = "product_id", nullable = false)
-private Long productId;
-```
-
-연관관계를 매핑했다면 지연 로딩을 기본으로 명시하고, 연관 데이터가 필요한 조회에서 가져올 범위를 정한다. ID 참조도 목록의 각 ID를 개별 조회하면 호출이 늘어난다. 목록은 필요한 데이터를 묶어서 조회하고, 실제 SQL이나 API 호출 횟수를 확인한다. [Hibernate ORM 조회 전략](https://docs.hibernate.org/orm/7.1/userguide/html_single/#fetching), [마이크로서비스 데이터 소유권](https://learn.microsoft.com/en-us/azure/architecture/microservices/design/data-considerations)
-
-### 10.2 조회 방식 선택
-
-- 기본 CRUD와 단순 조회는 `JpaRepository`의 기본 메서드와 메서드 이름으로 쿼리를 생성하는 방식을 사용한다.
-- 선택 조건을 여러 개 조합하거나 조인·집계로 쿼리가 복잡해지는 조회는 Querydsl로 작성한다. 예를 들어 상담 목록에서 상태·수의사·기간 중 전달받은 조건만 조합해 조회한다.
-- 실행 성능을 개선하려고 조회 방식을 바꾸는 경우에는 실제 SQL, 쿼리 횟수, 필요에 따라 실행 계획을 비교한다.
-
-### 10.3 추가로 정할 항목
-
-- 서비스별 [`BaseEntity` 상속 대상](#75-베이스-엔티티--baseentityjava)
-- 테이블, 컬럼, 키, 인덱스 이름
-- 스키마 제약, 마이그레이션 파일과 변경 절차
-- 쿼리 작성 위치, 조회 범위, 성능 확인
-- 트랜잭션 시작과 종료, 실패 시 롤백
-- 동시성, 중복 요청, 데이터 정합성
-
-## 11. 외부 연동과 비동기 처리
-
-- 외부 클라이언트와 연동 모델의 위치
-- 시간 제한, 재시도, 장애 시 처리
-- 이벤트 이름과 데이터 형식
-- 중복 처리, 순서, 멱등성
-
-## 12. 보안과 설정
-
-- 인증·인가 검사 위치와 권한 검증
-- 외부 입력 검증과 민감정보 처리
-- 환경 변수, 비밀값, 설정 파일 이름
-- 환경별 설정 분리와 누락된 설정 처리
-
-## 13. 로깅과 모니터링
-
-- 로그 수준, 메시지 형식, 공통 필드
-- 요청·작업 추적 식별자
-- 민감정보 마스킹과 로그 제외 항목
-- 메트릭, 상태 확인, 장애 진단 정보
-
-## 14. 테스트 코드
-
-- 테스트 파일 위치, 이름, 시나리오 표현
-- 단위·통합·API 테스트의 범위
-- 픽스처, 테스트 데이터, 테스트 간 격리
-- Mock과 실제 의존성을 사용하는 범위
-- 정상·경계·실패·회귀 사례와 검증 방식
-
-## 15. 주석과 코드 문서
-
-- 주석을 작성하는 경우와 설명 범위
-- 공개 API 문서와 사용 예시
-- TODO·FIXME 표기와 추적 방법
-
-## 16. 자동 검사와 코드 리뷰
-
-- 포매터, 린터, 정적 분석의 설정과 실행 위치
-- CI 검사 항목과 실패 처리
-- 리뷰에서 확인할 항목과 예외 기록
-- 규칙 변경과 기존 코드 정리 절차
-
-## 규칙별 작성 양식
-
-```markdown
-#### 규칙 이름
-
-- 적용 대상
-- 강제 수준
-- 구체적인 기준
-- 적용 이유
-- 허용 예시
-- 위반 예시
-- 예외 조건
-- 확인 방법
-```
+- [FinPlay 코드 컨벤션](https://github.com/finplay-team/finplay-backend/blob/dev/docs/conventions/code.md)의 주제별 문서 구성을 참고했다.
+- 포트와 어댑터의 역할과 내부·외부 경계는 [Alistair Cockburn의 헥사고날 아키텍처 원문](https://alistair.cockburn.us/hexagonal-architecture)을 참고했다.

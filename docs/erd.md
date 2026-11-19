@@ -1,197 +1,118 @@
 # ERD (Entity Relationship Diagram)
 
-루이쿠리의 현재 ERD 초안을 도메인별로 정리했다. 첨부 SQL을 바탕으로 작성했으며, [PRD](prd.md) 변경분(`5f03d5b`)을 반영했다. 추가·변경된 컬럼과 관계는 설계 초안이다.
+## 기준과 표기
 
-- `PK`는 기본키, `UK`는 설계에 명시한 유일성 제약이다. `NULL` 표기가 없는 컬럼은 `NOT NULL`이다.
-- 점선은 첨부 SQL과 PRD를 바탕으로 표시한 참조 관계다. 관계의 개수는 참조 컬럼의 NULL 허용 여부와 유일성을 반영한다. 첨부 SQL에는 FK와 UNIQUE 제약 선언이 없다.
-- 다른 도메인의 참조 대상은 해당 다이어그램에 이름만 표시한다.
+2026-11-19에 제공된 SQL 내보내기를 바탕으로 **MySQL에 저장할 테이블**을 정리했다. 일반 회원 프로필과 반려동물 관련 데이터는 MongoDB에서 관리하며, 반려동물 영역에서는 접종명 기준 데이터만 MySQL에 둔다. 제품 요구사항은 [PRD](prd.md)를 따른다.
+
+기능별 개발 과정에서 필요한 테이블·컬럼·관계·제약을 구체화하고, 구현과 스키마 변경에 맞춰 이 문서도 같은 작업에서 갱신한다. 아래 보완 항목은 해당 기능을 개발할 때 확인한다.
+
+- 컬럼명·타입·NULL 허용·기본키·주석은 첨부 SQL을 따른다. 이름이 미정인 `Field` 계열과 원문의 오타도 보존했다. `DATETiME`는 다이어그램에서 `DATETIME`으로 표기한다.
+- `PK`는 SQL의 기본키 선언이다. `NULL` 표기가 없으면 `NOT NULL`이다.
+- SQL에는 FK·UNIQUE 제약 선언이 없다. 주석에 적힌 FK·UNIQUE는 설계 의도이며 실제 제약과 구분한다.
+- 다이어그램은 SQL에 선언된 테이블 구조를 표시한다. FK와 참조 대상의 유일성이 미확정이므로 관계선은 그리지 않고, 컬럼명·주석 기반 참조 후보를 별도 표에 정리한다.
+- 각 테이블의 필드 정의는 소유 영역에 한 번만 둔다.
+- 원본 SQL에서 MongoDB로 옮길 프로필·반려동물 데이터를 제외한 MySQL 구조를 기록한다. 실제 개발할 기능은 PRD의 우선 개발 범위를 따른다.
+
+## 저장소 경계
+
+| 저장소 | 데이터 |
+| --- | --- |
+| MongoDB | 일반 회원 프로필, 반려동물 기본 정보·보호자 연결·종/품종, 건강 기록, 예방접종 이력, 병원진료 이력 |
+| MySQL | 계정·인증, 접종명 기준 데이터와 아래 엔티티 목록 |
+
+원본의 `유저정보`는 닉네임 등 프로필 데이터로 분류하여 MongoDB 대상으로 정리했다. MongoDB 문서의 상세 필드와 컬렉션 구조는 기능 개발 시 구체화한다. `실시간 상담.pet_uuid`는 MongoDB 반려동물의 외부 식별자로 사용하고, MongoDB 접종 이력은 MySQL 접종명 식별자와 연결한다. 저장소 간 조회·존재 확인은 애플리케이션에서 처리한다.
 
 ## 엔티티 목록
 
-| 도메인 | 테이블 |
-| --- | --- |
-| 계정 · 인증 | `계정` |
-| 계정 · 인증 | `로그인기록` |
-| 계정 · 인증 | `소셜인증` |
-| 보호자 · 수의사 · 병원 | `보호자` |
-| 보호자 · 수의사 · 병원 | `보호자 미디어` |
-| 보호자 · 수의사 · 병원 | `보호자 약관` |
-| 보호자 · 수의사 · 병원 | `보호자 약관 동의` |
-| 보호자 · 수의사 · 병원 | `수의사` |
-| 보호자 · 수의사 · 병원 | `수의사 미디어` |
-| 보호자 · 수의사 · 병원 | `수의사 약관` |
-| 보호자 · 수의사 · 병원 | `수의사 약관 동의` |
-| 보호자 · 수의사 · 병원 | `병원` |
-| 보호자 · 수의사 · 병원 | `병원 정산 계좌` |
-| 반려동물 · 건강 기록 | `반려동물` |
-| 반려동물 · 건강 기록 | `종` |
-| 반려동물 · 건강 기록 | `품종` |
-| 반려동물 · 건강 기록 | `미디어` |
-| 반려동물 · 건강 기록 | `건강기록` |
-| 반려동물 · 건강 기록 | `건강기록상세` |
-| 반려동물 · 건강 기록 | `건강기록미디어` |
-| 반려동물 · 건강 기록 | `예방접종` |
-| 반려동물 · 건강 기록 | `접종명` |
-| 반려동물 · 건강 기록 | `병원진료` |
-| 상담 · 일지 · 후기 | `상담` |
-| 상담 · 일지 · 후기 | `상담 연결` |
-| 코인 · 결제 · 정산 | `코인 지갑` |
-| 코인 · 결제 · 정산 | `코인 충전 주문` |
-| 코인 · 결제 · 정산 | `코인 결제` |
-| 코인 · 결제 · 정산 | `코인 내역` |
-| 코인 · 결제 · 정산 | `상담 코인 홀드` |
-| 코인 · 결제 · 정산 | `수의사 정산` |
-| 커뮤니티 | `유저정보` |
-| 커뮤니티 | `게시판` |
-| 커뮤니티 | `카테고리` |
-| 커뮤니티 | `게시글` |
-| 커뮤니티 | `게시글 미디어` |
-| 커뮤니티 | `게시글 노출 변경 이력` |
-| 커뮤니티 | `게시글 좋아요` |
-| 커뮤니티 | `댓글` |
-| 커뮤니티 | `댓글 좋아요` |
-| 관리자 · 신고 | `관리자` |
-| 관리자 · 신고 | `권한` |
-| 관리자 · 신고 | `관리자권한` |
-| 관리자 · 신고 | `신고` |
-| 관리자 · 신고 | `신고 사유` |
-| 관리자 · 신고 | `신고 사유 선정` |
+현재 MySQL ERD는 27개 테이블·205개 컬럼을 포함한다.
 
-## 1. 계정 · 인증
+| 영역 | 테이블 |
+| --- | --- |
+| 계정·인증 | `계정`, `로그인`, `소셜인증`, `로그인기록` |
+| 접종명 기준 데이터 | `접종명` |
+| 실시간 상담·병원 | `실시간 상담`, `병원`, `병원 예약`, `수의사 평가` |
+| 미디어·알림 | `미디어`, `알림` |
+| 코인·결제·정산 | `코인 지갑`, `코인 충전 주문`, `코인 결제`, `상담 코인 홀드`, `코인 내역`, `수의사 정산` |
+| 커뮤니티 | `게시판`, `카테고리`, `게시글`, `댓글`, `게시글 좋아요`, `댓글 좋아요`, `팔로우` |
+| 신고 | `신고`, `신고 사유`, `신고 사유 선정` |
+
+## 1. 계정·인증
 
 ```mermaid
 erDiagram
-    "계정" ||..o{ "로그인기록" : "Auth_id"
-    "계정" ||..o{ "소셜인증" : "Auth_id"
-
     "계정" {
         BIGINT id PK
-        VARCHAR user_UUID
+        VARCHAR user_uuid
         VARCHAR type "보호자/수의사/관리자  구분"
-        VARCHAR login_id
-        VARCHAR password "NULL · 소셜 로그인시 null"
         VARCHAR status "가입 대기, 활동, 탈퇴, 정지(Enum으로 관리)"
         DATETIME created_at
         DATETIME updated_at
         DATETIME deleted_at
+        VARCHAR authentication_info
+        VARCHAR name
+        VARCHAR Field2
+        VARCHAR Field3
+        DATETIME Field4
+        VARCHAR Field5
+        VARCHAR Field6
+        BOOLEAN Field7
     }
-    "로그인기록" {
+    "로그인" {
         BIGINT id PK
-        BIGINT Auth_id
-        VARCHAR login_type
-        DATETIME fail_reason "NULL"
-        INTEGER login_attempt "NULL"
-        BOOLEAN is_successed
-        DATETIME authenticated_at
+        VARCHAR user_uuid
+        VARCHAR login_id
+        VARCHAR password "NULL"
     }
     "소셜인증" {
         BIGINT id PK
-        BIGINT Auth_id
         VARCHAR provider
-        VARCHAR provider_user_id
+        VARCHAR provider_id
+        DATETIME created_at
+        VARCHAR user_uuid
+    }
+    "로그인기록" {
+        BIGINT id PK
+        VARCHAR user_uuid
         DATETIME authenticated_at
-        DATETIME deleted_at
+        VARCHAR login_type
     }
 ```
 
-`계정.user_UUID`의 참조 대상은 `type`에 따라 보호자·수의사·관리자로 달라지는 것으로 보인다. 역할별 UUID 연결 방식과 유일성은 확인이 필요하다.
-
-## 2. 보호자 · 수의사 · 병원
+## 2. 접종명 기준 데이터
 
 ```mermaid
 erDiagram
-    "보호자" ||..o{ "보호자 미디어" : "caregiver_id"
-    "보호자" ||..o{ "보호자 약관 동의" : "caregiver_id"
-    "보호자 약관" ||..o{ "보호자 약관 동의" : "terms_id"
-    "수의사" ||..o{ "수의사 미디어" : "veterinarian_id"
-    "병원" ||..o{ "수의사" : "hospital_id"
-    "병원" ||..o{ "병원 정산 계좌" : "hospital_id"
-    "수의사" ||..o{ "병원 정산 계좌" : "veterinarian_id"
+    "접종명" {
+        BIGINT id PK
+        VARCHAR vaccine
+        DATETIME created_at
+        VARCHAR(255) Field "NULL"
+        VARCHAR(255) Field2 "NULL"
+        VARCHAR(255) Field3 "NULL"
+        VARCHAR(255) Field4 "NULL"
+        VARCHAR(255) Field5 "NULL"
+    }
+```
 
-    "보호자" {
+## 3. 실시간 상담·병원
+
+```mermaid
+erDiagram
+    "실시간 상담" {
         BIGINT id PK
         VARCHAR uuid
-        VARCHAR(50) name
-        VARCHAR(20) phone_number
-        VARCHAR(20) email
-        VARCHAR(30) nick_name
-        DATETIME created_at
-        DATETIME updated_at
-        DATETIME deleted_at "NULL"
-    }
-    "보호자 미디어" {
-        BIGINT id PK
-        BIGINT caregiver_id
-        VARCHAR file_name
-        VARCHAR(10) media_type
-        VARCHAR(45) file_extension
-        INTEGER file_size
-        VARCHAR(255) media_url
-        DATETIME created_at
-        DATETIME updated_at
-        DATETIME deleted_at "NULL"
-    }
-    "보호자 약관" {
-        BIGINT id PK
-        VARCHAR title
-        VARCHAR content
-        BOOLEAN required
-        DATETIME created_at
-        VARCHAR version
-    }
-    "보호자 약관 동의" {
-        BIGINT id PK
-        BIGINT caregiver_id
-        BIGINT terms_id
-        BOOLEAN agreed
-        DATETIME agreed_at
-    }
-    "수의사" {
-        BIGINT id PK
-        BIGINT hospital_id
-        VARCHAR uuid
-        VARCHAR hospital_uuid "NULL"
-        VARCHAR(50) name
-        VARCHAR(20) phone_number
-        VARCHAR(20) email
-        DATETIME created_at
-        DATETIME updated_at
-        DATETIME deletd_at "NULL"
-        VARCHAR status
-        DOUBLE rating "평균평점"
-    }
-    "수의사 미디어" {
-        BIGINT id PK
-        BIGINT veterinarian_id
-        VARCHAR file_name
-        VARCHAR(10) media_type "수의사 면허 타입도 관리"
-        VARCHAR(45) file_extension
-        INTEGER file_size
-        VARCHAR(255) media_url
-        DATETIME created_at
-        DATETIME updated_at "NULL"
-        DATETIME deleted_at "NULL"
-    }
-    "수의사 약관" {
-        BIGINT id PK
-        VARCHAR title
-        VARCHAR content
-        BOOLEAN required
-        DATETIME created_at
-    }
-    "수의사 약관 동의" {
-        VARCHAR(255) id PK
-        BIGINT veterinarian_uuid
-        BIGINT id2
-        BOOLEAN agreed
-        DATETIME agreed_at
+        VARCHAR caregiver_uuid
+        VARCHAR veterinarian_uuid
+        VARCHAR pet_uuid
+        VARCHAR status "대기, 상담중, 완료"
+        VARCHAR content "화상,/채팅 내용을 미디어로 저장"
+        VARCHAR consultation_record "내용만 작성"
+        DATETIME created_at "상담일시"
     }
     "병원" {
         BIGINT id PK
         VARCHAR(255) uuid
         VARCHAR name
-        VARCHAR business_registration_number
-        VARCHAR representative_name
         VARCHAR address
         VARCHAR detail_address
         VARCHAR tel_no
@@ -199,189 +120,52 @@ erDiagram
         DATETIME updated_at
         DATETIME deleted_at "NULL"
     }
-    "병원 정산 계좌" {
+    "병원 예약" {
         BIGINT id PK
-        BIGINT hospital_id
-        BIGINT veterinarian_id "가입 시 등록한 수의사"
+        VARCHAR(255) Field
+        VARCHAR(255) Field2
+        VARCHAR(255) created_at
+        VARCHAR(255) cancelled_at "NULL"
+    }
+    "수의사 평가" {
+        BIGINT id PK
+        VARCHAR veterinarian_uuid
+        VARCHAR(255) Field
+        DATETIME created_at
     }
 ```
 
-ACC-02에 따라 수의사 가입에는 소속 병원과 해당 병원 명의의 사업자 계좌가 필요하다. 계좌 입력 항목과 검증 결과의 저장 방식은 D02에서 확정한다. 수의사 가입 시 카카오 우편번호 서비스에서 선택한 주소를 병원 기본 주소에 사용한다. 상세주소 입력 방식은 D11에서 확정한다.
-
-`수의사`에는 `hospital_id`와 `hospital_uuid`가 함께 있다. `수의사 약관 동의.veterinarian_uuid`는 `BIGINT`이고 `수의사.uuid`는 `VARCHAR`다. `veterinarian_uuid`와 `id2`의 참조 대상 컬럼을 확인해야 한다.
-
-## 3. 반려동물 · 건강 기록
+## 4. 미디어·알림
 
 ```mermaid
 erDiagram
-    "보호자" ||..o{ "반려동물" : "caregiver_uuid"
-    "종" ||..o{ "품종" : "species_id"
-    "종" ||..o{ "반려동물" : "species_id"
-    "품종" ||..o{ "반려동물" : "breed_id"
-    "반려동물" ||..o{ "미디어" : "pet_id"
-    "반려동물" ||..o{ "건강기록" : "pet_uuid"
-    "반려동물" ||..o{ "예방접종" : "pet_id"
-    "접종명" ||..o{ "예방접종" : "vaccine_name_id"
-    "반려동물" ||..o{ "병원진료" : "pet_id"
-    "건강기록" ||..o{ "건강기록상세" : "health_record_id"
-    "건강기록" ||..o{ "건강기록미디어" : "health_record_id"
-
-    "반려동물" {
-        BIGINT id PK
-        BIGINT species_id
-        BIGINT breed_id
-        VARCHAR(100) uuid
-        VARCHAR caregiver_uuid
-        VARCHAR(50) name
-        DATE birth "NULL"
-        BOOLEAN sex
-        BOOLEAN is_neutered "NULL"
-        DOUBLE weight "DOUBLE(19,2) · NULL"
-        BOOLEAN vaccination "NULL"
-        DATETIME created_at
-        DATETIME updated_at
-        DATETIME deleted_at "NULL"
-    }
-    "종" {
-        BIGINT id PK
-        VARCHAR(50) name
-    }
-    "품종" {
-        BIGINT id PK
-        BIGINT species_id
-        VARCHAR(50) name
-    }
     "미디어" {
         BIGINT id PK
-        BIGINT pet_id
-        VARCHAR title
-        VARCHAR(10) media_type
-        VARCHAR(45) file_extension
-        INTEGER file_size
-        VARCHAR(255) media_url
-        DATETIME created_at
-        DATETIME updated_at "NULL"
-        DATETIME deleted_at "NULL"
-    }
-    "건강기록" {
-        BIGINT id PK
-        VARCHAR pet_uuid
-        VARCHAR type "Enum(음수량, 구토, 체중, 변, 식사량, 상처)"
-        DATETIME evented_at
-        DATETIME created_at
-        DATETIME updated_at
-        DATETIME deleted_at "NULL · 소프트 삭제 시각"
-    }
-    "건강기록상세" {
-        VARCHAR(255) id PK
-        BIGINT health_record_id
-        VARCHAR sub_type "NULL · 변모양, 변색깔, 구토색깔"
-        VARCHAR text_content "NULL"
-        DOUBLE numeric_content "NULL · 액체량, 식사량"
-    }
-    "건강기록미디어" {
-        BIGINT id PK
-        BIGINT health_record_id
         VARCHAR file_name
         VARCHAR(10) media_type
         VARCHAR(45) file_extension
         INTEGER file_size
         VARCHAR(255) media_url
-        DATETIME created_at
-        DATETIME updated_at "NULL"
-        DATETIME deleted_at "NULL"
-    }
-    "예방접종" {
-        VARCHAR(255) id PK
-        BIGINT pet_id
-        BIGINT vaccine_name_id
-        DATETIME evented_at
+        BOOLEAN deleted
         DATETIME created_at
         DATETIME updated_at
     }
-    "접종명" {
-        BIGINT id PK
-        VARCHAR(255) name
-        VARCHAR(255) created_at
-    }
-    "병원진료" {
+    "알림" {
         VARCHAR(255) id PK
-        BIGINT pet_id
-        DATETIME visited_at
-        VARCHAR type
-        VARCHAR content
-        DATETIME evented_at
-        DATETIME created_at
-        DATETIME updated_at
+        VARCHAR(255) recipient_uuid "NULL"
+        VARCHAR(255) actor_uuid "NULL"
+        VARCHAR(255) type "NULL"
+        VARCHAR(255) title "NULL"
+        VARCHAR(255) content "NULL"
+        VARCHAR(255) created_at "NULL"
+        VARCHAR(255) read_at "NULL"
     }
 ```
 
-건강 기록을 삭제하면 `건강기록.deleted_at`에 삭제 시각을 남긴다. 상세 행과 첨부 행·파일은 보관한다. 조회에는 삭제되지 않은 건강 기록만 포함하며, 상세나 첨부를 직접 조회할 때도 상위 건강 기록의 `deleted_at`을 함께 검사한다. 첨부 자체의 삭제 여부는 `건강기록미디어.deleted_at`으로 확인한다.
-
-`예방접종.vaccine_name_id`는 `접종명.id`를 참조한다. 두 컬럼의 타입은 `BIGINT`다.
-
-## 4. 상담 · 일지 · 후기
+## 5. 코인·결제·정산
 
 ```mermaid
 erDiagram
-    "보호자" ||..o{ "상담" : "caregiver_uuid"
-    "수의사" |o..o{ "상담" : "veterinarian_uuid"
-    "반려동물" ||..o{ "상담" : "pet_uuid"
-    "상담" ||..o{ "상담 연결" : "consultation_id"
-
-    "상담" {
-        BIGINT id PK
-        VARCHAR uuid UK
-        VARCHAR caregiver_uuid
-        VARCHAR veterinarian_uuid "NULL · 지정 예약은 필수, 즉시 상담은 매칭 확정 시 설정"
-        VARCHAR pet_uuid
-        VARCHAR request_type "지정 예약, 위치 기반 즉시 상담"
-        VARCHAR channel "채팅, 화상통화, 안심번호 전화"
-        INTEGER fee_coin_amount "신청 시 적용한 상담 요금(코인)"
-        VARCHAR status "지정 예약 상태와 즉시 상담 매칭 결과를 표현"
-        VARCHAR consultation_title "NULL · 현재 신청 API에서 입력받지 않음"
-        VARCHAR consultation_content "NULL · 지정 예약은 필수, 즉시 상담은 선택"
-        VARCHAR consultation_record "NULL · 담당 수의사가 완료 전에 일지를 작성하면 저장"
-        DOUBLE rating "NULL"
-        VARCHAR review_content "NULL"
-        DATETIME created_at
-        DATETIME preferred_at "NULL · 지정 예약은 필수"
-        DATETIME matched_at "NULL · 즉시 상담 매칭 확정 시각"
-        DATETIME consulted_at "NULL"
-        DATETIME cancelled_at "NULL"
-        DATETIME reviewed_at "NULL"
-    }
-    "상담 연결" {
-        BIGINT id PK
-        BIGINT consultation_id
-        VARCHAR status "연결 결과 · 연결 실패는 FAILED"
-        VARCHAR external_connection_id "NULL · 외부 연동 식별자"
-        DATETIME created_at
-    }
-```
-
-CON-01·CON-03·CON-05에 따라 즉시 상담은 `created_at`부터 최대 60초 동안 매칭을 기다린다. 최초 수락자 한 명을 확정할 때 담당 수의사 지정과 코인 차감이 한 번만 성립해야 한다. 미매칭과 매칭 전 취소에는 차감이 발생하지 않는다. 즉시 상담은 매칭 후에도 기존 건강 기록 열람 권한을 부여하지 않는다. 대기 화면과 단계별 요청 전달의 저장 방식은 D15·D17에서, 상태 변경 이력과 내부 상태값은 상담 상태 상세 설계에서 확정한다.
-
-상담 신청 시 제목은 입력받지 않으므로 `consultation_title`은 비워 둔다. 지정 예약은 상담 내용이 필수이며, 즉시 상담에서 내용을 생략하면 `consultation_content`는 NULL이다. 담당 수의사가 실제 상담을 마치고 일지를 작성하면 `consultation_record`를 채운다. 연결이 성립하고 일지 본문이 저장된 상담만 완료 상태로 전환할 수 있다.
-
-상담 연결 시도는 상담과 연결하며 담당 수의사와 수단은 상담에서 확인한다. 수단 변경 및 연결 이력 보관은 D06에서 확정한다. 후기는 `rating`, `review_content`, `reviewed_at`에 담는다.
-
-## 5. 코인 · 결제 · 정산
-
-```mermaid
-erDiagram
-    "보호자" ||..o{ "코인 지갑" : "caregiver_uuid"
-    "보호자" ||..o{ "코인 충전 주문" : "caregiver_uuid"
-    "코인 지갑" ||..o{ "코인 충전 주문" : "coin_wallet_id"
-    "코인 충전 주문" ||..o{ "코인 결제" : "charge_order_id"
-    "코인 지갑" ||..o{ "코인 내역" : "wallet_id"
-    "코인 지갑" ||..o{ "상담 코인 홀드" : "wallet_id"
-    "상담" ||..o| "상담 코인 홀드" : "consultation_uuid"
-    "보호자" ||..o{ "상담 코인 홀드" : "caregiver_uuid"
-    "상담 코인 홀드" ||..o| "수의사 정산" : "consultation_hold_id"
-    "수의사" ||..o{ "수의사 정산" : "veterinarian_UUID"
-    "병원 정산 계좌" |o..o{ "수의사 정산" : "payout_account_id"
-
     "코인 지갑" {
         BIGINT id PK
         VARCHAR(255) uuid "NULL"
@@ -395,7 +179,7 @@ erDiagram
         BIGINT coin_wallet_id
         VARCHAR order_uuid
         VARCHAR caregiver_uuid
-        INTEGER charge_amount "충전 코인 수"
+        INTEGER charge_amount
         VARCHAR status
         DATETIME created_at
         DATETIME expires_at
@@ -409,7 +193,7 @@ erDiagram
         VARCHAR pg_payment_key "NULL · PG사에서 발급한 결제 식별자 UNIQUE"
         VARCHAR pg_cancel_key "NULL · PG사에서 발급한 취소 식별자"
         VARCHAR transaction_type "Enum(PAYMENT, REFUND)"
-        INTEGER amount "원 · 결제는 양수(+), 환불은 음수(-)"
+        INTEGER amount "결제는 양수(+), 환불은 음수(-)"
         VARCHAR method "카드, 간편결제"
         VARCHAR status "ENUM(PENDING, PAID, CANCELLED, FAILED, EXPIRED)"
         DATETIME paid_at "NULL · 결제 승인 또는 환불 완료 일시"
@@ -418,6 +202,17 @@ erDiagram
         VARCHAR remark "NULL"
         VARCHAR refund_type "ENUM"
         VARCHAR refund_reason
+    }
+    "상담 코인 홀드" {
+        BIGINT id PK
+        BIGINT wallet_id
+        VARCHAR consultation_uuid
+        VARCHAR caregiver_uuid
+        INTEGER hold_coint_amount
+        VARCHAR status "ENUM(HEILD, RELEASED, USED)"
+        DATETIME created_at
+        DATETIME released_at "NULL"
+        DATETIME used_at "NULL"
     }
     "코인 내역" {
         BIGINT id PK
@@ -430,63 +225,24 @@ erDiagram
         VARCHAR description "NULL"
         DATETIME created_at
     }
-    "상담 코인 홀드" {
-        BIGINT id PK
-        BIGINT wallet_id
-        VARCHAR consultation_uuid UK
-        VARCHAR caregiver_uuid
-        INTEGER hold_coint_amount
-        VARCHAR status "ENUM(HEILD, RELEASED, USED)"
-        DATETIME created_at
-        DATETIME released_at "NULL"
-        DATETIME used_at "NULL"
-    }
     "수의사 정산" {
         BIGINT id PK
-        BIGINT consultation_hold_id UK
+        BIGINT consultation_hold_id
         VARCHAR veterinarian_UUID
-        BIGINT payout_account_id "NULL · 이체 요청 시 필수"
-        INTEGER coin_amount "사용 확정 코인 수"
-        INTEGER settlement_base_amount "부가세 제외 정산 기준액(원)"
-        DECIMAL commision_rate "DECIMAL(5, 2) · 수수료율(%)"
-        INTEGER comission_amount "플랫폼 수수료(원)"
-        INTEGER payout_amount "수의사 배분액(원)"
-        VARCHAR status "기존 상태: PENDING, READY, PAID, CANCELLED · 이체 실패 기록 필요(D02)"
+        INTEGER coin_amount
+        DECIMAL(5,2) commision_rate "BIGDECIMAL"
+        INTEGER comission_amount
+        INTEGER payout_amount
+        VARCHAR status "ENUM(PENDING, READY, PAID, CANCELLED)"
         DATETIME paid_at "NULL"
         DATETIME created_at
     }
 ```
 
-PAY-01·PAY-02에 따라 7,700원 결제 성공 시 7,000코인을 지급한다. 두 유형 모두 상담 1건당 7,000코인을 차감하며, 지정 예약은 신청 시, 즉시 상담은 매칭 확정 시 `상담 코인 홀드`에 실제 차감량을 기록한다.
-
-- 상담 1건에 차감 홀드는 0~1건이다. 즉시 상담의 미매칭·매칭 전 취소에는 홀드가 0건이다. 지정 예약 신청 후 거절되면 이미 생성한 홀드에 반환 상태(`RELEASED`)를 남기며 정산은 생성하지 않는다.
-- 홀드 1건에 수의사 정산은 0~1건이다. 완료된 유료 상담의 사용 확정 홀드만 정산에 1회 반영한다. 홀드는 `상담.uuid`를, 정산은 `상담 코인 홀드.id`를 참조한다.
-
-SET-01에 따라 완료 상담 1건의 정산 기준액은 7,000원이며 플랫폼 수수료는 20%인 1,400원, 수의사 배분액은 5,600원이다. 부가세 700원은 배분에서 제외한다. 매월 25일 정산 후 등록된 병원 명의 계좌로 이체를 요청하고 성공을 확인한 뒤 지급 완료로 기록한다. 소속·계좌 변경 시 기존 상담에 적용할 계좌와 이체 실패 재시도 절차는 D02에서 확정한다.
-
-`코인 결제.original_transaction_id`의 원본 주석은 결제 자기 참조를 가리킨다. 이 컬럼은 `INTEGER`이고 `코인 결제.id`는 `BIGINT`다. `pg_payment_key`의 유일성은 주석에 기재돼 있다. `코인 내역.related_type`과 `related_id`의 대상 테이블은 유형별로 확인해야 한다.
-
 ## 6. 커뮤니티
 
 ```mermaid
 erDiagram
-    "게시판" ||..o{ "게시글" : "board_id"
-    "카테고리" ||..o{ "게시글" : "category_id"
-    "게시글" ||..o{ "게시글 미디어" : "post_id"
-    "게시글" ||..o{ "게시글 노출 변경 이력" : "post_id"
-    "관리자" ||..o{ "게시글 노출 변경 이력" : "admin_id"
-    "게시글" ||..o{ "게시글 좋아요" : "post_id"
-    "게시글" ||..o{ "댓글" : "post_id"
-    "댓글" |o..o{ "댓글" : "parent_comment_id"
-    "댓글" ||..o{ "댓글" : "root_comment_id"
-    "댓글" ||..o{ "댓글 좋아요" : "comment_id"
-
-    "유저정보" {
-        BIGINT id PK
-        VARCHAR nickname "수의사는 이름으로"
-        VARCHAR user_uuid
-        VARCHAR type "보호자, 수의사"
-    }
     "게시판" {
         BIGINT id PK
         VARCHAR name "NULL"
@@ -502,7 +258,6 @@ erDiagram
         BIGINT user_uuid
         VARCHAR title
         VARCHAR content
-        VARCHAR visibility "VISIBLE 또는 HIDDEN"
         INTEGER like_count "NULL"
         INTEGER view_count "NULL"
         INTEGER commnet_count "NULL"
@@ -510,35 +265,6 @@ erDiagram
         DATETIME created_at
         DATETIME updated_at "NULL"
         DATETIME deleted_at "NULL"
-    }
-    "게시글 노출 변경 이력" {
-        BIGINT id PK
-        BIGINT post_id
-        BIGINT admin_id
-        VARCHAR previous_visibility "VISIBLE 또는 HIDDEN"
-        VARCHAR new_visibility "VISIBLE 또는 HIDDEN"
-        VARCHAR reason
-        DATETIME created_at
-    }
-    "게시글 미디어" {
-        BIGINT id PK
-        BIGINT post_id
-        VARCHAR(255) file_name "NULL"
-        VARCHAR(10) media_type
-        VARCHAR(45) file_extension
-        INTEGER file_size
-        VARCHAR(45) description
-        VARCHAR(255) media_url
-        DATETIME created_at
-        DATETIME updated_at "NULL"
-        DATETIME deleted_at "NULL"
-    }
-    "게시글 좋아요" {
-        BIGINT id PK
-        BIGINT post_id
-        VARCHAR user_uuid
-        VARCHAR role
-        DATETIME created_at
     }
     "댓글" {
         BIGINT id PK
@@ -551,11 +277,19 @@ erDiagram
         VARCHAR content
         INTEGER state
         INTEGER like_count
+        INTEGER comment_count "NULL"
         INTEGER alert_count
         DATETIME created_at
         DATETIME updated_at "NULL"
         DATETIME deleted_at "NULL"
         VARCHAR reason "NULL"
+    }
+    "게시글 좋아요" {
+        BIGINT id PK
+        BIGINT post_id
+        VARCHAR user_uuid
+        VARCHAR role
+        DATETIME created_at
     }
     "댓글 좋아요" {
         BIGINT id PK
@@ -564,46 +298,22 @@ erDiagram
         VARCHAR role
         DATETIME created_at
     }
+    "팔로우" {
+        BIGINT Key PK
+        VARCHAR follower
+        VARCHAR following
+        DATETIME created_at
+    }
 ```
 
-게시글과 댓글의 `user_uuid`는 `BIGINT`이고 `유저정보.user_uuid`와 좋아요 테이블의 사용자 UUID는 `VARCHAR`다. 작성자와 좋아요 사용자에 각각 어떤 식별자를 저장할지 확인해야 한다.
-
-게시글 숨김과 복구는 `visibility`를 변경하고 처리자·시각·사유를 이력에 남긴다. `deleted_at`은 기존 삭제 상태를 표현한다. 숨김 중에는 작성자를 포함한 일반 사용자의 게시글·댓글·첨부 접근을 차단한다. 댓글과 첨부의 개별 상태는 유지해 복구하면 숨김 전에 보였던 항목을 다시 노출한다.
-
-## 7. 관리자 · 신고
+## 7. 신고
 
 ```mermaid
 erDiagram
-    "관리자" ||..o{ "관리자권한" : "admin_id"
-    "권한" ||..o{ "관리자권한" : "role_id"
-    "상담" |o..o{ "신고" : "consultation_id"
-    "신고" ||..o{ "신고 사유 선정" : "report_id"
-    "신고 사유" ||..o{ "신고 사유 선정" : "report_reason_id"
-
-    "관리자" {
-        BIGINT id PK
-        VARCHAR(255) uuid "NULL"
-        VARCHAR tel_no "NULL"
-        VARCHAR email
-        DATETIME created_at
-        DATETIME updated_at
-        DATETIME deleted_at "NULL"
-    }
-    "권한" {
-        BIGINT id PK
-        VARCHAR name
-    }
-    "관리자권한" {
-        BIGINT id PK
-        BIGINT admin_id
-        BIGINT role_id
-    }
     "신고" {
         BIGINT id PK
         VARCHAR uuid
         VARCHAR reporter_type "caregiver, veterinarian"
-        BIGINT consultation_id "NULL · 상담 보호자 신고는 필수"
-        VARCHAR reporter_uuid "NULL · 상담 보호자 신고는 담당 수의사 UUID 필수"
         VARCHAR target_uuid
         VARCHAR target_type "Enum (CAREGIVER, VETERINARIAN, BOARD, COMMENT)"
         VARCHAR content "신고자가 작성한 내용(자유양식)"
@@ -627,10 +337,60 @@ erDiagram
     }
 ```
 
-CON-04의 보호자 신고는 상담이 완료된 뒤 기존 `신고`에 기록한다. 완료된 상담과 신고한 담당 수의사를 연결하고, 신고 대상은 그 상담의 보호자로 제한한다. 신고 사유·입력 항목은 D04에서 확정한다.
+## 참조 관계 후보
 
-`신고.target_uuid`는 `target_type`에 따라 참조 대상이 달라진다. 게시글과 댓글에는 첨부본 기준 `BIGINT id`가 있어 신고 대상 식별 방식과 `reviewer_user_id`의 참조 대상을 확인해야 한다.
+SQL의 FK 선언이 아닌 검토 대상이다. UUID 참조는 대상 컬럼의 유일성과 자료형부터 확인한다.
 
-## 참고
+| 참조 대상 테이블 | 참조하는 테이블 | 참조 컬럼 |
+| --- | --- | --- |
+| `계정` | `로그인` | `user_uuid` |
+| `계정` | `소셜인증` | `user_uuid` |
+| `계정` | `로그인기록` | `user_uuid` |
+| `계정` | `실시간 상담` | `caregiver_uuid / veterinarian_uuid` |
+| `계정` | `수의사 평가` | `veterinarian_uuid` |
+| `계정` | `알림` | `recipient_uuid / actor_uuid` |
+| `계정` | `코인 지갑` | `caregiver_uuid` |
+| `코인 지갑` | `코인 충전 주문` | `coin_wallet_id` |
+| `코인 충전 주문` | `코인 결제` | `charge_order_id` |
+| `코인 결제` | `코인 결제` | `original_transaction_id` |
+| `코인 지갑` | `상담 코인 홀드` | `wallet_id` |
+| `실시간 상담` | `상담 코인 홀드` | `consultation_uuid` |
+| `코인 지갑` | `코인 내역` | `wallet_id` |
+| `상담 코인 홀드` | `수의사 정산` | `consultation_hold_id` |
+| `게시판` | `게시글` | `board_id` |
+| `카테고리` | `게시글` | `category_id` |
+| `게시글` | `댓글` | `post_id` |
+| `댓글` | `댓글` | `parent_comment_id / root_comment_id` |
+| `게시글` | `게시글 좋아요` | `post_id` |
+| `댓글` | `댓글 좋아요` | `comment_id` |
+| `계정` | `게시글 좋아요` | `user_uuid` |
+| `계정` | `댓글 좋아요` | `user_UUID` |
+| `계정` | `팔로우` | `follower / following` |
+| `신고` | `신고 사유 선정` | `report_id` |
+| `신고 사유` | `신고 사유 선정` | `report_reason_id` |
 
-문서 구성은 [FinPlay 백엔드 ERD](https://github.com/finplay-team/finplay-backend/blob/dev/docs/erd.md)의 엔티티 목록과 도메인별 다이어그램 형식을 따랐다.
+## 개발 시 보완할 항목
+
+아래는 현재 PRD와 시작 스키마 사이의 차이다. 해당 기능을 개발할 때 필요한 항목부터 설계하고 반영한다.
+
+| 항목 | 확인한 차이와 필요한 결정 |
+| --- | --- |
+| 계정 | `계정.Field2`~`Field7`의 의미가 미정이다. 일반 회원 프로필은 PRD에 따라 MongoDB에 저장한다. 계정 SQL과 프로필 문서 사이의 식별자 연결·속성 배치를 개발 시 구체화한다. `deleted_at`은 원문에서 NOT NULL이며 활성 계정의 값 표현이 필요하다. |
+| 계정 식별자 | 계정·로그인·소셜인증·로그인기록의 `user_uuid` 연계와 유일성 제약이 선언되어 있지 않다. 이메일당 한 계정, 로그인 ID·소셜 제공자 식별값의 중복 정책을 스키마에 반영해야 한다. |
+| 원본 테이블과 제품 범위 | SQL에는 역할·병원 예약·수의사 평가·결제·정산 관련 데이터도 포함되어 있다. 원본 구조로 기록하며, 현재 PRD의 기능을 개발할 때 사용하는 데이터만 구체화한다. |
+| 접종명 | `접종명`은 MySQL의 기준 데이터다. `Field`~`Field5`의 의미는 사용 시 구체화한다. MongoDB 접종 이력의 참조 식별자와 명칭 제공 방식을 함께 정한다. |
+| MongoDB 문서 | 반려동물 기본 정보·소유 관계·종/품종·건강 기록·접종 이력·병원진료와 일반 회원 프로필은 MongoDB에서 관리한다. 문서 구조와 인덱스는 기능 개발 시 구체화한다. |
+| 실시간 매칭 | `실시간 상담.veterinarian_uuid`는 NOT NULL이어서 매칭 전 대기 상태를 저장하는 방식이 불명확하다. 위치·거리 탐색, 요청 증상·첨부, 채팅/화상 방식, 매칭 취소·만료 및 중복 수락 제어에 필요한 저장·연동 방식이 미정이다. |
+| 상담·일지 | `content`는 화상/채팅 내용을 미디어로 저장한다는 주석이 있으나 미디어 연결 컬럼이 없다. `consultation_record`도 NOT NULL이므로 일지 작성 전 상태를 어떻게 표현하는지 확인해야 한다. 수의사 정보·일지의 외부 제공 주체도 확인 대상이다. |
+| 병원·병원 예약 | `병원`에는 위치 좌표와 수의사 연결이 없다. 위치 기반 탐색의 데이터 제공 방법이 필요하다. `병원 예약`은 `Field`, `Field2`와 문자열 시각만 있으며 실시간 상담 전환 후 사용 여부가 미정이다. |
+| 팔로우 | `팔로우.follower`·`following`의 계정 연결과 조합 유일성 제약을 확인한다. 자기 팔로우·중복 관계를 막고 목록·수·상태 조회와 이벤트별 알림 생성을 일관되게 처리할 구조를 개발 시 반영한다. |
+| 공통 미디어 | `미디어` 테이블 하나를 사용한다. 업로드 주체·완료 상태·사용처 연결 컬럼이나 연결 테이블이 SQL에 없으므로 연결 권한·교체·미사용 파일 정리 요구사항을 만족할 설계가 필요하다. |
+| 알림 | 알림 수신자·행위자·유형·본문·생성·읽음 시각은 있으나 대부분 NULL 허용이고 시각도 VARCHAR다. 직접 답글 대상 댓글 작성자에게 알리는 요구와 동일 이벤트 중복 방지를 지원할 이벤트 키·대상 연결·전달 방식을 개발 시 구체화한다. |
+| 식별자 타입 | 게시글·댓글의 `user_uuid`는 BIGINT, 계정의 `user_uuid`는 VARCHAR다. `코인 결제.original_transaction_id`는 INTEGER이며 참조 후보 `id`는 BIGINT다. 실제 관계 확정 전에 타입 정합성이 필요하다. |
+| 다형 참조·원문 이름 | 신고 대상과 코인 내역의 관련 대상은 유형별 참조다. 원문 `commnet_count`, `hold_coint_amount`, `HEILD`, `commision_rate`, `comission_amount` 등을 보존했으며 실제 스키마 명칭은 별도 확정한다. |
+| SQL 실행성 | 길이 없는 VARCHAR, 누락된 FK·UNIQUE·인덱스, 기본값과 식별자 생성 전략 등은 실행 DB에 맞게 확정해야 한다. 이 문서에는 원본에 없는 제약을 추가하지 않았다. |
+
+## 참고 자료
+
+- 사용자 제공 SQL 내보내기, 2026-11-19 수신
+- [제품 요구사항과 미정 항목](prd.md)
