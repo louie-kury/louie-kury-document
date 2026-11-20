@@ -17,6 +17,10 @@
 - `project-verify`, `project-review`, `project-security-review`: [ECC](https://github.com/affaan-m/ECC)의 verification-loop, code-reviewer, security-review를 프로젝트용으로 각색한 수동 보조 스킬이다. 참조 커밋 `25278e7d7b6cf6e6a4e7a6c8e10f14ff22f0eb5b`, [MIT 고지](licenses/ECC-MIT.txt).
 - `project-handoff`와 세션 저장 스크립트는 프로젝트용으로 작성했다. 기존 훅은 유지하며 신뢰를 대신 승인하지 않는다.
 
+## 비용 관리 구조 참고
+
+2026-11-20 [finplay-team/finplay-backend](https://github.com/finplay-team/finplay-backend/tree/e94f2f7661b5cae287426875d52f898510ea7ea7), 참조 커밋 `e94f2f7661b5cae287426875d52f898510ea7ea7`의 `ai/context-router.md`, `ai/adr/0010-agent-session-lifecycle.md`, `.agents/skills/feature/SKILL.md`, `.agents/skills/review-pr/SKILL.md`를 확인했다. 필요한 절만 읽기·최소 위임 정보·구현/테스트 담당 재사용·CI 근거 활용 아이디어를 현재 WORKFLOW와 기존 리뷰·검증 스킬에 맞춰 새로 작성했다. 원본 스킬·제품 설정·CI는 복사하거나 설치하지 않았다. reviewer 독립성·휴먼게이트·재작업 한도는 유지하며 절감률은 측정하지 않았다.
+
 ## 과거 구성
 
 Spec Kit과 등록 에이전트, 터미널 승인 프로그램은 2026-11-03 사용자 결정으로 제거했다. 과거 검증 자료는 `validation/`에 역사 기록으로 남긴다. 남아 있는 [Spec Kit 고지](licenses/Spec-Kit-MIT.txt)는 과거 복사 자료의 출처 보존용이며 설치를 뜻하지 않는다.
