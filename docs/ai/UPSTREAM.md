@@ -10,6 +10,8 @@
 - 각 스킬의 `agents/openai.yaml`은 메뉴 표시·호출 설정이다. 실행되는 부에이전트 정의가 아니다. 초기 축소에서는 기존 에이전트를 제거했고, 현재는 사용자가 정한 planner·implementer·tester·reviewer 네 개만 `.codex/agents/`에 등록한다.
 - MIT, Copyright (c) 2026 Noah Kim. [고지 원문](licenses/VibeWise-MIT.txt)을 보존한다.
 
+2026-11-20 적용 범위 조정: 일반 planner의 VibeWise 자동 적용을 제거하고 Codex 어댑터에 사용자가 명시적으로 요청한 학습 모드에서만 적용하도록 안내했다. 원본 SKILL·behavior의 학습 방식과 reset 동작은 유지한다. 일반 작업은 관련 자료에 근거한 계획서를 먼저 검토받고, 이슈 승인 후 승인 범위를 이어서 수행한다.
+
 ## 유지하는 도구·스킬
 
 - Context7: [원본](https://github.com/upstash/context7). 프로젝트 HTTP MCP 설정만 유지한다.
