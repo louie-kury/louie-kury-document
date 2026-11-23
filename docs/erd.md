@@ -2,7 +2,7 @@
 
 ## 기준과 표기
 
-2026-11-19에 제공된 SQL 내보내기를 바탕으로 **MySQL에 저장할 테이블**을 정리했다. 일반 회원 프로필과 반려동물 관련 데이터는 MongoDB에서 관리하며, 반려동물 영역에서는 접종명 기준 데이터만 MySQL에 둔다. 제품 요구사항은 [PRD](prd.md)를 따른다.
+2026-11-19에 제공된 SQL 내보내기를 바탕으로 **MySQL에 저장할 테이블**을 정리했다. 계정·인증 영역에는 2026-11-23에 제공된 SQL을 반영했다. 일반 회원 프로필과 반려동물 관련 데이터는 MongoDB에서 관리하며, 반려동물 영역에서는 접종명 기준 데이터만 MySQL에 둔다. 제품 요구사항은 [PRD](prd.md)를 따른다.
 
 기능별 개발 과정에서 필요한 테이블·컬럼·관계·제약을 구체화하고, 구현과 스키마 변경에 맞춰 이 문서도 같은 작업에서 갱신한다. 아래 보완 항목은 해당 기능을 개발할 때 확인한다.
 
@@ -24,7 +24,7 @@
 
 ## 엔티티 목록
 
-현재 MySQL ERD는 27개 테이블·205개 컬럼을 포함한다.
+현재 MySQL ERD는 27개 테이블·204개 컬럼을 포함한다.
 
 | 영역 | 테이블 |
 | --- | --- |
@@ -41,37 +41,36 @@
 ```mermaid
 erDiagram
     "계정" {
-        BIGINT id PK
+        BIGINT id
         VARCHAR user_uuid
-        VARCHAR type "보호자/수의사/관리자  구분"
         VARCHAR status "가입 대기, 활동, 탈퇴, 정지(Enum으로 관리)"
         DATETIME created_at
         DATETIME updated_at
-        DATETIME deleted_at
+        DATETIME deleted_at "NULL"
         VARCHAR authentication_info
         VARCHAR name
-        VARCHAR Field2
-        VARCHAR Field3
-        DATETIME Field4
-        VARCHAR Field5
-        VARCHAR Field6
-        BOOLEAN Field7
+        VARCHAR phone_number
+        VARCHAR gender
+        DATETIME birth_date
+        VARCHAR address
+        VARCHAR email
+        BOOLEAN terms_agreed
     }
     "로그인" {
-        BIGINT id PK
+        BIGINT id
         VARCHAR user_uuid
         VARCHAR login_id
-        VARCHAR password "NULL"
+        VARCHAR password_hash "NULL"
     }
     "소셜인증" {
-        BIGINT id PK
+        BIGINT id
         VARCHAR provider
         VARCHAR provider_id
         DATETIME created_at
         VARCHAR user_uuid
     }
     "로그인기록" {
-        BIGINT id PK
+        BIGINT id
         VARCHAR user_uuid
         DATETIME authenticated_at
         VARCHAR login_type
@@ -375,7 +374,7 @@ SQL의 FK 선언이 아닌 검토 대상이다. UUID 참조는 대상 컬럼의 
 
 | 항목 | 확인한 차이와 필요한 결정 |
 | --- | --- |
-| 계정 | `계정.Field2`~`Field7`의 의미가 미정이다. 일반 회원 프로필은 PRD에 따라 MongoDB에 저장한다. 계정 SQL과 프로필 문서 사이의 식별자 연결·속성 배치를 개발 시 구체화한다. `deleted_at`은 원문에서 NOT NULL이며 활성 계정의 값 표현이 필요하다. |
+| 계정 | 계정 SQL과 MongoDB 프로필 문서 사이의 식별자 연결·속성 배치를 개발 시 구체화한다. `deleted_at`은 탈퇴 전에는 `NULL`이며, 탈퇴 시각을 기록한다. |
 | 계정 식별자 | 계정·로그인·소셜인증·로그인기록의 `user_uuid` 연계와 유일성 제약이 선언되어 있지 않다. 이메일당 한 계정, 로그인 ID·소셜 제공자 식별값의 중복 정책을 스키마에 반영해야 한다. |
 | 원본 테이블과 제품 범위 | SQL에는 역할·병원 예약·수의사 평가·결제·정산 관련 데이터도 포함되어 있다. 원본 구조로 기록하며, 현재 PRD의 기능을 개발할 때 사용하는 데이터만 구체화한다. |
 | 접종명 | `접종명`은 MySQL의 기준 데이터다. `Field`~`Field5`의 의미는 사용 시 구체화한다. MongoDB 접종 이력의 참조 식별자와 명칭 제공 방식을 함께 정한다. |
