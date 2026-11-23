@@ -1,14 +1,20 @@
 # 필요한 자료만 읽기
 
+## 읽기 규칙
+
+작업에 맞는 행에서 연결한 필수 절을 읽는다. 표에 없는 자료는 제목과 검색 결과로 관련성을 확인한 뒤 필요한 절만 추가로 읽는다. 같은 세션에서 이미 확인했고 변경되지 않은 절은 재사용한다. 계획서에는 확인한 경로·절과 적용 사실, 해당하지 않는 자료의 이유, 미확인·충돌 사항을 남긴다. 문서에 있는 답은 다시 묻지 않는다.
+
+## 작업별 문서
+
 | 할 일 | 참고할 곳 |
 | --- | --- |
-| 기능 요청 시작·계획 검토 | [시작 순서](HUMAN_GATES.md#일반-기능-개발)를 따른다. 관련 문서를 모두 조사해 [계획서](templates/plan.md)를 먼저 작성하고 계획 승인 → 이슈 작성·승인 → 브랜치 → 구현 순서를 지킨다. |
+| 기능 요청 시작·계획 검토 | [시작 순서](HUMAN_GATES.md#일반-기능-개발)를 따른다. 위 읽기 규칙으로 조사하고 [계획서](templates/plan.md)를 작성한다. |
 | 프로젝트 이해 | [PRD](../prd.md), 현재 Git 상태 |
 | 프론트엔드·백엔드 작업 폴더 선택 | [서비스 작업 경로](WORKFLOW.md#서비스-작업-경로)에서 기존 클론 또는 새 서비스의 위치를 확인한다. |
 | 제품 기능 설계·구현·검증 | 기능 ID가 없으면 [PRD 기능 목록](../prd.md#6-기능-요구사항과-수용-기준)에서 찾는다. ID를 알면 [6.10 기능 연결표](../prd.md#610-기능공통-정책질문qa-연결표)에서 해당 행을 먼저 찾아 기능 본문과 관련 정책·D 항목·Q 시나리오를 읽는다. 계획 전에 [ERD](../erd.md)의 관련 엔티티·관계·필수값·제약과 [API 명세](../api/README.md)의 공통 계약·해당 도메인, 관련 정책·컨벤션을 함께 확인한다. 작업에 해당하지 않는 자료는 이유를 기록한다. 확인한 파일·절과 데이터 제약을 계획서에 남기고 문서에 있는 내용을 다시 묻지 않는다. |
 | 프론트엔드 화면 구현·QA | [PRD 화면 목록](../prd.md#9-기능-기반-화면-목록)과 해당 기능의 수용 기준을 확인한다. |
 | 프론트엔드 코드 작성·리뷰 | [프론트엔드 코드 컨벤션](../convension/FRONTEND_CODE_CONVENTIONS.md)에서 작업에 해당하는 절을 읽는다. |
-| 백엔드 코드 작성·리뷰 | [백엔드 코드 컨벤션](../convension/BACKEND_CODE_CONVENTIONS.md)에서 작업에 해당하는 절만 읽는다. [패키지 구조](../convension/BACKEND_CODE_CONVENTIONS.md#패키지-구조), [의존 방향과 계층별 책임](../convension/BACKEND_CODE_CONVENTIONS.md#의존-방향과-계층별-책임), [네이밍](../convension/BACKEND_CODE_CONVENTIONS.md#네이밍), [영속성과 JPA 엔티티](../convension/BACKEND_CODE_CONVENTIONS.md#영속성과-jpa-엔티티)를 참고한다. |
+| 백엔드 코드 작성·리뷰 | [백엔드 코드 컨벤션](../convension/BACKEND_CODE_CONVENTIONS.md)에서 작업에 해당하는 절만 읽는다. [패키지 구조](../convension/BACKEND_CODE_CONVENTIONS.md#패키지-구조), [의존 방향과 계층별 책임](../convension/BACKEND_CODE_CONVENTIONS.md#의존-방향과-계층별-책임), [네이밍](../convension/BACKEND_CODE_CONVENTIONS.md#네이밍), [영속성과 JPA 엔티티](../convension/BACKEND_CODE_CONVENTIONS.md#영속성과-jpa-엔티티), [DTO와 경계 변환](../convension/BACKEND_CODE_CONVENTIONS.md#dto와-경계-변환), [트랜잭션과 외부 연동](../convension/BACKEND_CODE_CONVENTIONS.md#트랜잭션과-외부-연동), [API와 공통 응답](../convension/BACKEND_CODE_CONVENTIONS.md#api와-공통-응답), [예외와 오류 처리](../convension/BACKEND_CODE_CONVENTIONS.md#예외와-오류-처리), [테스트 작성 규칙](../convension/BACKEND_CODE_CONVENTIONS.md#테스트-작성-규칙)을 참고한다. |
 | 백엔드 데이터 조회·저장, 소유권·접근 권한, 상태 전이, 금전 처리 | 스키마 변경 여부와 관계없이 [ERD](../erd.md)에서 작업에 관련된 엔티티·참조 관계·필수값·제약을 확인한다. 예를 들어 상담 완료(`CON-04`)는 상담·코인 홀드·정산을 확인한다. |
 | 실행 계획·선택 이유 기록 | [계획서 틀](templates/plan.md), [명세 틀](templates/spec.md), 해당 기능 문서. 유효한 설계가 있어도 이번 실행 계획을 작성한다. |
 | 사용자가 명시적으로 요청한 학습 모드 | [바이브 와이즈](../../.agents/skills/vibe-wise/SKILL.md). 일반 planner 작업에 자동 적용하지 않는다. |
@@ -26,4 +32,4 @@
 | 지난 결정·실수 | [기억 인덱스](memory/INDEX.md)에서 관련 항목만 |
 | 작업 마무리·다음 세션 | `$project-handoff`, 명시적으로 전달받은 인계 파일 |
 
-메인은 요청 범위에 필요한 단계만 역할에 배정한다. 무조건 전체 파이프라인을 실행하지 않는다. `docs/`·`.agents/` 전체를 본문까지 순회하지 않고 작업 행에서 연결한 절을 먼저 읽는다. 파일 목록과 `rg`로 작업에 관련된 문서·절을 모두 찾으며 비용 절감을 이유로 관련 자료를 생략하지 않는다. 과거 감사 자료 `validation/`는 당시 결과이며 현재 설정이 아니다. 제품 실행·검사 명령은 대상 레포에서 확인한다.
+과거 검증 자료 `validation/`는 당시 기록이다. 제품 실행·검사 명령은 대상 저장소에서 확인한다.
