@@ -6,8 +6,8 @@
 
 기능별 개발 과정에서 필요한 테이블·컬럼·관계·제약을 구체화하고, 구현과 스키마 변경에 맞춰 이 문서도 같은 작업에서 갱신한다. 아래 보완 항목은 해당 기능을 개발할 때 확인한다.
 
-- 컬럼명·타입·NULL 허용·기본키·주석은 첨부 SQL과 문서에 명시한 후속 설계를 따른다. 이름이 미정인 `Field` 계열과 원문의 오타도 보존했다. `DATETiME`는 다이어그램에서 `DATETIME`으로 표기한다.
-- `PK`는 SQL의 기본키 선언이다. `NULL` 표기가 없으면 `NOT NULL`이다.
+- 컬럼명·타입·NULL 허용·기본키·주석은 첨부 SQL과 확정된 후속 변경을 따른다. 이름이 미정인 `Field` 계열과 원문의 오타도 보존했다. `DATETiME`는 다이어그램에서 `DATETIME`으로 표기한다.
+- `PK`는 기본키다. 미디어의 PK와 자동 증가 설정은 이후 사용자 결정이며, 나머지는 SQL 선언을 따른다. `NULL` 표기가 없으면 `NOT NULL`이다.
 - SQL에는 FK·UNIQUE 제약 선언이 없다. 주석에 적힌 FK·UNIQUE는 설계 의도이며 실제 제약과 구분한다.
 - 다이어그램은 SQL에 선언된 테이블 구조를 표시한다. FK와 참조 대상의 유일성이 미확정이므로 관계선은 그리지 않고, 컬럼명·주석 기반 참조 후보를 별도 표에 정리한다.
 - 각 테이블의 필드 정의는 소유 영역에 한 번만 둔다.
@@ -146,12 +146,12 @@ erDiagram
 ```mermaid
 erDiagram
     "미디어" {
-        BIGINT id PK
+        BIGINT id PK "AUTO_INCREMENT"
+        VARCHAR user_uuid
         VARCHAR file_name
-        VARCHAR(10) media_type
-        VARCHAR(45) file_extension
+        VARCHAR content_type "image/jpeg, video/mp4, application/pdf"
+        VARCHAR object_key "S3 객체 키(버킷이름/폴더경로/파일명)"
         INTEGER file_size
-        VARCHAR(255) media_url
         BOOLEAN deleted
         DATETIME created_at
         DATETIME updated_at
@@ -355,6 +355,7 @@ SQL의 FK 선언이 아닌 검토 대상이다. UUID 참조는 대상 컬럼의 
 | `계정` | `실시간 상담` | `caregiver_uuid / veterinarian_uuid` |
 | `계정` | `수의사 평가` | `veterinarian_uuid` |
 | `계정` | `알림` | `recipient_uuid / actor_uuid` |
+| `계정` | `미디어` | `user_uuid` |
 | `계정` | `코인 지갑` | `caregiver_uuid` |
 | `코인 지갑` | `코인 충전 주문` | `coin_wallet_id` |
 | `코인 충전 주문` | `코인 결제` | `charge_order_id` |
@@ -391,7 +392,7 @@ SQL의 FK 선언이 아닌 검토 대상이다. UUID 참조는 대상 컬럼의 
 | 상담·일지 | `content`는 화상/채팅 내용을 미디어로 저장한다는 주석이 있으나 미디어 연결 컬럼이 없다. `consultation_record`도 NOT NULL이므로 일지 작성 전 상태를 어떻게 표현하는지 확인해야 한다. 수의사 정보·일지의 외부 제공 주체도 확인 대상이다. |
 | 병원·병원 예약 | `병원`에는 위치 좌표와 수의사 연결이 없다. 위치 기반 탐색의 데이터 제공 방법이 필요하다. `병원 예약`은 `Field`, `Field2`와 문자열 시각만 있으며 실시간 상담 전환 후 사용 여부가 미정이다. |
 | 팔로우 | `팔로우.follower`·`following`의 계정 연결과 조합 유일성 제약을 확인한다. 자기 팔로우·중복 관계를 막고 목록·수·상태 조회와 이벤트별 알림 생성을 일관되게 처리할 구조를 개발 시 반영한다. |
-| 공통 미디어 | `미디어` 테이블 하나를 사용한다. 업로드 주체·완료 상태·사용처 연결 컬럼이나 연결 테이블이 SQL에 없으므로 연결 권한·교체·미사용 파일 정리 요구사항을 만족할 설계가 필요하다. |
+| 공통 미디어 | 9개 컬럼은 모두 NOT NULL이며 `id`는 PK와 AUTO_INCREMENT다. `user_uuid`는 업로더, `object_key`는 S3 객체 키를 기록한다. VARCHAR 길이와 계정 참조 제약은 미정이다. 별도 첨부 테이블에서 업로드 용도·연결 전 상태·사용처 연결과 정리 보호 상태를 관리하고, 별도 MySQL 업로드 작업 기록으로 S3와 DB 간 실패를 복구한다. 이 구조들의 구체 컬럼·제약은 구현 설계 시 정한다. |
 | 알림 | 알림 수신자·행위자·유형·본문·생성·읽음 시각은 있으나 대부분 NULL 허용이고 시각도 VARCHAR다. 직접 답글 대상 댓글 작성자에게 알리는 요구와 동일 이벤트 중복 방지를 지원할 이벤트 키·대상 연결·전달 방식을 개발 시 구체화한다. |
 | 식별자 타입 | 게시글·댓글의 `user_uuid`는 BIGINT, 계정의 `user_uuid`는 VARCHAR다. `코인 결제.original_transaction_id`는 INTEGER이며 참조 후보 `id`는 BIGINT다. 실제 관계 확정 전에 타입 정합성이 필요하다. |
 | 다형 참조·원문 이름 | 신고 대상과 코인 내역의 관련 대상은 유형별 참조다. 원문 `commnet_count`, `hold_coint_amount`, `HEILD`, `commision_rate`, `comission_amount` 등을 보존했으며 실제 스키마 명칭은 별도 확정한다. |
