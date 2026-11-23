@@ -1215,7 +1215,9 @@ public abstract class BaseEntity {
     private LocalDateTime deletedAt;
 
     public void updateDeletedAt(LocalDateTime deletedAt) {
-        this.deletedAt = Objects.requireNonNull(deletedAt, "deletedAt");
+        if (this.deletedAt == null) {
+            this.deletedAt = Objects.requireNonNull(deletedAt, "deletedAt");
+        }
     }
 }
 ```
