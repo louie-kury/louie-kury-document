@@ -24,7 +24,7 @@
 
 ## 엔티티 목록
 
-현재 MySQL ERD는 27개 테이블·204개 컬럼을 포함한다.
+현재 MySQL ERD는 27개 테이블·203개 컬럼을 포함한다.
 
 | 영역 | 테이블 |
 | --- | --- |
@@ -47,7 +47,6 @@ erDiagram
         DATETIME created_at
         DATETIME updated_at
         DATETIME deleted_at "NULL"
-        VARCHAR authentication_info
         VARCHAR name
         VARCHAR phone_number
         VARCHAR gender
