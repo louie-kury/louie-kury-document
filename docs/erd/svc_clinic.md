@@ -5,7 +5,7 @@
 
 ## 테이블 구조
 
-컬럼 타입은 기본 타입으로 표시한다. 길이·NULL 허용·기본값과 복합 인덱스는 아래 상세 표를 따른다.
+컬럼 타입은 기본 타입으로 표시한다. 길이·NULL 허용·기본값과 복합 인덱스는 아래 상세 표를 따른다. 관계선은 참조 대상이 확인된 외래키이며, 필수 여부와 유일성은 모델의 컬럼과 인덱스를 기준으로 표시한다. 참조 대상이 미확정인 관계는 아래 외래키 관계도에 점선으로 표시한다.
 
 ```mermaid
 erDiagram
@@ -146,6 +146,14 @@ erDiagram
         DATETIME called_at
         DATETIME completed_at
     }
+    hospital ||--o{ hospital_admin : "hospital_id"
+    hospital ||--o| hospital_consult_policy : "hospital_id"
+    hospital ||--o{ hospital_hours : "hospital_id"
+    hospital ||--o| hospital_runtime : "hospital_id"
+    hospital ||--o{ hospital_staff : "hospital_id"
+    hospital ||--o{ vet_duty_session : "hospital_id"
+    hospital ||--o{ vet_hospital_affiliation : "hospital_id"
+    hospital ||--o{ visit_arrival : "hospital_id"
 ```
 
 ## 외래키 관계
