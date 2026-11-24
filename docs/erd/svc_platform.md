@@ -63,14 +63,14 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `admin_uuid` | `CHAR(36)` | 불가 | — | — |
-| `action` | `VARCHAR(80)` | 불가 | — | — |
-| `target_type` | `VARCHAR(40)` | 불가 | — | — |
-| `target_uuid` | `CHAR(36)` | 불가 | — | — |
-| `detail` | `JSON` | 허용 | `NULL` | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `admin_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `action` | `VARCHAR(80)` | NOT NULL | — | — |
+| `target_type` | `VARCHAR(40)` | NOT NULL | — | — |
+| `target_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `detail` | `JSON` | NULL | `NULL` | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -91,18 +91,18 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `name` | `VARCHAR(50)` | 불가 | — | — |
-| `active` | `TINYINT(1)` | 불가 | — | — |
-| `default_radius_m` | `INT` | 불가 | — | — |
-| `emergency_radius_m` | `INT` | 불가 | — | — |
-| `radius_step_m` | `INT` | 불가 | — | — |
-| `max_waves` | `INT` | 불가 | — | — |
-| `max_offers_per_wave` | `INT` | 불가 | — | — |
-| `offer_ttl_sec` | `INT` | 불가 | — | — |
-| `request_ttl_sec` | `INT` | 불가 | — | — |
-| `updated_at` | `DATETIME` | 불가 | — | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `name` | `VARCHAR(50)` | NOT NULL | — | — |
+| `active` | `TINYINT(1)` | NOT NULL | — | — |
+| `default_radius_m` | `INT` | NOT NULL | — | — |
+| `emergency_radius_m` | `INT` | NOT NULL | — | — |
+| `radius_step_m` | `INT` | NOT NULL | — | — |
+| `max_waves` | `INT` | NOT NULL | — | — |
+| `max_offers_per_wave` | `INT` | NOT NULL | — | — |
+| `offer_ttl_sec` | `INT` | NOT NULL | — | — |
+| `request_ttl_sec` | `INT` | NOT NULL | — | — |
+| `updated_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -122,13 +122,13 @@ platform 트랜잭셔널 아웃박스. 토픽 platform.policy.v1
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `event_id` | `CHAR(36)` | 불가 | — | — |
-| `event_type` | `VARCHAR(100)` | 불가 | — | — |
-| `aggregate_uuid` | `CHAR(36)` | 불가 | — | — |
-| `payload` | `JSON` | 불가 | — | — |
-| `occurred_at` | `DATETIME(6)` | 불가 | — | — |
-| `published_at` | `DATETIME(6)` | 허용 | `NULL` | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `event_id` | `CHAR(36)` | NOT NULL | — | — |
+| `event_type` | `VARCHAR(100)` | NOT NULL | — | — |
+| `aggregate_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `payload` | `JSON` | NOT NULL | — | — |
+| `occurred_at` | `DATETIME(6)` | NOT NULL | — | — |
+| `published_at` | `DATETIME(6)` | NULL | `NULL` | — |
 
 **인덱스**
 
@@ -148,9 +148,9 @@ platform 트랜잭셔널 아웃박스. 토픽 platform.policy.v1
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `setting_key` | `VARCHAR(80)` | 불가 | — | — |
-| `setting_value` | `JSON` | 불가 | — | — |
-| `updated_at` | `DATETIME` | 불가 | — | — |
+| `setting_key` | `VARCHAR(80)` | NOT NULL | — | — |
+| `setting_value` | `JSON` | NOT NULL | — | — |
+| `updated_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -168,12 +168,12 @@ platform 트랜잭셔널 아웃박스. 토픽 platform.policy.v1
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `code` | `VARCHAR(20)` | 불가 | — | — |
-| `name` | `VARCHAR(50)` | 불가 | — | — |
-| `parent_code` | `VARCHAR(20)` | 허용 | `NULL` | — |
-| `latitude` | `DECIMAL(9,6)` | 허용 | `NULL` | — |
-| `longitude` | `DECIMAL(9,6)` | 허용 | `NULL` | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `code` | `VARCHAR(20)` | NOT NULL | — | — |
+| `name` | `VARCHAR(50)` | NOT NULL | — | — |
+| `parent_code` | `VARCHAR(20)` | NULL | `NULL` | — |
+| `latitude` | `DECIMAL(9,6)` | NULL | `NULL` | — |
+| `longitude` | `DECIMAL(9,6)` | NULL | `NULL` | — |
 
 **인덱스**
 

@@ -74,10 +74,10 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `species_id` | `BIGINT` | 불가 | — | — |
-| `name` | `VARCHAR(50)` | 불가 | — | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `species_id` | `BIGINT` | NOT NULL | — | — |
+| `name` | `VARCHAR(50)` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -97,9 +97,9 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `caregiver_uuid` | `CHAR(36)` | 불가 | — | — |
-| `pet_id` | `BIGINT` | 불가 | — | — |
-| `linked_at` | `DATETIME` | 불가 | — | — |
+| `caregiver_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `pet_id` | `BIGINT` | NOT NULL | — | — |
+| `linked_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -118,13 +118,13 @@ pet 트랜잭셔널 아웃박스
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `event_id` | `CHAR(36)` | 불가 | — | — |
-| `event_type` | `VARCHAR(100)` | 불가 | — | — |
-| `aggregate_uuid` | `CHAR(36)` | 불가 | — | — |
-| `payload` | `JSON` | 불가 | — | — |
-| `occurred_at` | `DATETIME(6)` | 불가 | — | — |
-| `published_at` | `DATETIME(6)` | 허용 | `NULL` | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `event_id` | `CHAR(36)` | NOT NULL | — | — |
+| `event_type` | `VARCHAR(100)` | NOT NULL | — | — |
+| `aggregate_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `payload` | `JSON` | NOT NULL | — | — |
+| `occurred_at` | `DATETIME(6)` | NOT NULL | — | — |
+| `published_at` | `DATETIME(6)` | NULL | `NULL` | — |
 
 **인덱스**
 
@@ -144,19 +144,19 @@ pet 트랜잭셔널 아웃박스
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `breed_id` | `BIGINT` | 불가 | — | — |
-| `name` | `VARCHAR(50)` | 불가 | — | — |
-| `birth_date` | `DATE` | 허용 | `NULL` | — |
-| `weight_kg` | `DECIMAL(5,2)` | 허용 | `NULL` | — |
-| `sex` | `VARCHAR(10)` | 불가 | — | — |
-| `is_neutered` | `TINYINT(1)` | 허용 | `NULL` | — |
-| `neutered_at` | `DATETIME` | 허용 | `NULL` | — |
-| `status` | `VARCHAR(20)` | 불가 | — | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
-| `updated_at` | `DATETIME` | 불가 | — | — |
-| `deleted_at` | `DATETIME` | 허용 | `NULL` | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `breed_id` | `BIGINT` | NOT NULL | — | — |
+| `name` | `VARCHAR(50)` | NOT NULL | — | — |
+| `birth_date` | `DATE` | NULL | `NULL` | — |
+| `weight_kg` | `DECIMAL(5,2)` | NULL | `NULL` | — |
+| `sex` | `VARCHAR(10)` | NOT NULL | — | — |
+| `is_neutered` | `TINYINT(1)` | NULL | `NULL` | — |
+| `neutered_at` | `DATETIME` | NULL | `NULL` | — |
+| `status` | `VARCHAR(20)` | NOT NULL | — | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
+| `updated_at` | `DATETIME` | NOT NULL | — | — |
+| `deleted_at` | `DATETIME` | NULL | `NULL` | — |
 
 **인덱스**
 
@@ -179,13 +179,13 @@ pet 트랜잭셔널 아웃박스
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `pet_id` | `BIGINT` | 불가 | — | — |
-| `vaccine_id` | `BIGINT` | 불가 | — | — |
-| `evented_at` | `DATETIME` | 불가 | — | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
-| `updated_at` | `DATETIME` | 불가 | — | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `pet_id` | `BIGINT` | NOT NULL | — | — |
+| `vaccine_id` | `BIGINT` | NOT NULL | — | — |
+| `evented_at` | `DATETIME` | NOT NULL | — | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
+| `updated_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -208,9 +208,9 @@ pet 트랜잭셔널 아웃박스
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `name` | `VARCHAR(50)` | 불가 | — | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `name` | `VARCHAR(50)` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -230,10 +230,10 @@ pet 트랜잭셔널 아웃박스
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `name` | `VARCHAR(100)` | 불가 | — | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `name` | `VARCHAR(100)` | NOT NULL | — | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 

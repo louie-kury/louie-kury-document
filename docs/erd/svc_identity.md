@@ -95,19 +95,19 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `status` | `VARCHAR(20)` | 불가 | — | — |
-| `name` | `VARCHAR(100)` | 불가 | — | — |
-| `phone_number` | `VARCHAR(30)` | 불가 | — | — |
-| `gender` | `VARCHAR(20)` | 불가 | — | — |
-| `birth_date` | `DATE` | 불가 | — | — |
-| `address` | `VARCHAR(255)` | 불가 | — | — |
-| `email` | `VARCHAR(254)` | 불가 | — | — |
-| `terms_agreed` | `TINYINT(1)` | 불가 | — | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
-| `updated_at` | `DATETIME` | 불가 | — | — |
-| `deleted_at` | `DATETIME` | 허용 | `NULL` | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `status` | `VARCHAR(20)` | NOT NULL | — | — |
+| `name` | `VARCHAR(100)` | NOT NULL | — | — |
+| `phone_number` | `VARCHAR(30)` | NOT NULL | — | — |
+| `gender` | `VARCHAR(20)` | NOT NULL | — | — |
+| `birth_date` | `DATE` | NOT NULL | — | — |
+| `address` | `VARCHAR(255)` | NOT NULL | — | — |
+| `email` | `VARCHAR(254)` | NOT NULL | — | — |
+| `terms_agreed` | `TINYINT(1)` | NOT NULL | — | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
+| `updated_at` | `DATETIME` | NOT NULL | — | — |
+| `deleted_at` | `DATETIME` | NULL | `NULL` | — |
 
 **인덱스**
 
@@ -129,16 +129,16 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `name` | `VARCHAR(100)` | 불가 | — | — |
-| `phone_number` | `VARCHAR(30)` | 허용 | `NULL` | — |
-| `email` | `VARCHAR(254)` | 허용 | `NULL` | — |
-| `is_super_admin` | `TINYINT(1)` | 불가 | `'0'` | — |
-| `status` | `VARCHAR(20)` | 불가 | `'ACTIVE'` | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
-| `updated_at` | `DATETIME` | 불가 | — | — |
-| `deleted_at` | `DATETIME` | 허용 | `NULL` | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `name` | `VARCHAR(100)` | NOT NULL | — | — |
+| `phone_number` | `VARCHAR(30)` | NULL | `NULL` | — |
+| `email` | `VARCHAR(254)` | NULL | `NULL` | — |
+| `is_super_admin` | `TINYINT(1)` | NOT NULL | `'0'` | — |
+| `status` | `VARCHAR(20)` | NOT NULL | `'ACTIVE'` | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
+| `updated_at` | `DATETIME` | NOT NULL | — | — |
+| `deleted_at` | `DATETIME` | NULL | `NULL` | — |
 
 **인덱스**
 
@@ -158,12 +158,12 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `admin_account_id` | `BIGINT` | 불가 | — | — |
-| `login_id` | `VARCHAR(100)` | 불가 | — | — |
-| `password_hash` | `VARCHAR(255)` | 불가 | — | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
-| `updated_at` | `DATETIME` | 불가 | — | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `admin_account_id` | `BIGINT` | NOT NULL | — | — |
+| `login_id` | `VARCHAR(100)` | NOT NULL | — | — |
+| `password_hash` | `VARCHAR(255)` | NOT NULL | — | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
+| `updated_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -185,12 +185,12 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `account_id` | `BIGINT` | 불가 | — | — |
-| `login_id` | `VARCHAR(100)` | 불가 | — | — |
-| `password_hash` | `VARCHAR(255)` | 허용 | `NULL` | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
-| `updated_at` | `DATETIME` | 불가 | — | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `account_id` | `BIGINT` | NOT NULL | — | — |
+| `login_id` | `VARCHAR(100)` | NOT NULL | — | — |
+| `password_hash` | `VARCHAR(255)` | NULL | `NULL` | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
+| `updated_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -212,10 +212,10 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `account_id` | `BIGINT` | 불가 | — | — |
-| `authenticated_at` | `DATETIME` | 불가 | — | — |
-| `login_type` | `VARCHAR(30)` | 불가 | — | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `account_id` | `BIGINT` | NOT NULL | — | — |
+| `authenticated_at` | `DATETIME` | NOT NULL | — | — |
+| `login_type` | `VARCHAR(30)` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -236,13 +236,13 @@ identity 트랜잭셔널 아웃박스
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `event_id` | `CHAR(36)` | 불가 | — | — |
-| `event_type` | `VARCHAR(100)` | 불가 | — | — |
-| `aggregate_uuid` | `CHAR(36)` | 불가 | — | — |
-| `payload` | `JSON` | 불가 | — | — |
-| `occurred_at` | `DATETIME(6)` | 불가 | — | — |
-| `published_at` | `DATETIME(6)` | 허용 | `NULL` | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `event_id` | `CHAR(36)` | NOT NULL | — | — |
+| `event_type` | `VARCHAR(100)` | NOT NULL | — | — |
+| `aggregate_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `payload` | `JSON` | NOT NULL | — | — |
+| `occurred_at` | `DATETIME(6)` | NOT NULL | — | — |
+| `published_at` | `DATETIME(6)` | NULL | `NULL` | — |
 
 **인덱스**
 
@@ -262,11 +262,11 @@ identity 트랜잭셔널 아웃박스
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `account_id` | `BIGINT` | 불가 | — | — |
-| `provider` | `VARCHAR(30)` | 불가 | — | — |
-| `provider_id` | `VARCHAR(191)` | 불가 | — | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `account_id` | `BIGINT` | NOT NULL | — | — |
+| `provider` | `VARCHAR(30)` | NOT NULL | — | — |
+| `provider_id` | `VARCHAR(191)` | NOT NULL | — | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -288,12 +288,12 @@ identity 트랜잭셔널 아웃박스
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `account_id` | `BIGINT` | 불가 | — | — |
-| `nickname` | `VARCHAR(50)` | 불가 | — | — |
-| `user_type` | `VARCHAR(20)` | 불가 | — | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
-| `updated_at` | `DATETIME` | 불가 | — | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `account_id` | `BIGINT` | NOT NULL | — | — |
+| `nickname` | `VARCHAR(50)` | NOT NULL | — | — |
+| `user_type` | `VARCHAR(20)` | NOT NULL | — | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
+| `updated_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 

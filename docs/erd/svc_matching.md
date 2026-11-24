@@ -79,27 +79,27 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `caregiver_uuid` | `CHAR(36)` | 불가 | — | — |
-| `pet_uuid` | `CHAR(36)` | 불가 | — | — |
-| `medical_subject_uuid` | `CHAR(36)` | 불가 | — | — |
-| `channel` | `VARCHAR(20)` | 불가 | — | — |
-| `is_emergency` | `TINYINT(1)` | 불가 | — | — |
-| `status` | `VARCHAR(20)` | 불가 | — | — |
-| `origin_lat` | `DECIMAL(9,6)` | 불가 | — | — |
-| `origin_lng` | `DECIMAL(9,6)` | 불가 | — | — |
-| `geohash` | `VARCHAR(12)` | 불가 | — | — |
-| `region` | `VARCHAR(50)` | 불가 | — | — |
-| `si` | `VARCHAR(50)` | 불가 | — | — |
-| `gu` | `VARCHAR(50)` | 불가 | — | — |
-| `search_radius_m` | `INT` | 불가 | — | — |
-| `symptom_memo` | `VARCHAR(200)` | 허용 | `NULL` | — |
-| `requested_at` | `DATETIME` | 불가 | — | — |
-| `expire_at` | `DATETIME` | 불가 | — | — |
-| `assigned_vet_uuid` | `CHAR(36)` | 허용 | `NULL` | — |
-| `assigned_hospital_uuid` | `CHAR(36)` | 허용 | `NULL` | — |
-| `assigned_at` | `DATETIME` | 허용 | `NULL` | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `caregiver_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `pet_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `medical_subject_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `channel` | `VARCHAR(20)` | NOT NULL | — | — |
+| `is_emergency` | `TINYINT(1)` | NOT NULL | — | — |
+| `status` | `VARCHAR(20)` | NOT NULL | — | — |
+| `origin_lat` | `DECIMAL(9,6)` | NOT NULL | — | — |
+| `origin_lng` | `DECIMAL(9,6)` | NOT NULL | — | — |
+| `geohash` | `VARCHAR(12)` | NOT NULL | — | — |
+| `region` | `VARCHAR(50)` | NOT NULL | — | — |
+| `si` | `VARCHAR(50)` | NOT NULL | — | — |
+| `gu` | `VARCHAR(50)` | NOT NULL | — | — |
+| `search_radius_m` | `INT` | NOT NULL | — | — |
+| `symptom_memo` | `VARCHAR(200)` | NULL | `NULL` | — |
+| `requested_at` | `DATETIME` | NOT NULL | — | — |
+| `expire_at` | `DATETIME` | NOT NULL | — | — |
+| `assigned_vet_uuid` | `CHAR(36)` | NULL | `NULL` | — |
+| `assigned_hospital_uuid` | `CHAR(36)` | NULL | `NULL` | — |
+| `assigned_at` | `DATETIME` | NULL | `NULL` | — |
 
 **인덱스**
 
@@ -122,18 +122,18 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `request_id` | `BIGINT` | 불가 | — | — |
-| `wave_id` | `BIGINT` | 불가 | — | — |
-| `vet_uuid` | `CHAR(36)` | 불가 | — | — |
-| `hospital_uuid` | `CHAR(36)` | 불가 | — | — |
-| `distance_m` | `INT` | 불가 | — | — |
-| `score` | `DECIMAL(6,2)` | 불가 | — | — |
-| `status` | `VARCHAR(20)` | 불가 | — | — |
-| `offered_at` | `DATETIME` | 불가 | — | — |
-| `respond_by` | `DATETIME` | 불가 | — | — |
-| `responded_at` | `DATETIME` | 허용 | `NULL` | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `request_id` | `BIGINT` | NOT NULL | — | — |
+| `wave_id` | `BIGINT` | NOT NULL | — | — |
+| `vet_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `hospital_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `distance_m` | `INT` | NOT NULL | — | — |
+| `score` | `DECIMAL(6,2)` | NOT NULL | — | — |
+| `status` | `VARCHAR(20)` | NOT NULL | — | — |
+| `offered_at` | `DATETIME` | NOT NULL | — | — |
+| `respond_by` | `DATETIME` | NOT NULL | — | — |
+| `responded_at` | `DATETIME` | NULL | `NULL` | — |
 
 **인덱스**
 
@@ -158,13 +158,13 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `request_id` | `BIGINT` | 불가 | — | — |
-| `wave_no` | `INT` | 불가 | — | — |
-| `radius_m` | `INT` | 불가 | — | — |
-| `started_at` | `DATETIME` | 불가 | — | — |
-| `finished_at` | `DATETIME` | 허용 | `NULL` | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `request_id` | `BIGINT` | NOT NULL | — | — |
+| `wave_no` | `INT` | NOT NULL | — | — |
+| `radius_m` | `INT` | NOT NULL | — | — |
+| `started_at` | `DATETIME` | NOT NULL | — | — |
+| `finished_at` | `DATETIME` | NULL | `NULL` | — |
 
 **인덱스**
 
@@ -186,13 +186,13 @@ matching 아웃박스. 토픽 matching.request.v1, matching.offer.v1
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `event_id` | `CHAR(36)` | 불가 | — | — |
-| `event_type` | `VARCHAR(100)` | 불가 | — | — |
-| `aggregate_uuid` | `CHAR(36)` | 불가 | — | — |
-| `payload` | `JSON` | 불가 | — | — |
-| `occurred_at` | `DATETIME(6)` | 불가 | — | — |
-| `published_at` | `DATETIME(6)` | 허용 | `NULL` | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `event_id` | `CHAR(36)` | NOT NULL | — | — |
+| `event_type` | `VARCHAR(100)` | NOT NULL | — | — |
+| `aggregate_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `payload` | `JSON` | NOT NULL | — | — |
+| `occurred_at` | `DATETIME(6)` | NOT NULL | — | — |
+| `published_at` | `DATETIME(6)` | NULL | `NULL` | — |
 
 **인덱스**
 
@@ -212,8 +212,8 @@ matching 아웃박스. 토픽 matching.request.v1, matching.offer.v1
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `request_id` | `BIGINT` | 불가 | — | — |
-| `symptom_uuid` | `CHAR(36)` | 불가 | — | — |
+| `request_id` | `BIGINT` | NOT NULL | — | — |
+| `symptom_uuid` | `CHAR(36)` | NOT NULL | — | — |
 
 **인덱스**
 

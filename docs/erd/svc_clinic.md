@@ -162,28 +162,28 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `region` | `VARCHAR(50)` | 허용 | `NULL` | — |
-| `si` | `VARCHAR(50)` | 허용 | `NULL` | — |
-| `gun` | `VARCHAR(50)` | 허용 | `NULL` | — |
-| `gu` | `VARCHAR(50)` | 허용 | `NULL` | — |
-| `name` | `VARCHAR(100)` | 불가 | — | — |
-| `zip_code` | `VARCHAR(10)` | 허용 | `NULL` | — |
-| `road_address` | `VARCHAR(255)` | 허용 | `NULL` | — |
-| `lot_address` | `VARCHAR(255)` | 허용 | `NULL` | — |
-| `tel` | `VARCHAR(20)` | 허용 | `NULL` | — |
-| `mgmt_no` | `VARCHAR(50)` | 허용 | `NULL` | — |
-| `licensed_at` | `DATE` | 허용 | `NULL` | — |
-| `business_no` | `VARCHAR(20)` | 허용 | `NULL` | — |
-| `homepage_url` | `VARCHAR(500)` | 허용 | `NULL` | — |
-| `logo_url` | `VARCHAR(500)` | 허용 | `NULL` | — |
-| `remark` | `VARCHAR(500)` | 허용 | `NULL` | — |
-| `latitude` | `DECIMAL(9,6)` | 허용 | `NULL` | 위도 |
-| `longitude` | `DECIMAL(9,6)` | 허용 | `NULL` | 경도 |
-| `geohash` | `VARCHAR(12)` | 허용 | `NULL` | 지오해시 |
-| `created_at` | `DATETIME` | 불가 | — | — |
-| `updated_at` | `DATETIME` | 불가 | — | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `region` | `VARCHAR(50)` | NULL | `NULL` | — |
+| `si` | `VARCHAR(50)` | NULL | `NULL` | — |
+| `gun` | `VARCHAR(50)` | NULL | `NULL` | — |
+| `gu` | `VARCHAR(50)` | NULL | `NULL` | — |
+| `name` | `VARCHAR(100)` | NOT NULL | — | — |
+| `zip_code` | `VARCHAR(10)` | NULL | `NULL` | — |
+| `road_address` | `VARCHAR(255)` | NULL | `NULL` | — |
+| `lot_address` | `VARCHAR(255)` | NULL | `NULL` | — |
+| `tel` | `VARCHAR(20)` | NULL | `NULL` | — |
+| `mgmt_no` | `VARCHAR(50)` | NULL | `NULL` | — |
+| `licensed_at` | `DATE` | NULL | `NULL` | — |
+| `business_no` | `VARCHAR(20)` | NULL | `NULL` | — |
+| `homepage_url` | `VARCHAR(500)` | NULL | `NULL` | — |
+| `logo_url` | `VARCHAR(500)` | NULL | `NULL` | — |
+| `remark` | `VARCHAR(500)` | NULL | `NULL` | — |
+| `latitude` | `DECIMAL(9,6)` | NULL | `NULL` | 위도 |
+| `longitude` | `DECIMAL(9,6)` | NULL | `NULL` | 경도 |
+| `geohash` | `VARCHAR(12)` | NULL | `NULL` | 지오해시 |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
+| `updated_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -206,11 +206,11 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `admin_uuid` | `CHAR(36)` | 불가 | — | — |
-| `hospital_id` | `BIGINT` | 불가 | — | — |
-| `assigned_at` | `DATETIME` | 불가 | — | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `admin_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `hospital_id` | `BIGINT` | NOT NULL | — | — |
+| `assigned_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -233,13 +233,13 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `hospital_id` | `BIGINT` | 불가 | — | — |
-| `chat_enabled` | `TINYINT(1)` | 불가 | — | — |
-| `video_enabled` | `TINYINT(1)` | 불가 | — | — |
-| `emergency_enabled` | `TINYINT(1)` | 불가 | — | — |
-| `max_concurrent` | `INT` | 불가 | — | — |
-| `service_radius_m` | `INT` | 불가 | — | — |
-| `updated_at` | `DATETIME` | 불가 | — | — |
+| `hospital_id` | `BIGINT` | NOT NULL | — | — |
+| `chat_enabled` | `TINYINT(1)` | NOT NULL | — | — |
+| `video_enabled` | `TINYINT(1)` | NOT NULL | — | — |
+| `emergency_enabled` | `TINYINT(1)` | NOT NULL | — | — |
+| `max_concurrent` | `INT` | NOT NULL | — | — |
+| `service_radius_m` | `INT` | NOT NULL | — | — |
+| `updated_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -259,16 +259,16 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `hospital_id` | `BIGINT` | 불가 | — | — |
-| `day_of_week` | `TINYINT` | 불가 | — | — |
-| `is_closed` | `TINYINT(1)` | 불가 | — | — |
-| `open_time` | `TIME` | 허용 | `NULL` | — |
-| `close_time` | `TIME` | 허용 | `NULL` | — |
-| `break_start` | `TIME` | 허용 | `NULL` | — |
-| `break_end` | `TIME` | 허용 | `NULL` | — |
-| `updated_at` | `DATETIME` | 불가 | — | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `hospital_id` | `BIGINT` | NOT NULL | — | — |
+| `day_of_week` | `TINYINT` | NOT NULL | — | — |
+| `is_closed` | `TINYINT(1)` | NOT NULL | — | — |
+| `open_time` | `TIME` | NULL | `NULL` | — |
+| `close_time` | `TIME` | NULL | `NULL` | — |
+| `break_start` | `TIME` | NULL | `NULL` | — |
+| `break_end` | `TIME` | NULL | `NULL` | — |
+| `updated_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -290,11 +290,11 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `hospital_id` | `BIGINT` | 불가 | — | — |
-| `is_accepting_visit` | `TINYINT(1)` | 불가 | — | — |
-| `is_accepting_consult` | `TINYINT(1)` | 불가 | — | — |
-| `pause_reason` | `VARCHAR(200)` | 허용 | `NULL` | — |
-| `updated_at` | `DATETIME` | 불가 | — | — |
+| `hospital_id` | `BIGINT` | NOT NULL | — | — |
+| `is_accepting_visit` | `TINYINT(1)` | NOT NULL | — | — |
+| `is_accepting_consult` | `TINYINT(1)` | NOT NULL | — | — |
+| `pause_reason` | `VARCHAR(200)` | NULL | `NULL` | — |
+| `updated_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -314,13 +314,13 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `hospital_id` | `BIGINT` | 불가 | — | — |
-| `account_uuid` | `CHAR(36)` | 불가 | — | — |
-| `staff_role` | `VARCHAR(20)` | 불가 | — | — |
-| `status` | `VARCHAR(20)` | 불가 | — | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `hospital_id` | `BIGINT` | NOT NULL | — | — |
+| `account_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `staff_role` | `VARCHAR(20)` | NOT NULL | — | — |
+| `status` | `VARCHAR(20)` | NOT NULL | — | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -343,13 +343,13 @@ clinic 트랜잭셔널 아웃박스
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `event_id` | `CHAR(36)` | 불가 | — | — |
-| `event_type` | `VARCHAR(100)` | 불가 | — | — |
-| `aggregate_uuid` | `CHAR(36)` | 불가 | — | — |
-| `payload` | `JSON` | 불가 | — | — |
-| `occurred_at` | `DATETIME(6)` | 불가 | — | — |
-| `published_at` | `DATETIME(6)` | 허용 | `NULL` | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `event_id` | `CHAR(36)` | NOT NULL | — | — |
+| `event_type` | `VARCHAR(100)` | NOT NULL | — | — |
+| `aggregate_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `payload` | `JSON` | NOT NULL | — | — |
+| `occurred_at` | `DATETIME(6)` | NOT NULL | — | — |
+| `published_at` | `DATETIME(6)` | NULL | `NULL` | — |
 
 **인덱스**
 
@@ -369,11 +369,11 @@ clinic 트랜잭셔널 아웃박스
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `vet_id` | `BIGINT` | 불가 | — | — |
-| `off_date` | `DATE` | 불가 | — | — |
-| `reason` | `VARCHAR(200)` | 허용 | `NULL` | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `vet_id` | `BIGINT` | NOT NULL | — | — |
+| `off_date` | `DATE` | NOT NULL | — | — |
+| `reason` | `VARCHAR(200)` | NULL | `NULL` | — |
 
 **인덱스**
 
@@ -393,18 +393,18 @@ clinic 트랜잭셔널 아웃박스
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `vet_id` | `BIGINT` | 불가 | — | — |
-| `hospital_id` | `BIGINT` | 불가 | — | — |
-| `accept_chat` | `TINYINT(1)` | 불가 | — | — |
-| `accept_video` | `TINYINT(1)` | 불가 | — | — |
-| `service_radius_m` | `INT` | 불가 | — | — |
-| `origin_lat` | `DECIMAL(9,6)` | 불가 | — | — |
-| `origin_lng` | `DECIMAL(9,6)` | 불가 | — | — |
-| `started_at` | `DATETIME` | 불가 | — | — |
-| `ended_at` | `DATETIME` | 허용 | `NULL` | — |
-| `current_flag` | `TINYINT` | 허용 | `NULL` | GENERATED if((`ended_at` is null),1,NULL) STORED |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `vet_id` | `BIGINT` | NOT NULL | — | — |
+| `hospital_id` | `BIGINT` | NOT NULL | — | — |
+| `accept_chat` | `TINYINT(1)` | NOT NULL | — | — |
+| `accept_video` | `TINYINT(1)` | NOT NULL | — | — |
+| `service_radius_m` | `INT` | NOT NULL | — | — |
+| `origin_lat` | `DECIMAL(9,6)` | NOT NULL | — | — |
+| `origin_lng` | `DECIMAL(9,6)` | NOT NULL | — | — |
+| `started_at` | `DATETIME` | NOT NULL | — | — |
+| `ended_at` | `DATETIME` | NULL | `NULL` | — |
+| `current_flag` | `TINYINT` | NULL | `NULL` | GENERATED if((`ended_at` is null),1,NULL) STORED |
 
 **인덱스**
 
@@ -427,13 +427,13 @@ clinic 트랜잭셔널 아웃박스
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `vet_id` | `BIGINT` | 불가 | — | — |
-| `hospital_id` | `BIGINT` | 불가 | — | — |
-| `started_at` | `DATETIME` | 불가 | — | — |
-| `ended_at` | `DATETIME` | 허용 | `NULL` | — |
-| `current_flag` | `TINYINT` | 허용 | `NULL` | GENERATED if((`ended_at` is null),1,NULL) STORED |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `vet_id` | `BIGINT` | NOT NULL | — | — |
+| `hospital_id` | `BIGINT` | NOT NULL | — | — |
+| `started_at` | `DATETIME` | NOT NULL | — | — |
+| `ended_at` | `DATETIME` | NULL | `NULL` | — |
+| `current_flag` | `TINYINT` | NULL | `NULL` | GENERATED if((`ended_at` is null),1,NULL) STORED |
 
 **인덱스**
 
@@ -456,10 +456,10 @@ clinic 트랜잭셔널 아웃박스
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `vet_id` | `BIGINT` | 불가 | — | — |
-| `day_of_week` | `TINYINT` | 불가 | — | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `vet_id` | `BIGINT` | NOT NULL | — | — |
+| `day_of_week` | `TINYINT` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -479,18 +479,18 @@ clinic 트랜잭셔널 아웃박스
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `account_uuid` | `CHAR(36)` | 불가 | — | — |
-| `name` | `VARCHAR(50)` | 불가 | — | — |
-| `major` | `VARCHAR(100)` | 불가 | — | — |
-| `specialty` | `VARCHAR(100)` | 불가 | — | — |
-| `license_no` | `VARCHAR(100)` | 불가 | — | — |
-| `is_available` | `TINYINT(1)` | 불가 | — | — |
-| `status` | `VARCHAR(20)` | 불가 | — | — |
-| `status_reason` | `VARCHAR(255)` | 허용 | `NULL` | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
-| `updated_at` | `DATETIME` | 불가 | — | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `account_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `name` | `VARCHAR(50)` | NOT NULL | — | — |
+| `major` | `VARCHAR(100)` | NOT NULL | — | — |
+| `specialty` | `VARCHAR(100)` | NOT NULL | — | — |
+| `license_no` | `VARCHAR(100)` | NOT NULL | — | — |
+| `is_available` | `TINYINT(1)` | NOT NULL | — | — |
+| `status` | `VARCHAR(20)` | NOT NULL | — | — |
+| `status_reason` | `VARCHAR(255)` | NULL | `NULL` | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
+| `updated_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -512,14 +512,14 @@ clinic 트랜잭셔널 아웃박스
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `hospital_id` | `BIGINT` | 불가 | — | — |
-| `reservation_uuid` | `CHAR(36)` | 불가 | — | — |
-| `status` | `VARCHAR(20)` | 불가 | — | — |
-| `arrived_at` | `DATETIME` | 불가 | — | — |
-| `called_at` | `DATETIME` | 허용 | `NULL` | — |
-| `completed_at` | `DATETIME` | 허용 | `NULL` | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `hospital_id` | `BIGINT` | NOT NULL | — | — |
+| `reservation_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `status` | `VARCHAR(20)` | NOT NULL | — | — |
+| `arrived_at` | `DATETIME` | NOT NULL | — | — |
+| `called_at` | `DATETIME` | NULL | `NULL` | — |
+| `completed_at` | `DATETIME` | NULL | `NULL` | — |
 
 **인덱스**
 

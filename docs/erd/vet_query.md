@@ -227,11 +227,11 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `stat_date` | `DATE` | 불가 | — | — |
-| `board_name` | `VARCHAR(100)` | 불가 | — | — |
-| `post_count` | `INT` | 불가 | — | — |
-| `comment_count` | `INT` | 불가 | — | — |
-| `like_count` | `INT` | 불가 | — | — |
+| `stat_date` | `DATE` | NOT NULL | — | — |
+| `board_name` | `VARCHAR(100)` | NOT NULL | — | — |
+| `post_count` | `INT` | NOT NULL | — | — |
+| `comment_count` | `INT` | NOT NULL | — | — |
+| `like_count` | `INT` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -249,11 +249,11 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `stat_date` | `DATE` | 불가 | — | — |
-| `subject_name` | `VARCHAR(100)` | 불가 | — | — |
-| `status` | `VARCHAR(20)` | 불가 | — | — |
-| `is_emergency` | `TINYINT(1)` | 불가 | — | — |
-| `consultation_count` | `INT` | 불가 | — | — |
+| `stat_date` | `DATE` | NOT NULL | — | — |
+| `subject_name` | `VARCHAR(100)` | NOT NULL | — | — |
+| `status` | `VARCHAR(20)` | NOT NULL | — | — |
+| `is_emergency` | `TINYINT(1)` | NOT NULL | — | — |
+| `consultation_count` | `INT` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -272,13 +272,13 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `stat_date` | `DATE` | 불가 | — | — |
-| `region` | `VARCHAR(50)` | 불가 | — | — |
-| `channel` | `VARCHAR(20)` | 불가 | — | — |
-| `status` | `VARCHAR(20)` | 불가 | — | — |
-| `is_emergency` | `TINYINT(1)` | 불가 | — | — |
-| `request_count` | `INT` | 불가 | — | — |
-| `avg_match_sec` | `INT` | 허용 | `NULL` | — |
+| `stat_date` | `DATE` | NOT NULL | — | — |
+| `region` | `VARCHAR(50)` | NOT NULL | — | — |
+| `channel` | `VARCHAR(20)` | NOT NULL | — | — |
+| `status` | `VARCHAR(20)` | NOT NULL | — | — |
+| `is_emergency` | `TINYINT(1)` | NOT NULL | — | — |
+| `request_count` | `INT` | NOT NULL | — | — |
+| `avg_match_sec` | `INT` | NULL | `NULL` | — |
 
 **인덱스**
 
@@ -296,12 +296,12 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `stat_date` | `DATE` | 불가 | — | — |
-| `hospital_uuid` | `CHAR(36)` | 불가 | — | — |
-| `hospital_name` | `VARCHAR(100)` | 불가 | — | — |
-| `region` | `VARCHAR(50)` | 불가 | — | — |
-| `status` | `VARCHAR(20)` | 불가 | — | — |
-| `reservation_count` | `INT` | 불가 | — | — |
+| `stat_date` | `DATE` | NOT NULL | — | — |
+| `hospital_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `hospital_name` | `VARCHAR(100)` | NOT NULL | — | — |
+| `region` | `VARCHAR(50)` | NOT NULL | — | — |
+| `status` | `VARCHAR(20)` | NOT NULL | — | — |
+| `reservation_count` | `INT` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -320,9 +320,9 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `event_id` | `CHAR(36)` | 불가 | — | — |
-| `event_type` | `VARCHAR(100)` | 불가 | — | — |
-| `processed_at` | `DATETIME(6)` | 불가 | — | — |
+| `event_id` | `CHAR(36)` | NOT NULL | — | — |
+| `event_type` | `VARCHAR(100)` | NOT NULL | — | — |
+| `processed_at` | `DATETIME(6)` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -340,25 +340,25 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `consultation_uuid` | `CHAR(36)` | 불가 | — | — |
-| `status` | `VARCHAR(20)` | 불가 | — | — |
-| `consult_type` | `VARCHAR(20)` | 불가 | — | — |
-| `is_emergency` | `TINYINT(1)` | 불가 | — | — |
-| `summary` | `VARCHAR(500)` | 허용 | `NULL` | — |
-| `caregiver_uuid` | `CHAR(36)` | 불가 | — | — |
-| `caregiver_nickname` | `VARCHAR(50)` | 불가 | — | — |
-| `pet_uuid` | `CHAR(36)` | 불가 | — | — |
-| `pet_name` | `VARCHAR(50)` | 불가 | — | — |
-| `species_name` | `VARCHAR(50)` | 불가 | — | — |
-| `vet_uuid` | `CHAR(36)` | 허용 | `NULL` | — |
-| `vet_name` | `VARCHAR(50)` | 허용 | `NULL` | — |
-| `subject_name` | `VARCHAR(100)` | 불가 | — | — |
-| `hospital_uuid` | `CHAR(36)` | 허용 | `NULL` | — |
-| `hospital_name` | `VARCHAR(100)` | 허용 | `NULL` | — |
-| `region` | `VARCHAR(50)` | 허용 | `NULL` | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
-| `accepted_at` | `DATETIME` | 허용 | `NULL` | — |
-| `completed_at` | `DATETIME` | 허용 | `NULL` | — |
+| `consultation_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `status` | `VARCHAR(20)` | NOT NULL | — | — |
+| `consult_type` | `VARCHAR(20)` | NOT NULL | — | — |
+| `is_emergency` | `TINYINT(1)` | NOT NULL | — | — |
+| `summary` | `VARCHAR(500)` | NULL | `NULL` | — |
+| `caregiver_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `caregiver_nickname` | `VARCHAR(50)` | NOT NULL | — | — |
+| `pet_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `pet_name` | `VARCHAR(50)` | NOT NULL | — | — |
+| `species_name` | `VARCHAR(50)` | NOT NULL | — | — |
+| `vet_uuid` | `CHAR(36)` | NULL | `NULL` | — |
+| `vet_name` | `VARCHAR(50)` | NULL | `NULL` | — |
+| `subject_name` | `VARCHAR(100)` | NOT NULL | — | — |
+| `hospital_uuid` | `CHAR(36)` | NULL | `NULL` | — |
+| `hospital_name` | `VARCHAR(100)` | NULL | `NULL` | — |
+| `region` | `VARCHAR(50)` | NULL | `NULL` | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
+| `accepted_at` | `DATETIME` | NULL | `NULL` | — |
+| `completed_at` | `DATETIME` | NULL | `NULL` | — |
 
 **인덱스**
 
@@ -383,9 +383,9 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `consultation_uuid` | `CHAR(36)` | 불가 | — | — |
-| `symptom_uuid` | `CHAR(36)` | 불가 | — | — |
-| `symptom_name` | `VARCHAR(100)` | 불가 | — | — |
+| `consultation_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `symptom_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `symptom_name` | `VARCHAR(100)` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -405,15 +405,15 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `hospital_uuid` | `CHAR(36)` | 불가 | — | — |
-| `region` | `VARCHAR(50)` | 불가 | — | — |
-| `si` | `VARCHAR(50)` | 불가 | — | — |
-| `gun` | `VARCHAR(50)` | 불가 | — | — |
-| `gu` | `VARCHAR(50)` | 불가 | — | — |
-| `name` | `VARCHAR(100)` | 불가 | — | — |
-| `road_address` | `VARCHAR(255)` | 불가 | — | — |
-| `lot_address` | `VARCHAR(255)` | 불가 | — | — |
-| `tel` | `VARCHAR(20)` | 허용 | `NULL` | — |
+| `hospital_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `region` | `VARCHAR(50)` | NOT NULL | — | — |
+| `si` | `VARCHAR(50)` | NOT NULL | — | — |
+| `gun` | `VARCHAR(50)` | NOT NULL | — | — |
+| `gu` | `VARCHAR(50)` | NOT NULL | — | — |
+| `name` | `VARCHAR(100)` | NOT NULL | — | — |
+| `road_address` | `VARCHAR(255)` | NOT NULL | — | — |
+| `lot_address` | `VARCHAR(255)` | NOT NULL | — | — |
+| `tel` | `VARCHAR(20)` | NULL | `NULL` | — |
 
 **인덱스**
 
@@ -433,11 +433,11 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `hospital_uuid` | `CHAR(36)` | 불가 | — | — |
-| `day_of_week` | `TINYINT` | 불가 | — | — |
-| `is_closed` | `TINYINT(1)` | 불가 | — | — |
-| `open_time` | `TIME` | 허용 | `NULL` | — |
-| `close_time` | `TIME` | 허용 | `NULL` | — |
+| `hospital_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `day_of_week` | `TINYINT` | NOT NULL | — | — |
+| `is_closed` | `TINYINT(1)` | NOT NULL | — | — |
+| `open_time` | `TIME` | NULL | `NULL` | — |
+| `close_time` | `TIME` | NULL | `NULL` | — |
 
 **인덱스**
 
@@ -456,22 +456,22 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `request_uuid` | `CHAR(36)` | 불가 | — | — |
-| `status` | `VARCHAR(20)` | 불가 | — | — |
-| `channel` | `VARCHAR(20)` | 불가 | — | — |
-| `is_emergency` | `TINYINT(1)` | 불가 | — | — |
-| `region` | `VARCHAR(50)` | 불가 | — | — |
-| `gu` | `VARCHAR(50)` | 불가 | — | — |
-| `origin_lat` | `DECIMAL(9,6)` | 불가 | — | — |
-| `origin_lng` | `DECIMAL(9,6)` | 불가 | — | — |
-| `caregiver_nickname` | `VARCHAR(50)` | 불가 | — | — |
-| `pet_name` | `VARCHAR(50)` | 불가 | — | — |
-| `subject_name` | `VARCHAR(100)` | 불가 | — | — |
-| `assigned_vet_name` | `VARCHAR(50)` | 허용 | `NULL` | — |
-| `assigned_hospital_name` | `VARCHAR(100)` | 허용 | `NULL` | — |
-| `distance_m` | `INT` | 허용 | `NULL` | — |
-| `requested_at` | `DATETIME` | 불가 | — | — |
-| `assigned_at` | `DATETIME` | 허용 | `NULL` | — |
+| `request_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `status` | `VARCHAR(20)` | NOT NULL | — | — |
+| `channel` | `VARCHAR(20)` | NOT NULL | — | — |
+| `is_emergency` | `TINYINT(1)` | NOT NULL | — | — |
+| `region` | `VARCHAR(50)` | NOT NULL | — | — |
+| `gu` | `VARCHAR(50)` | NOT NULL | — | — |
+| `origin_lat` | `DECIMAL(9,6)` | NOT NULL | — | — |
+| `origin_lng` | `DECIMAL(9,6)` | NOT NULL | — | — |
+| `caregiver_nickname` | `VARCHAR(50)` | NOT NULL | — | — |
+| `pet_name` | `VARCHAR(50)` | NOT NULL | — | — |
+| `subject_name` | `VARCHAR(100)` | NOT NULL | — | — |
+| `assigned_vet_name` | `VARCHAR(50)` | NULL | `NULL` | — |
+| `assigned_hospital_name` | `VARCHAR(100)` | NULL | `NULL` | — |
+| `distance_m` | `INT` | NULL | `NULL` | — |
+| `requested_at` | `DATETIME` | NOT NULL | — | — |
+| `assigned_at` | `DATETIME` | NULL | `NULL` | — |
 
 **인덱스**
 
@@ -491,13 +491,13 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `notification_uuid` | `CHAR(36)` | 불가 | — | — |
-| `recipient_uuid` | `CHAR(36)` | 불가 | — | — |
-| `type` | `VARCHAR(30)` | 불가 | — | — |
-| `title` | `VARCHAR(200)` | 불가 | — | — |
-| `read_at` | `DATETIME` | 허용 | `NULL` | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
-| `is_unread` | `TINYINT` | 허용 | `NULL` | GENERATED if((`read_at` is null),1,0) STORED |
+| `notification_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `recipient_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `type` | `VARCHAR(30)` | NOT NULL | — | — |
+| `title` | `VARCHAR(200)` | NOT NULL | — | — |
+| `read_at` | `DATETIME` | NULL | `NULL` | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
+| `is_unread` | `TINYINT` | NULL | `NULL` | GENERATED if((`read_at` is null),1,0) STORED |
 
 **인덱스**
 
@@ -517,17 +517,17 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `pet_uuid` | `CHAR(36)` | 불가 | — | — |
-| `caregiver_uuid` | `CHAR(36)` | 불가 | — | — |
-| `caregiver_nickname` | `VARCHAR(50)` | 불가 | — | — |
-| `name` | `VARCHAR(50)` | 불가 | — | — |
-| `species_name` | `VARCHAR(50)` | 불가 | — | — |
-| `breed_name` | `VARCHAR(50)` | 불가 | — | — |
-| `sex` | `VARCHAR(10)` | 불가 | — | — |
-| `birth_date` | `DATE` | 허용 | `NULL` | — |
-| `weight_kg` | `DECIMAL(5,2)` | 허용 | `NULL` | — |
-| `is_neutered` | `TINYINT(1)` | 허용 | `NULL` | — |
-| `status` | `VARCHAR(20)` | 불가 | — | — |
+| `pet_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `caregiver_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `caregiver_nickname` | `VARCHAR(50)` | NOT NULL | — | — |
+| `name` | `VARCHAR(50)` | NOT NULL | — | — |
+| `species_name` | `VARCHAR(50)` | NOT NULL | — | — |
+| `breed_name` | `VARCHAR(50)` | NOT NULL | — | — |
+| `sex` | `VARCHAR(10)` | NOT NULL | — | — |
+| `birth_date` | `DATE` | NULL | `NULL` | — |
+| `weight_kg` | `DECIMAL(5,2)` | NULL | `NULL` | — |
+| `is_neutered` | `TINYINT(1)` | NULL | `NULL` | — |
+| `status` | `VARCHAR(20)` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -548,17 +548,17 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `post_uuid` | `CHAR(36)` | 불가 | — | — |
-| `board_name` | `VARCHAR(100)` | 불가 | — | — |
-| `category_name` | `VARCHAR(100)` | 불가 | — | — |
-| `author_uuid` | `CHAR(36)` | 불가 | — | — |
-| `author_nickname` | `VARCHAR(50)` | 불가 | — | — |
-| `author_type` | `VARCHAR(20)` | 불가 | — | — |
-| `title` | `VARCHAR(200)` | 불가 | — | — |
-| `content` | `TEXT` | 불가 | — | — |
-| `like_count` | `INT` | 불가 | — | — |
-| `comment_count` | `INT` | 불가 | — | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
+| `post_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `board_name` | `VARCHAR(100)` | NOT NULL | — | — |
+| `category_name` | `VARCHAR(100)` | NOT NULL | — | — |
+| `author_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `author_nickname` | `VARCHAR(50)` | NOT NULL | — | — |
+| `author_type` | `VARCHAR(20)` | NOT NULL | — | — |
+| `title` | `VARCHAR(200)` | NOT NULL | — | — |
+| `content` | `TEXT` | NOT NULL | — | — |
+| `like_count` | `INT` | NOT NULL | — | — |
+| `comment_count` | `INT` | NOT NULL | — | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -580,11 +580,11 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `account_uuid` | `CHAR(36)` | 불가 | — | — |
-| `nickname` | `VARCHAR(50)` | 불가 | — | — |
-| `user_type` | `VARCHAR(20)` | 불가 | — | — |
-| `status` | `VARCHAR(20)` | 불가 | — | — |
-| `name` | `VARCHAR(100)` | 불가 | — | — |
+| `account_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `nickname` | `VARCHAR(50)` | NOT NULL | — | — |
+| `user_type` | `VARCHAR(20)` | NOT NULL | — | — |
+| `status` | `VARCHAR(20)` | NOT NULL | — | — |
+| `name` | `VARCHAR(100)` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -605,15 +605,15 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `report_uuid` | `CHAR(36)` | 불가 | — | — |
-| `status` | `VARCHAR(20)` | 불가 | — | — |
-| `reporter_type` | `VARCHAR(20)` | 불가 | — | — |
-| `reporter_uuid` | `CHAR(36)` | 불가 | — | — |
-| `target_type` | `VARCHAR(30)` | 불가 | — | — |
-| `target_uuid` | `CHAR(36)` | 불가 | — | — |
-| `reason_codes` | `VARCHAR(255)` | 불가 | — | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
-| `reviewed_at` | `DATETIME` | 허용 | `NULL` | — |
+| `report_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `status` | `VARCHAR(20)` | NOT NULL | — | — |
+| `reporter_type` | `VARCHAR(20)` | NOT NULL | — | — |
+| `reporter_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `target_type` | `VARCHAR(30)` | NOT NULL | — | — |
+| `target_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `reason_codes` | `VARCHAR(255)` | NOT NULL | — | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
+| `reviewed_at` | `DATETIME` | NULL | `NULL` | — |
 
 **인덱스**
 
@@ -634,18 +634,18 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `vet_uuid` | `CHAR(36)` | 불가 | — | — |
-| `account_uuid` | `CHAR(36)` | 불가 | — | — |
-| `name` | `VARCHAR(50)` | 불가 | — | — |
-| `major` | `VARCHAR(100)` | 불가 | — | — |
-| `specialty` | `VARCHAR(100)` | 불가 | — | — |
-| `is_available` | `TINYINT(1)` | 불가 | — | — |
-| `status` | `VARCHAR(20)` | 불가 | — | — |
-| `hospital_uuid` | `CHAR(36)` | 불가 | — | — |
-| `hospital_name` | `VARCHAR(100)` | 불가 | — | — |
-| `region` | `VARCHAR(50)` | 불가 | — | — |
-| `si` | `VARCHAR(50)` | 불가 | — | — |
-| `gu` | `VARCHAR(50)` | 불가 | — | — |
+| `vet_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `account_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `name` | `VARCHAR(50)` | NOT NULL | — | — |
+| `major` | `VARCHAR(100)` | NOT NULL | — | — |
+| `specialty` | `VARCHAR(100)` | NOT NULL | — | — |
+| `is_available` | `TINYINT(1)` | NOT NULL | — | — |
+| `status` | `VARCHAR(20)` | NOT NULL | — | — |
+| `hospital_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `hospital_name` | `VARCHAR(100)` | NOT NULL | — | — |
+| `region` | `VARCHAR(50)` | NOT NULL | — | — |
+| `si` | `VARCHAR(50)` | NOT NULL | — | — |
+| `gu` | `VARCHAR(50)` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -667,17 +667,17 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `vet_uuid` | `CHAR(36)` | 불가 | — | — |
-| `vet_name` | `VARCHAR(50)` | 불가 | — | — |
-| `hospital_uuid` | `CHAR(36)` | 불가 | — | — |
-| `hospital_name` | `VARCHAR(100)` | 불가 | — | — |
-| `region` | `VARCHAR(50)` | 불가 | — | — |
-| `accept_chat` | `TINYINT(1)` | 불가 | — | — |
-| `accept_video` | `TINYINT(1)` | 불가 | — | — |
-| `service_radius_m` | `INT` | 불가 | — | — |
-| `origin_lat` | `DECIMAL(9,6)` | 불가 | — | — |
-| `origin_lng` | `DECIMAL(9,6)` | 불가 | — | — |
-| `started_at` | `DATETIME` | 불가 | — | — |
+| `vet_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `vet_name` | `VARCHAR(50)` | NOT NULL | — | — |
+| `hospital_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `hospital_name` | `VARCHAR(100)` | NOT NULL | — | — |
+| `region` | `VARCHAR(50)` | NOT NULL | — | — |
+| `accept_chat` | `TINYINT(1)` | NOT NULL | — | — |
+| `accept_video` | `TINYINT(1)` | NOT NULL | — | — |
+| `service_radius_m` | `INT` | NOT NULL | — | — |
+| `origin_lat` | `DECIMAL(9,6)` | NOT NULL | — | — |
+| `origin_lng` | `DECIMAL(9,6)` | NOT NULL | — | — |
+| `started_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -696,8 +696,8 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `vet_uuid` | `CHAR(36)` | 불가 | — | — |
-| `day_of_week` | `TINYINT` | 불가 | — | — |
+| `vet_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `day_of_week` | `TINYINT` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -716,27 +716,27 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `reservation_uuid` | `CHAR(36)` | 불가 | — | — |
-| `status` | `VARCHAR(20)` | 불가 | — | — |
-| `hoped_visit_date` | `DATE` | 불가 | — | — |
-| `hoped_start_time` | `TIME` | 불가 | — | — |
-| `symptom_memo` | `VARCHAR(200)` | 허용 | `NULL` | — |
-| `hospital_uuid` | `CHAR(36)` | 불가 | — | — |
-| `hospital_name` | `VARCHAR(100)` | 불가 | — | — |
-| `region` | `VARCHAR(50)` | 불가 | — | — |
-| `si` | `VARCHAR(50)` | 불가 | — | — |
-| `gu` | `VARCHAR(50)` | 불가 | — | — |
-| `subject_name` | `VARCHAR(100)` | 불가 | — | — |
-| `slot_uuid` | `CHAR(36)` | 불가 | — | — |
-| `slot_start` | `TIME` | 불가 | — | — |
-| `slot_end` | `TIME` | 불가 | — | — |
-| `caregiver_uuid` | `CHAR(36)` | 불가 | — | — |
-| `caregiver_nickname` | `VARCHAR(50)` | 불가 | — | — |
-| `pet_uuid` | `CHAR(36)` | 불가 | — | — |
-| `pet_name` | `VARCHAR(50)` | 불가 | — | — |
-| `species_name` | `VARCHAR(50)` | 불가 | — | — |
-| `breed_name` | `VARCHAR(50)` | 불가 | — | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
+| `reservation_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `status` | `VARCHAR(20)` | NOT NULL | — | — |
+| `hoped_visit_date` | `DATE` | NOT NULL | — | — |
+| `hoped_start_time` | `TIME` | NOT NULL | — | — |
+| `symptom_memo` | `VARCHAR(200)` | NULL | `NULL` | — |
+| `hospital_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `hospital_name` | `VARCHAR(100)` | NOT NULL | — | — |
+| `region` | `VARCHAR(50)` | NOT NULL | — | — |
+| `si` | `VARCHAR(50)` | NOT NULL | — | — |
+| `gu` | `VARCHAR(50)` | NOT NULL | — | — |
+| `subject_name` | `VARCHAR(100)` | NOT NULL | — | — |
+| `slot_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `slot_start` | `TIME` | NOT NULL | — | — |
+| `slot_end` | `TIME` | NOT NULL | — | — |
+| `caregiver_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `caregiver_nickname` | `VARCHAR(50)` | NOT NULL | — | — |
+| `pet_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `pet_name` | `VARCHAR(50)` | NOT NULL | — | — |
+| `species_name` | `VARCHAR(50)` | NOT NULL | — | — |
+| `breed_name` | `VARCHAR(50)` | NOT NULL | — | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -760,9 +760,9 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `reservation_uuid` | `CHAR(36)` | 불가 | — | — |
-| `symptom_uuid` | `CHAR(36)` | 불가 | — | — |
-| `symptom_name` | `VARCHAR(100)` | 불가 | — | — |
+| `reservation_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `symptom_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `symptom_name` | `VARCHAR(100)` | NOT NULL | — | — |
 
 **인덱스**
 

@@ -84,9 +84,9 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `name` | `VARCHAR(100)` | 불가 | — | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `name` | `VARCHAR(100)` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -106,9 +106,9 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `name` | `VARCHAR(100)` | 불가 | — | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `name` | `VARCHAR(100)` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -128,11 +128,11 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `comment_id` | `BIGINT` | 불가 | — | — |
-| `actor_uuid` | `CHAR(36)` | 불가 | — | — |
-| `actor_role` | `VARCHAR(20)` | 불가 | — | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `comment_id` | `BIGINT` | NOT NULL | — | — |
+| `actor_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `actor_role` | `VARCHAR(20)` | NOT NULL | — | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -152,9 +152,9 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `follower_uuid` | `CHAR(36)` | 불가 | — | — |
-| `following_uuid` | `CHAR(36)` | 불가 | — | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
+| `follower_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `following_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -173,13 +173,13 @@ community 트랜잭셔널 아웃박스
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `event_id` | `CHAR(36)` | 불가 | — | — |
-| `event_type` | `VARCHAR(100)` | 불가 | — | — |
-| `aggregate_uuid` | `CHAR(36)` | 불가 | — | — |
-| `payload` | `JSON` | 불가 | — | — |
-| `occurred_at` | `DATETIME(6)` | 불가 | — | — |
-| `published_at` | `DATETIME(6)` | 허용 | `NULL` | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `event_id` | `CHAR(36)` | NOT NULL | — | — |
+| `event_type` | `VARCHAR(100)` | NOT NULL | — | — |
+| `aggregate_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `payload` | `JSON` | NOT NULL | — | — |
+| `occurred_at` | `DATETIME(6)` | NOT NULL | — | — |
+| `published_at` | `DATETIME(6)` | NULL | `NULL` | — |
 
 **인덱스**
 
@@ -199,16 +199,16 @@ community 트랜잭셔널 아웃박스
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `board_id` | `BIGINT` | 불가 | — | — |
-| `category_id` | `BIGINT` | 불가 | — | — |
-| `author_uuid` | `CHAR(36)` | 불가 | — | — |
-| `title` | `VARCHAR(200)` | 불가 | — | — |
-| `content` | `TEXT` | 불가 | — | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
-| `updated_at` | `DATETIME` | 허용 | `NULL` | — |
-| `deleted_at` | `DATETIME` | 허용 | `NULL` | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `board_id` | `BIGINT` | NOT NULL | — | — |
+| `category_id` | `BIGINT` | NOT NULL | — | — |
+| `author_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `title` | `VARCHAR(200)` | NOT NULL | — | — |
+| `content` | `TEXT` | NOT NULL | — | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
+| `updated_at` | `DATETIME` | NULL | `NULL` | — |
+| `deleted_at` | `DATETIME` | NULL | `NULL` | — |
 
 **인덱스**
 
@@ -233,16 +233,16 @@ community 트랜잭셔널 아웃박스
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `post_id` | `BIGINT` | 불가 | — | — |
-| `parent_comment_id` | `BIGINT` | 허용 | `NULL` | — |
-| `author_uuid` | `CHAR(36)` | 불가 | — | — |
-| `depth` | `TINYINT` | 불가 | — | — |
-| `content` | `VARCHAR(2000)` | 불가 | — | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
-| `updated_at` | `DATETIME` | 허용 | `NULL` | — |
-| `deleted_at` | `DATETIME` | 허용 | `NULL` | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `post_id` | `BIGINT` | NOT NULL | — | — |
+| `parent_comment_id` | `BIGINT` | NULL | `NULL` | — |
+| `author_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `depth` | `TINYINT` | NOT NULL | — | — |
+| `content` | `VARCHAR(2000)` | NOT NULL | — | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
+| `updated_at` | `DATETIME` | NULL | `NULL` | — |
+| `deleted_at` | `DATETIME` | NULL | `NULL` | — |
 
 **인덱스**
 
@@ -267,11 +267,11 @@ community 트랜잭셔널 아웃박스
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `post_id` | `BIGINT` | 불가 | — | — |
-| `actor_uuid` | `CHAR(36)` | 불가 | — | — |
-| `actor_role` | `VARCHAR(20)` | 불가 | — | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `post_id` | `BIGINT` | NOT NULL | — | — |
+| `actor_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `actor_role` | `VARCHAR(20)` | NOT NULL | — | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 

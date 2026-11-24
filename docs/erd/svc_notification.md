@@ -40,18 +40,18 @@ erDiagram
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `uuid` | `CHAR(36)` | 불가 | — | — |
-| `recipient_uuid` | `CHAR(36)` | 불가 | — | — |
-| `actor_uuid` | `CHAR(36)` | 불가 | — | — |
-| `event_id` | `CHAR(36)` | 불가 | — | — |
-| `type` | `VARCHAR(30)` | 불가 | — | — |
-| `title` | `VARCHAR(200)` | 불가 | — | — |
-| `content` | `VARCHAR(500)` | 불가 | — | — |
-| `target_type` | `VARCHAR(30)` | 불가 | — | — |
-| `target_uuid` | `CHAR(36)` | 불가 | — | — |
-| `read_at` | `DATETIME` | 허용 | `NULL` | — |
-| `created_at` | `DATETIME` | 불가 | — | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `recipient_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `actor_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `event_id` | `CHAR(36)` | NOT NULL | — | — |
+| `type` | `VARCHAR(30)` | NOT NULL | — | — |
+| `title` | `VARCHAR(200)` | NOT NULL | — | — |
+| `content` | `VARCHAR(500)` | NOT NULL | — | — |
+| `target_type` | `VARCHAR(30)` | NOT NULL | — | — |
+| `target_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `read_at` | `DATETIME` | NULL | `NULL` | — |
+| `created_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
 
@@ -72,13 +72,13 @@ notification 트랜잭셔널 아웃박스
 
 | 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
 | --- | --- | --- | --- | --- |
-| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
-| `event_id` | `CHAR(36)` | 불가 | — | — |
-| `event_type` | `VARCHAR(100)` | 불가 | — | — |
-| `aggregate_uuid` | `CHAR(36)` | 불가 | — | — |
-| `payload` | `JSON` | 불가 | — | — |
-| `occurred_at` | `DATETIME(6)` | 불가 | — | — |
-| `published_at` | `DATETIME(6)` | 허용 | `NULL` | — |
+| `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
+| `event_id` | `CHAR(36)` | NOT NULL | — | — |
+| `event_type` | `VARCHAR(100)` | NOT NULL | — | — |
+| `aggregate_uuid` | `CHAR(36)` | NOT NULL | — | — |
+| `payload` | `JSON` | NOT NULL | — | — |
+| `occurred_at` | `DATETIME(6)` | NOT NULL | — | — |
+| `published_at` | `DATETIME(6)` | NULL | `NULL` | — |
 
 **인덱스**
 
