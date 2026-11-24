@@ -158,3 +158,7 @@ moderation 트랜잭셔널 아웃박스
 | --- | --- | --- | --- | --- |
 | `fk_pick_reason` | `report_reason_id` | `svc_moderation.report_reason` (`id`) | 미지정 / 미지정 | — |
 | `fk_pick_report` | `report_id` | `svc_moderation.report` (`id`) | 미지정 / 미지정 | — |
+
+## 모델과 후속 정책의 차이
+
+위 구조는 원본 모델이다. 외부 `reportId`는 `report.uuid`를 사용한다. 합의한 신고당 사유 하나와 중복 신고 제한은 기존 UNIQUE만으로 보장되지 않는다. 회원 신고의 게시글 맥락, 처리 결과 및 완료 알림을 위한 저장·전달 구조와 제약은 구현 설계에서 보완한다. 상세 사유·상태 코드와 조회 모델 동기화는 미정이다. 제품 정책은 [PRD](../prd.md#67-커뮤니티--com), 동작은 [커뮤니티 API](../api/community.md)를 따른다.
