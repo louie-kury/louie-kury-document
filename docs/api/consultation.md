@@ -85,3 +85,344 @@
 | D18 | MySQL 상담과 MongoDB 반려동물의 식별자 연결·상태 저장·멱등성 제약 |
 
 수락·종료·일지 제공 이벤트의 내부 연동 API는 제공 주체와 인증 계약을 정한 뒤 명세화한다. 현재 문서는 보호자 API 초안이며 실제 상담 제공 업체·서버·DB 연동 검증은 수행하지 않았다.
+
+## 요청·응답 예시
+
+아래 값은 형식 설명용이며 미정 정책, 제한값, 상태 전이나 실제 서버 동작을 확정하지 않는다. 인증·멱등성 등 공통 헤더는 [공통 계약](README.md#공통-계약)을 따른다. 각 예시는 별도의 상황이다.
+
+### `POST /api/consultations`
+
+요청 예시:
+
+```http
+POST /api/consultations HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <요청별 고유 키>
+Content-Type: application/json
+
+{
+  "petId": "pet_01",
+  "channel": "CHAT",
+  "symptom": "상담 요청",
+  "mediaIds": [],
+  "location": {
+    "latitude": 37.5,
+    "longitude": 127.0
+  }
+}
+```
+
+응답 예시 (`201`):
+
+```json
+{
+  "data": {
+    "consultationId": "consult_01",
+    "pet": {
+      "petId": "pet_01",
+      "name": "루이"
+    },
+    "veterinarian": null,
+    "channel": "CHAT",
+    "status": "MATCHING",
+    "requestedAt": "2026-11-19T10:00:00+09:00",
+    "symptom": "상담 요청",
+    "media": [],
+    "matchedAt": null,
+    "startedAt": null,
+    "endedAt": null,
+    "durationSeconds": null,
+    "journalAvailability": "NOT_WRITTEN"
+  }
+}
+```
+
+### `GET /api/consultations`
+
+요청 예시:
+
+```http
+GET /api/consultations?page=0&size=20 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+### `GET /api/consultations/{consultationId}`
+
+요청 예시:
+
+```http
+GET /api/consultations/consult_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "consultationId": "consult_01",
+    "pet": {
+      "petId": "pet_01",
+      "name": "루이"
+    },
+    "veterinarian": null,
+    "channel": "CHAT",
+    "status": "MATCHING",
+    "requestedAt": "2026-11-19T10:00:00+09:00",
+    "symptom": "상담 요청",
+    "media": [],
+    "matchedAt": null,
+    "startedAt": null,
+    "endedAt": null,
+    "durationSeconds": null,
+    "journalAvailability": "NOT_WRITTEN"
+  }
+}
+```
+
+### `GET /api/consultations/{consultationId}/matching`
+
+요청 예시:
+
+```http
+GET /api/consultations/consult_01/matching HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "consultationId": "consult_01",
+    "status": "MATCHING",
+    "requestedAt": "2026-11-19T10:00:00+09:00",
+    "expiresAt": null,
+    "elapsedSeconds": 0,
+    "veterinarian": null
+  }
+}
+```
+
+### `GET /api/consultations/{consultationId}/stream`
+
+요청 예시:
+
+```http
+GET /api/consultations/consult_01/stream HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200 text/event-stream`, 이벤트 유형은 미정):
+
+```text
+id: event_01
+event: <이벤트_유형>
+data: {"eventId":"event_01","type":"<이벤트_유형>","consultationId":"consult_01","occurredAt":"2026-11-19T10:00:00+09:00","data":{}}
+```
+
+### `POST /api/consultations/{consultationId}/cancellation`
+
+요청 예시:
+
+```http
+POST /api/consultations/consult_01/cancellation HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Content-Type: application/json
+
+{
+  "reason": "일정 변경"
+}
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "consultationId": "consult_01",
+    "pet": {
+      "petId": "pet_01",
+      "name": "루이"
+    },
+    "veterinarian": null,
+    "channel": "CHAT",
+    "status": "CANCELLED",
+    "requestedAt": "2026-11-19T10:00:00+09:00",
+    "symptom": "상담 요청",
+    "media": [],
+    "matchedAt": null,
+    "startedAt": null,
+    "endedAt": null,
+    "durationSeconds": null,
+    "journalAvailability": "NOT_WRITTEN"
+  }
+}
+```
+
+### `POST /api/consultations/{consultationId}/connections`
+
+요청 예시:
+
+```http
+POST /api/consultations/consult_01/connections HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <요청별 고유 키>
+```
+
+응답 예시 (`201`):
+
+```json
+{
+  "data": {
+    "connectionId": "connection_01",
+    "channel": "CHAT",
+    "status": "CONNECTING",
+    "expiresAt": null,
+    "access": {
+      "url": null,
+      "token": null
+    }
+  }
+}
+```
+
+### `POST /api/consultations/{consultationId}/termination`
+
+요청 예시:
+
+```http
+POST /api/consultations/consult_01/termination HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <요청별 고유 키>
+```
+
+응답 예시 (`202`):
+
+```json
+{
+  "data": {
+    "actionId": "action_01",
+    "consultationId": "consult_01",
+    "status": "ACCEPTED",
+    "requestedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `GET /api/consultations/{consultationId}/journal`
+
+요청 예시:
+
+```http
+GET /api/consultations/consult_01/journal HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "availability": "NOT_WRITTEN",
+    "journal": null
+  }
+}
+```
+
+### `GET /api/consultations/{consultationId}/veterinarian`
+
+요청 예시:
+
+```http
+GET /api/consultations/consult_01/veterinarian HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "veterinarianId": "vet_01",
+    "name": "수의사",
+    "hospital": {
+      "hospitalId": "hospital_01",
+      "name": "동물병원"
+    },
+    "profileMedia": null,
+    "introduction": null,
+    "averageRating": null,
+    "reviewCount": null
+  }
+}
+```
+
+### `POST /api/consultations/{consultationId}/reviews`
+
+요청 예시:
+
+```http
+POST /api/consultations/consult_01/reviews HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <요청별 고유 키>
+Content-Type: application/json
+
+{
+  "rating": 5,
+  "content": "감사합니다."
+}
+```
+
+응답 예시 (`201`):
+
+```json
+{
+  "data": {
+    "reviewId": "review_01",
+    "consultationId": "consult_01",
+    "rating": 5,
+    "content": "감사합니다.",
+    "createdAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `GET /api/consultations/{consultationId}/reviews`
+
+요청 예시:
+
+```http
+GET /api/consultations/consult_01/reviews?page=0&size=20 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```

@@ -162,3 +162,422 @@
 | D18 | MySQL 계정과 MongoDB 프로필의 식별자·속성 배치·가입/변경 부분 실패 복구, 이메일·로그인 ID·소셜 식별값의 유일성 |
 
 이 문서는 요청·응답 설계이며 실제 서버·DB·메일·OAuth 제공자 연동 검증은 수행하지 않았다.
+
+## 요청·응답 예시
+
+아래 값은 형식 설명용이며 미정 정책, 제한값, 상태 전이나 실제 서버 동작을 확정하지 않는다. 인증·멱등성 등 공통 헤더는 [공통 계약](README.md#공통-계약)을 따른다. 각 예시는 별도의 상황이다.
+
+### `POST /api/auth/email-verifications`
+
+요청 예시:
+
+```http
+POST /api/auth/email-verifications HTTP/1.1
+Content-Type: application/json
+
+{
+  "email": "caregiver@example.com",
+  "purpose": "SIGNUP"
+}
+```
+
+응답 예시 (`202`):
+
+```json
+{
+  "data": {
+    "verificationId": "verify_01",
+    "expiresAt": "2026-11-19T10:05:00+09:00"
+  }
+}
+```
+
+### `POST /api/auth/email-verifications/{verificationId}/confirm`
+
+요청 예시:
+
+```http
+POST /api/auth/email-verifications/verify_01/confirm HTTP/1.1
+Content-Type: application/json
+
+{
+  "code": "123456"
+}
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "emailVerificationToken": "<이메일 인증 증명>",
+    "expiresAt": "2026-11-19T10:05:00+09:00"
+  }
+}
+```
+
+### `POST /api/auth/signup`
+
+요청 예시:
+
+```http
+POST /api/auth/signup HTTP/1.1
+Idempotency-Key: <요청별 고유 키>
+Content-Type: application/json
+
+{
+  "name": "김보호",
+  "phoneNumber": "01000000000",
+  "gender": "<확정된 성별 코드>",
+  "birthDate": "1995-01-01",
+  "address": "서울특별시",
+  "nickname": "루이집사",
+  "loginId": "loui-care",
+  "password": "Example!123",
+  "email": "caregiver@example.com",
+  "emailVerificationToken": "<이메일 인증 증명>"
+}
+```
+
+응답 예시 (`201`):
+
+```json
+{
+  "data": {
+    "memberId": "member_01"
+  }
+}
+```
+
+### `POST /api/auth/login`
+
+요청 예시:
+
+```http
+POST /api/auth/login HTTP/1.1
+Content-Type: application/json
+
+{
+  "loginId": "loui-care",
+  "password": "Example!123"
+}
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "accessToken": "<액세스 토큰>",
+    "tokenType": "Bearer",
+    "expiresAt": "2026-11-19T10:05:00+09:00",
+    "memberId": "member_01"
+  }
+}
+```
+
+### `GET /api/auth/oauth/{provider}/authorize`
+
+요청 예시:
+
+```http
+GET /api/auth/oauth/kakao/authorize HTTP/1.1
+```
+
+응답: `302`와 `Location` 헤더. 이동 URL은 제공자 또는 허용된 프런트 설정에 따른다. 본문은 없다.
+
+### `GET /api/auth/oauth/{provider}/callback`
+
+요청 예시:
+
+```http
+GET /api/auth/oauth/kakao/callback?code=<제공자_인가_코드>&state=<요청_state> HTTP/1.1
+```
+
+응답: `302`와 `Location` 헤더. 이동 URL은 제공자 또는 허용된 프런트 설정에 따른다. 본문은 없다.
+
+### `POST /api/auth/oauth/exchanges`
+
+요청 예시:
+
+```http
+POST /api/auth/oauth/exchanges HTTP/1.1
+Content-Type: application/json
+
+{
+  "exchangeTicket": "<교환 증명>"
+}
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "result": "SIGNUP_REQUIRED",
+    "signupTicket": "<가입 증명>",
+    "expiresAt": "2026-11-19T10:05:00+09:00",
+    "suggestedNickname": null
+  }
+}
+```
+
+`LOGIN` 응답도 가능하다. `result`와 `session`은 위 데이터 모델을 따른다.
+
+### `POST /api/auth/oauth/signup`
+
+요청 예시:
+
+```http
+POST /api/auth/oauth/signup HTTP/1.1
+Idempotency-Key: <요청별 고유 키>
+Content-Type: application/json
+
+{
+  "signupTicket": "<가입 증명>",
+  "email": "caregiver@example.com",
+  "emailVerificationToken": "<이메일 인증 증명>",
+  "name": "김보호",
+  "phoneNumber": "01000000000"
+}
+```
+
+응답 예시 (`201`):
+
+```json
+{
+  "data": {
+    "memberId": "member_01"
+  }
+}
+```
+
+### `POST /api/auth/refresh`
+
+요청 예시:
+
+```http
+POST /api/auth/refresh HTTP/1.1
+```
+
+요청에 refresh 쿠키와 확정된 쿠키 보호 정보를 함께 전달한다.
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "accessToken": "<액세스 토큰>",
+    "tokenType": "Bearer",
+    "expiresAt": "2026-11-19T10:05:00+09:00",
+    "memberId": "member_01"
+  }
+}
+```
+
+### `POST /api/auth/logout`
+
+요청 예시:
+
+```http
+POST /api/auth/logout HTTP/1.1
+```
+
+요청에 refresh 쿠키와 확정된 쿠키 보호 정보를 함께 전달한다.
+
+응답: `204`, 본문 없음.
+
+### `POST /api/auth/login-id/recovery-requests`
+
+요청 예시:
+
+```http
+POST /api/auth/login-id/recovery-requests HTTP/1.1
+Content-Type: application/json
+
+{
+  "email": "caregiver@example.com"
+}
+```
+
+응답 예시 (`202`):
+
+```json
+{
+  "data": {
+    "verificationId": "verify_01",
+    "expiresAt": "2026-11-19T10:05:00+09:00"
+  }
+}
+```
+
+### `POST /api/auth/login-id/recoveries`
+
+요청 예시:
+
+```http
+POST /api/auth/login-id/recoveries HTTP/1.1
+Content-Type: application/json
+
+{
+  "verificationId": "verify_01",
+  "code": "123456"
+}
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "loginId": "loui-care"
+  }
+}
+```
+
+### `POST /api/auth/password/reset-requests`
+
+요청 예시:
+
+```http
+POST /api/auth/password/reset-requests HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "김보호",
+  "loginId": "loui-care"
+}
+```
+
+응답 예시 (`202`):
+
+```json
+{
+  "data": {
+    "verificationId": "verify_01",
+    "expiresAt": "2026-11-19T10:05:00+09:00"
+  }
+}
+```
+
+### `POST /api/auth/password/reset-verifications`
+
+요청 예시:
+
+```http
+POST /api/auth/password/reset-verifications HTTP/1.1
+Content-Type: application/json
+
+{
+  "verificationId": "verify_01",
+  "code": "123456"
+}
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "passwordResetToken": "<재설정 증명>",
+    "expiresAt": "2026-11-19T10:05:00+09:00"
+  }
+}
+```
+
+### `POST /api/auth/password/resets`
+
+요청 예시:
+
+```http
+POST /api/auth/password/resets HTTP/1.1
+Content-Type: application/json
+
+{
+  "passwordResetToken": "<재설정 증명>",
+  "newPassword": "Example!456"
+}
+```
+
+응답: `204`, 본문 없음.
+
+### `GET /api/members/me`
+
+요청 예시:
+
+```http
+GET /api/members/me HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "memberId": "member_01",
+    "nickname": "루이집사",
+    "email": "caregiver@example.com",
+    "phoneNumber": "01000000000",
+    "petCount": 1,
+    "profileMedia": null
+  }
+}
+```
+
+### `PATCH /api/members/me`
+
+요청 예시:
+
+```http
+PATCH /api/members/me HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Content-Type: application/json
+
+{
+  "nickname": "루이집사"
+}
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "memberId": "member_01",
+    "nickname": "루이집사",
+    "email": "caregiver@example.com",
+    "phoneNumber": "01000000000",
+    "petCount": 1,
+    "profileMedia": null
+  }
+}
+```
+
+### `PUT /api/members/me/password`
+
+요청 예시:
+
+```http
+PUT /api/members/me/password HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Content-Type: application/json
+
+{
+  "currentPassword": "Example!123",
+  "newPassword": "Example!456"
+}
+```
+
+응답: `204`, 본문 없음.
+
+### `DELETE /api/members/me`
+
+요청 예시:
+
+```http
+DELETE /api/members/me HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답: `204`, 본문 없음.

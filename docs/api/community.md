@@ -64,3 +64,502 @@
 - D08 — 게시글/댓글 길이·필수값, 신고 입력·사유, 중복 신고 정책, 목록 정렬, 프로필 공개 범위와 팔로우 목록의 비회원 접근.
 - D15 — 자기 대댓글 알림과 이벤트 중복 방지·재전달 기준.
 - D18·D19 — 작성자 UUID 타입 정합성, 부모/깊이·삭제 표시, 미디어 연결과 제한 설정.
+
+## 요청·응답 예시
+
+아래 값은 형식 설명용이며 미정 정책, 제한값, 상태 전이나 실제 서버 동작을 확정하지 않는다. 인증·멱등성 등 공통 헤더는 [공통 계약](README.md#공통-계약)을 따른다. 각 예시는 별도의 상황이다.
+
+### `GET /api/boards`
+
+요청 예시:
+
+```http
+GET /api/boards HTTP/1.1
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": [
+    {
+      "boardId": "board_01",
+      "name": "자유게시판"
+    }
+  ]
+}
+```
+
+### `GET /api/boards/{boardId}/categories`
+
+요청 예시:
+
+```http
+GET /api/boards/board_01/categories HTTP/1.1
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": [
+    {
+      "categoryId": "category_01",
+      "name": "일상"
+    }
+  ]
+}
+```
+
+### `GET /api/posts`
+
+요청 예시:
+
+```http
+GET /api/posts?boardId=board_01&page=0&size=20 HTTP/1.1
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+### `GET /api/posts/{postId}`
+
+요청 예시:
+
+```http
+GET /api/posts/post_01 HTTP/1.1
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "postId": "post_01",
+    "boardId": "board_01",
+    "category": {
+      "categoryId": "category_01",
+      "name": "일상"
+    },
+    "title": "안녕하세요",
+    "author": {
+      "memberId": "member_01",
+      "nickname": "루이집사",
+      "profileMedia": null
+    },
+    "likeCount": 0,
+    "viewCount": 1,
+    "commentCount": 0,
+    "likedByMe": null,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": null,
+    "content": "반갑습니다.",
+    "media": []
+  }
+}
+```
+
+### `POST /api/posts`
+
+요청 예시:
+
+```http
+POST /api/posts HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <요청별 고유 키>
+Content-Type: application/json
+
+{
+  "boardId": "board_01",
+  "categoryId": "category_01",
+  "title": "안녕하세요",
+  "content": "반갑습니다.",
+  "mediaIds": []
+}
+```
+
+응답 예시 (`201`):
+
+```json
+{
+  "data": {
+    "postId": "post_01",
+    "boardId": "board_01",
+    "category": {
+      "categoryId": "category_01",
+      "name": "일상"
+    },
+    "title": "안녕하세요",
+    "author": {
+      "memberId": "member_01",
+      "nickname": "루이집사",
+      "profileMedia": null
+    },
+    "likeCount": 0,
+    "viewCount": 1,
+    "commentCount": 0,
+    "likedByMe": false,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": null,
+    "content": "반갑습니다.",
+    "media": []
+  }
+}
+```
+
+### `PATCH /api/posts/{postId}`
+
+요청 예시:
+
+```http
+PATCH /api/posts/post_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Content-Type: application/json
+
+{
+  "title": "수정한 제목"
+}
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "postId": "post_01",
+    "boardId": "board_01",
+    "category": {
+      "categoryId": "category_01",
+      "name": "일상"
+    },
+    "title": "안녕하세요",
+    "author": {
+      "memberId": "member_01",
+      "nickname": "루이집사",
+      "profileMedia": null
+    },
+    "likeCount": 0,
+    "viewCount": 1,
+    "commentCount": 0,
+    "likedByMe": false,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": null,
+    "content": "반갑습니다.",
+    "media": []
+  }
+}
+```
+
+### `DELETE /api/posts/{postId}`
+
+요청 예시:
+
+```http
+DELETE /api/posts/post_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답: `204`, 본문 없음.
+
+### `PUT /api/posts/{postId}/like`
+
+요청 예시:
+
+```http
+PUT /api/posts/post_01/like HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "liked": true,
+    "likeCount": 1
+  }
+}
+```
+
+### `DELETE /api/posts/{postId}/like`
+
+요청 예시:
+
+```http
+DELETE /api/posts/post_01/like HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "liked": false,
+    "likeCount": 0
+  }
+}
+```
+
+### `GET /api/posts/{postId}/comments`
+
+요청 예시:
+
+```http
+GET /api/posts/post_01/comments?page=0&size=20 HTTP/1.1
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+### `GET /api/comments/{commentId}/replies`
+
+요청 예시:
+
+```http
+GET /api/comments/comment_01/replies?page=0&size=20 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+### `POST /api/posts/{postId}/comments`
+
+요청 예시:
+
+```http
+POST /api/posts/post_01/comments HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <요청별 고유 키>
+Content-Type: application/json
+
+{
+  "content": "안녕하세요"
+}
+```
+
+응답 예시 (`201`):
+
+```json
+{
+  "data": {
+    "commentId": "comment_01",
+    "postId": "post_01",
+    "parentCommentId": null,
+    "depth": 1,
+    "author": {
+      "memberId": "member_01",
+      "nickname": "루이집사",
+      "profileMedia": null
+    },
+    "content": "안녕하세요",
+    "deleted": false,
+    "likeCount": 0,
+    "replyCount": 0,
+    "likedByMe": false,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": null
+  }
+}
+```
+
+### `PATCH /api/comments/{commentId}`
+
+요청 예시:
+
+```http
+PATCH /api/comments/comment_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Content-Type: application/json
+
+{
+  "content": "수정한 댓글"
+}
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "commentId": "comment_01",
+    "postId": "post_01",
+    "parentCommentId": null,
+    "depth": 1,
+    "author": {
+      "memberId": "member_01",
+      "nickname": "루이집사",
+      "profileMedia": null
+    },
+    "content": "안녕하세요",
+    "deleted": false,
+    "likeCount": 0,
+    "replyCount": 0,
+    "likedByMe": false,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": null
+  }
+}
+```
+
+### `DELETE /api/comments/{commentId}`
+
+요청 예시:
+
+```http
+DELETE /api/comments/comment_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답: `204`, 본문 없음.
+
+### `PUT /api/comments/{commentId}/like`
+
+요청 예시:
+
+```http
+PUT /api/comments/comment_01/like HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "liked": true,
+    "likeCount": 1
+  }
+}
+```
+
+### `DELETE /api/comments/{commentId}/like`
+
+요청 예시:
+
+```http
+DELETE /api/comments/comment_01/like HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "liked": false,
+    "likeCount": 0
+  }
+}
+```
+
+### `GET /api/report-reasons`
+
+요청 예시:
+
+```http
+GET /api/report-reasons?targetType=POST HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": [
+    {
+      "reasonCode": "<조회한 신고 사유 코드>",
+      "name": "스팸"
+    }
+  ]
+}
+```
+
+### `POST /api/reports`
+
+요청 예시:
+
+```http
+POST /api/reports HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <요청별 고유 키>
+Content-Type: application/json
+
+{
+  "targetType": "POST",
+  "targetId": "post_01",
+  "reasonCodes": [
+    "<조회한 신고 사유 코드>"
+  ],
+  "content": "신고 내용"
+}
+```
+
+응답 예시 (`201`):
+
+```json
+{
+  "data": {
+    "reportId": "report_01",
+    "receivedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `GET /api/members/{memberId}/profile`
+
+요청 예시:
+
+```http
+GET /api/members/member_02/profile HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "memberId": "member_02",
+    "nickname": "루이집사",
+    "profileMedia": null
+  }
+}
+```

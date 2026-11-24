@@ -66,3 +66,323 @@
 - `D18` — MongoDB 문서·인덱스와 미디어 식별자 연결, 달력 날짜 경계와 조회 정렬
 
 후순위 초안의 경로와 모델은 위 정책을 확정한 뒤 구현 계약으로 고정한다. 실제 API·MongoDB 실행 검증은 아직 수행하지 않았다.
+
+## 요청·응답 예시
+
+아래 값은 형식 설명용이며 미정 정책, 제한값, 상태 전이나 실제 서버 동작을 확정하지 않는다. 인증·멱등성 등 공통 헤더는 [공통 계약](README.md#공통-계약)을 따른다. 각 예시는 별도의 상황이다.
+
+### `GET /api/pets/{petId}/health-records`
+
+요청 예시:
+
+```http
+GET /api/pets/pet_01/health-records?page=0&size=20 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+### `GET /api/pets/{petId}/health-records/calendar`
+
+요청 예시:
+
+```http
+GET /api/pets/pet_01/health-records/calendar?month=2026-11 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "month": "2026-11",
+    "days": [
+      {
+        "date": "2026-11-19",
+        "recordCount": 2
+      }
+    ]
+  }
+}
+```
+
+### `GET /api/pets/{petId}/health-records/{recordId}`
+
+요청 예시:
+
+```http
+GET /api/pets/pet_01/health-records/record_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "recordId": "record_01",
+    "petId": "pet_01",
+    "type": "OTHER",
+    "observedAt": "2026-11-19T10:00:00+09:00",
+    "summary": "메모",
+    "media": [],
+    "details": {
+      "memo": "메모"
+    },
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `POST /api/pets/{petId}/health-records`
+
+요청 예시:
+
+```http
+POST /api/pets/pet_01/health-records HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <요청별 고유 키>
+Content-Type: application/json
+
+{
+  "type": "OTHER",
+  "observedAt": "2026-11-19T10:00:00+09:00",
+  "details": {
+    "memo": "메모"
+  },
+  "mediaIds": []
+}
+```
+
+응답 예시 (`201`):
+
+```json
+{
+  "data": {
+    "recordId": "record_01",
+    "petId": "pet_01",
+    "type": "OTHER",
+    "observedAt": "2026-11-19T10:00:00+09:00",
+    "summary": "메모",
+    "media": [],
+    "details": {
+      "memo": "메모"
+    },
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `PATCH /api/pets/{petId}/health-records/{recordId}`
+
+요청 예시:
+
+```http
+PATCH /api/pets/pet_01/health-records/record_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Content-Type: application/json
+
+{
+  "details": {
+    "memo": "메모"
+  }
+}
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "recordId": "record_01",
+    "petId": "pet_01",
+    "type": "OTHER",
+    "observedAt": "2026-11-19T10:00:00+09:00",
+    "summary": "메모",
+    "media": [],
+    "details": {
+      "memo": "메모"
+    },
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `DELETE /api/pets/{petId}/health-records/{recordId}`
+
+요청 예시:
+
+```http
+DELETE /api/pets/pet_01/health-records/record_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답: `204`, 본문 없음.
+
+### `GET /api/pets/{petId}/visits`
+
+요청 예시:
+
+```http
+GET /api/pets/pet_01/visits?page=0&size=20 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+### `GET /api/pets/{petId}/visits/{visitId}`
+
+요청 예시:
+
+```http
+GET /api/pets/pet_01/visits/visit_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "visitId": "visit_01",
+    "petId": "pet_01",
+    "visitedAt": "2026-11-19",
+    "hospitalName": "동물병원",
+    "category": "진료",
+    "reason": null,
+    "diagnosis": null,
+    "treatment": null,
+    "medicationInstructions": null,
+    "cost": null,
+    "nextVisitDate": null,
+    "memo": null,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `POST /api/pets/{petId}/visits`
+
+요청 예시:
+
+```http
+POST /api/pets/pet_01/visits HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <요청별 고유 키>
+Content-Type: application/json
+
+{
+  "visitedAt": "2026-11-19",
+  "hospitalName": "동물병원",
+  "category": "진료",
+  "reason": "진료",
+  "diagnosis": "진단",
+  "treatment": "처치",
+  "medicationInstructions": "복약 안내",
+  "cost": 10000,
+  "nextVisitDate": null,
+  "memo": "메모"
+}
+```
+
+응답 예시 (`201`):
+
+```json
+{
+  "data": {
+    "visitId": "visit_01",
+    "petId": "pet_01",
+    "visitedAt": "2026-11-19",
+    "hospitalName": "동물병원",
+    "category": "진료",
+    "reason": null,
+    "diagnosis": null,
+    "treatment": null,
+    "medicationInstructions": null,
+    "cost": null,
+    "nextVisitDate": null,
+    "memo": null,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `PATCH /api/pets/{petId}/visits/{visitId}`
+
+요청 예시:
+
+```http
+PATCH /api/pets/pet_01/visits/visit_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Content-Type: application/json
+
+{
+  "memo": "메모"
+}
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "visitId": "visit_01",
+    "petId": "pet_01",
+    "visitedAt": "2026-11-19",
+    "hospitalName": "동물병원",
+    "category": "진료",
+    "reason": null,
+    "diagnosis": null,
+    "treatment": null,
+    "medicationInstructions": null,
+    "cost": null,
+    "nextVisitDate": null,
+    "memo": null,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `DELETE /api/pets/{petId}/visits/{visitId}`
+
+요청 예시:
+
+```http
+DELETE /api/pets/pet_01/visits/visit_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답: `204`, 본문 없음.

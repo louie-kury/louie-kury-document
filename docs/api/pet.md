@@ -41,3 +41,186 @@ PetWrite는 입력 가능한 전체 필드를 나열한 것이다. 생성 시 �
 - D12 — 생성 필수값, 생일을 모르는 경우, 나이 산식·기준일, 중성화·기본 접종 값, 체중 단위·범위, 프로필 선택 여부.
 - D11 — 진행 중 상담이 있는 동물 삭제의 허용 조건과 연결 이력 보관.
 - D18 — MongoDB 식별자·소유 관계·종/품종 문서 구조. 이 API의 필드가 DB 컬럼 설계를 확정하는 것은 아니다.
+
+## 요청·응답 예시
+
+아래 값은 형식 설명용이며 미정 정책, 제한값, 상태 전이나 실제 서버 동작을 확정하지 않는다. 인증·멱등성 등 공통 헤더는 [공통 계약](README.md#공통-계약)을 따른다. 각 예시는 별도의 상황이다.
+
+### `GET /api/pets`
+
+요청 예시:
+
+```http
+GET /api/pets?page=0&size=20 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+### `GET /api/pets/{petId}`
+
+요청 예시:
+
+```http
+GET /api/pets/pet_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "petId": "pet_01",
+    "name": "루이",
+    "species": {
+      "speciesId": "species_01",
+      "name": "개"
+    },
+    "breed": null,
+    "profileMedia": null,
+    "age": null,
+    "sex": "MALE",
+    "birth": null,
+    "isNeutered": null,
+    "weight": null,
+    "basicVaccinationCompleted": null,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `POST /api/pets`
+
+요청 예시:
+
+```http
+POST /api/pets HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <요청별 고유 키>
+Content-Type: application/json
+
+{
+  "name": "루이",
+  "speciesId": "species_01",
+  "breedId": null,
+  "profileMediaId": null,
+  "birth": null,
+  "sex": "MALE",
+  "isNeutered": null,
+  "weight": null,
+  "basicVaccinationCompleted": null
+}
+```
+
+응답 예시 (`201`):
+
+```json
+{
+  "data": {
+    "petId": "pet_01",
+    "name": "루이",
+    "species": {
+      "speciesId": "species_01",
+      "name": "개"
+    },
+    "breed": null,
+    "profileMedia": null,
+    "age": null,
+    "sex": "MALE",
+    "birth": null,
+    "isNeutered": null,
+    "weight": null,
+    "basicVaccinationCompleted": null,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `PATCH /api/pets/{petId}`
+
+요청 예시:
+
+```http
+PATCH /api/pets/pet_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Content-Type: application/json
+
+{
+  "name": "루이"
+}
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "petId": "pet_01",
+    "name": "루이",
+    "species": {
+      "speciesId": "species_01",
+      "name": "개"
+    },
+    "breed": null,
+    "profileMedia": null,
+    "age": null,
+    "sex": "MALE",
+    "birth": null,
+    "isNeutered": null,
+    "weight": null,
+    "basicVaccinationCompleted": null,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `DELETE /api/pets/{petId}`
+
+요청 예시:
+
+```http
+DELETE /api/pets/pet_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답: `204`, 본문 없음.
+
+### `GET /api/pet-species`
+
+요청 예시:
+
+```http
+GET /api/pet-species HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": [
+    {
+      "speciesId": "species_01",
+      "name": "개",
+      "breeds": []
+    }
+  ]
+}
+```

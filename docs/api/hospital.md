@@ -32,3 +32,58 @@
 ## 구현 전 확인
 
 `D16`의 병원 데이터 공급원·공개 필드·필터 값·인증·정렬·페이지 정책을 확인한다. 위치 기반 상담 탐색은 [상담 API](consultation.md)의 별도 유스케이스이며 병원 선택으로 예약을 생성하지 않는다. 실제 지도·위치 서비스와 MySQL 조회 검증은 아직 수행하지 않았다.
+
+## 요청·응답 예시
+
+아래 값은 형식 설명용이며 미정 정책, 제한값, 상태 전이나 실제 서버 동작을 확정하지 않는다. 인증·멱등성 등 공통 헤더는 [공통 계약](README.md#공통-계약)을 따른다. 각 예시는 별도의 상황이다.
+
+### `GET /api/hospitals`
+
+요청 예시:
+
+```http
+GET /api/hospitals?page=0&size=20 HTTP/1.1
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+### `GET /api/hospitals/{hospitalId}`
+
+요청 예시:
+
+```http
+GET /api/hospitals/hospital_01 HTTP/1.1
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "hospitalId": "hospital_01",
+    "name": "동물병원",
+    "address": "서울특별시",
+    "latitude": null,
+    "longitude": null,
+    "distanceMeters": null,
+    "specialties": [],
+    "detailAddress": null,
+    "phoneNumber": null,
+    "openingHours": null,
+    "supportedAnimals": []
+  }
+}
+```

@@ -48,3 +48,104 @@ API의 `mediaId`는 `id`를 문자열로 표현한다. `fileName`, `contentType`
 
 - D19 — 허용 형식·용량·사용처별 개수와 삭제 재시도 횟수·간격·오류 기록 항목 및 반복 실패 운영 절차.
 - D18 — VARCHAR 길이와 계정 참조 제약, 첨부·작업·활동 기록의 물리 구조와 인덱스, 활동 신호·복구 계약과 경합 제어를 구현 설계 시 구체화한다. 미디어 `id`는 PK와 AUTO_INCREMENT다.
+
+## 요청·응답 예시
+
+아래 값은 형식 설명용이며 미정 정책, 제한값, 상태 전이나 실제 서버 동작을 확정하지 않는다. 인증·멱등성 등 공통 헤더는 [공통 계약](README.md#공통-계약)을 따른다. 각 예시는 별도의 상황이다.
+
+### `GET /api/media/policies`
+
+요청 예시:
+
+```http
+GET /api/media/policies?usage=PET_PROFILE HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답: `200`의 `data`는 `MediaPolicy`다. 허용 형식·용량·개수는 D19 확정 전이므로 임의의 숫자 예시는 제공하지 않는다.
+
+### `POST /api/media`
+
+요청 예시:
+
+```http
+POST /api/media HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Content-Type: multipart/form-data; boundary=<boundary>
+
+--<boundary>
+Content-Disposition: form-data; name="usage"
+
+PET_PROFILE
+--<boundary>
+Content-Disposition: form-data; name="file"; filename="photo.jpg"
+Content-Type: image/jpeg
+
+<파일 바이너리>
+--<boundary>--
+```
+
+응답 예시 (`201`):
+
+```json
+{
+  "data": {
+    "mediaId": "media_01",
+    "fileName": "photo.jpg",
+    "contentType": "image/jpeg",
+    "fileSize": 1024,
+    "fileUrl": "/api/media/media_01/file",
+    "usage": "PET_PROFILE",
+    "status": "READY",
+    "createdAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `GET /api/media/{mediaId}`
+
+요청 예시:
+
+```http
+GET /api/media/media_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "mediaId": "media_01",
+    "fileName": "photo.jpg",
+    "contentType": "image/jpeg",
+    "fileSize": 1024,
+    "fileUrl": "/api/media/media_01/file",
+    "usage": "PET_PROFILE",
+    "status": "READY",
+    "createdAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `GET /api/media/{mediaId}/file`
+
+요청 예시:
+
+```http
+GET /api/media/media_01/file HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답: `200`과 파일 바이너리. Content-Type과 파일명은 검증된 파일 메타데이터에 따른다.
+
+### `DELETE /api/media/{mediaId}`
+
+요청 예시:
+
+```http
+DELETE /api/media/media_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답: `204`, 본문 없음.

@@ -40,3 +40,127 @@
 
 - D08에서 비회원 목록·수 조회 허용 여부, 목록 정렬과 페이지 기본값·범위를 결정한다. 비회원 공개를 허용하면 요청자 기준 `following` 필드의 처리도 정한다.
 - D15에서 언팔로우 후 다시 팔로우할 때의 이벤트 식별과 중복 방지 보관 기준을 결정한다. 재팔로우 알림의 생성 여부를 기존 요청 재시도 규칙만으로 확정하지 않는다.
+
+## 요청·응답 예시
+
+아래 값은 형식 설명용이며 미정 정책, 제한값, 상태 전이나 실제 서버 동작을 확정하지 않는다. 인증·멱등성 등 공통 헤더는 [공통 계약](README.md#공통-계약)을 따른다. 각 예시는 별도의 상황이다.
+
+### `PUT /api/members/{memberId}/following`
+
+요청 예시:
+
+```http
+PUT /api/members/member_02/following HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "memberId": "member_02",
+    "following": true
+  }
+}
+```
+
+### `DELETE /api/members/{memberId}/following`
+
+요청 예시:
+
+```http
+DELETE /api/members/member_02/following HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답: `204`, 본문 없음.
+
+### `GET /api/members/{memberId}/followers`
+
+요청 예시:
+
+```http
+GET /api/members/member_02/followers?page=0&size=20 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+### `GET /api/members/{memberId}/following`
+
+요청 예시:
+
+```http
+GET /api/members/member_02/following?page=0&size=20 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+### `GET /api/members/{memberId}/follow-status`
+
+요청 예시:
+
+```http
+GET /api/members/member_02/follow-status HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "memberId": "member_02",
+    "following": true
+  }
+}
+```
+
+### `GET /api/members/{memberId}/follow-counts`
+
+요청 예시:
+
+```http
+GET /api/members/member_02/follow-counts HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "memberId": "member_02",
+    "followerCount": 1,
+    "followingCount": 0
+  }
+}
+```

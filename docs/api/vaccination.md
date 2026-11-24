@@ -38,3 +38,173 @@
 
 - D12 — 접종명 선택/직접 입력, 항목별 필수값, 차수 범위, 날짜 관계, 다음 예정일 미정 처리.
 - D18 — MongoDB 이력과 MySQL 접종명 연결, 접종명 변경 시 이력의 표시명 보존 방식.
+
+## 요청·응답 예시
+
+아래 값은 형식 설명용이며 미정 정책, 제한값, 상태 전이나 실제 서버 동작을 확정하지 않는다. 인증·멱등성 등 공통 헤더는 [공통 계약](README.md#공통-계약)을 따른다. 각 예시는 별도의 상황이다.
+
+### `GET /api/vaccine-names`
+
+요청 예시:
+
+```http
+GET /api/vaccine-names?query=예방 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": [
+    {
+      "vaccineNameId": "vaccine_01",
+      "name": "예방접종"
+    }
+  ]
+}
+```
+
+### `GET /api/pets/{petId}/vaccinations`
+
+요청 예시:
+
+```http
+GET /api/pets/pet_01/vaccinations?page=0&size=20 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+### `GET /api/pets/{petId}/vaccinations/{vaccinationId}`
+
+요청 예시:
+
+```http
+GET /api/pets/pet_01/vaccinations/vaccination_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "vaccinationId": "vaccination_01",
+    "vaccineName": {
+      "vaccineNameId": "vaccine_01",
+      "name": "예방접종"
+    },
+    "vaccinatedOn": "2026-11-19",
+    "nextVaccinationOn": null,
+    "petId": "pet_01",
+    "doseNumber": null,
+    "hospitalName": null,
+    "memo": null,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `POST /api/pets/{petId}/vaccinations`
+
+요청 예시:
+
+```http
+POST /api/pets/pet_01/vaccinations HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <요청별 고유 키>
+Content-Type: application/json
+
+{
+  "vaccineNameId": "vaccine_01",
+  "vaccinatedOn": "2026-11-19",
+  "nextVaccinationOn": null,
+  "doseNumber": null,
+  "hospitalName": null,
+  "memo": null
+}
+```
+
+응답 예시 (`201`):
+
+```json
+{
+  "data": {
+    "vaccinationId": "vaccination_01",
+    "vaccineName": {
+      "vaccineNameId": "vaccine_01",
+      "name": "예방접종"
+    },
+    "vaccinatedOn": "2026-11-19",
+    "nextVaccinationOn": null,
+    "petId": "pet_01",
+    "doseNumber": null,
+    "hospitalName": null,
+    "memo": null,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `PATCH /api/pets/{petId}/vaccinations/{vaccinationId}`
+
+요청 예시:
+
+```http
+PATCH /api/pets/pet_01/vaccinations/vaccination_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Content-Type: application/json
+
+{
+  "memo": "접종 메모"
+}
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "vaccinationId": "vaccination_01",
+    "vaccineName": {
+      "vaccineNameId": "vaccine_01",
+      "name": "예방접종"
+    },
+    "vaccinatedOn": "2026-11-19",
+    "nextVaccinationOn": null,
+    "petId": "pet_01",
+    "doseNumber": null,
+    "hospitalName": null,
+    "memo": null,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `DELETE /api/pets/{petId}/vaccinations/{vaccinationId}`
+
+요청 예시:
+
+```http
+DELETE /api/pets/pet_01/vaccinations/vaccination_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답: `204`, 본문 없음.
