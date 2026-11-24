@@ -17,13 +17,132 @@
 
 모든 API는 Bearer 액세스 토큰으로 로그인한 본인만 사용한다. 수신자를 지정하는 입력은 받지 않는다.
 
+### `GET /api/notifications`
+
 | 요청 | 인증 | 입력 | 성공 | 주요 오류 | 근거 |
 | --- | --- | --- | --- | --- | --- |
 | `GET /api/notifications` | 로그인 | 쿼리 `page`, `size` | 200 `Page<Notification>` | 400 `VALIDATION_ERROR`, 401 `UNAUTHORIZED` | NTF-01, 시트 67행 |
+
+요청 예시:
+
+```http
+GET /api/notifications?page=0&size=20 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+### `GET /api/notifications/unread-count`
+
+| 요청 | 인증 | 입력 | 성공 | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
 | `GET /api/notifications/unread-count` | 로그인 | 없음 | 200 `UnreadCount` | 401 `UNAUTHORIZED` | NTF-01, 시트 68행 |
+
+요청 예시:
+
+```http
+GET /api/notifications/unread-count HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "unreadCount": 1
+  }
+}
+```
+
+### `PATCH /api/notifications/{notificationId}/read`
+
+| 요청 | 인증 | 입력 | 성공 | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
 | `PATCH /api/notifications/{notificationId}/read` | 로그인 | 문자열 경로 ID, 본문 없음 | 200 `Notification` | 401 `UNAUTHORIZED`, 404 `NOT_FOUND` | NTF-01, 시트 75행 |
+
+요청 예시:
+
+```http
+PATCH /api/notifications/notification_01/read HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "notificationId": "notification_01",
+    "type": "FOLLOW",
+    "content": "새 팔로워가 있습니다.",
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "read": true,
+    "readAt": "2026-11-19T10:00:00+09:00",
+    "target": null
+  }
+}
+```
+
+### `POST /api/notifications/read-all`
+
+| 요청 | 인증 | 입력 | 성공 | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
 | `POST /api/notifications/read-all` | 로그인 | 본문 없음 | 200 `ReadAllResult` | 401 `UNAUTHORIZED` | NTF-01, 시트 75행 |
+
+요청 예시:
+
+```http
+POST /api/notifications/read-all HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "readCount": 1,
+    "unreadCount": 0,
+    "processedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `GET /api/notifications/stream`
+
+| 요청 | 인증 | 입력 | 성공 | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
 | `GET /api/notifications/stream` | 로그인 | SSE 재연결 시 `Last-Event-ID` 선택 | 200 `text/event-stream` 제안 | 연결 전 401 `UNAUTHORIZED`, 503 `NOTIFICATION_STREAM_UNAVAILABLE` | NTF-01, 시트 73행, D15 |
+
+요청 예시:
+
+```http
+GET /api/notifications/stream HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200 text/event-stream`):
+
+```text
+id: event_01
+event: UNREAD_COUNT_CHANGED
+data: {"id":"event_01","type":"UNREAD_COUNT_CHANGED","occurredAt":"2026-11-19T10:00:00+09:00","data":{"unreadCount":3}}
+```
+
 
 ## 생성·조회·읽음 처리
 

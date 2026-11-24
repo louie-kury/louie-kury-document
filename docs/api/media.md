@@ -1,6 +1,6 @@
 # 공통 미디어
 
-**우선 개발.** PRD `MED-01`, `HLT-04`, `D19`, 요구사항정의서 C76:H89 기준. 메타데이터는 MySQL 공통 `미디어` 테이블에, 실제 파일은 S3에 저장한다. 물리 컬럼은 [ERD의 미디어 정의](../erd.md#4-미디어알림)를 따른다.
+**우선 개발.** PRD `MED-01`, `HLT-04`, `D19`, 요구사항정의서 C76:H89 기준. 메타데이터는 MySQL 공통 `미디어` 테이블에, 실제 파일은 S3에 저장한다. 물리 컬럼은 [ERD의 미디어 정의](../erd/svc_media.md)를 따른다.
 
 [공통 계약](README.md#공통-계약)을 함께 적용한다. 아래 경로·필드·오류 코드는 API 설계 초안이며 미정 정책은 마지막 절에서 추적한다.
 
@@ -20,13 +20,123 @@ API의 `mediaId`는 `id`를 문자열로 표현한다. `fileName`, `contentType`
 
 ## 엔드포인트
 
+### `GET /api/media/policies`
+
 | 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
 | --- | --- | --- | --- | --- |
 | `GET /api/media/policies` | 필수 | `usage` | `MediaPolicy` / 200 | 400 UNKNOWN_USAGE, 503 MEDIA_POLICY_UNAVAILABLE |
+
+요청 예시:
+
+```http
+GET /api/media/policies?usage=PET_PROFILE HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답: `200`의 `data`는 `MediaPolicy`다. 허용 형식·용량·개수는 D19 확정 전이므로 임의의 숫자 예시는 제공하지 않는다.
+
+### `POST /api/media`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `POST /api/media` | 필수 | multipart `file`, `usage` | `MediaDetail(status=READY)` / 201 | 400 INVALID_MEDIA_TYPE, 413 FILE_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 503 STORAGE_UNAVAILABLE |
+
+요청 예시:
+
+```http
+POST /api/media HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Content-Type: multipart/form-data; boundary=<boundary>
+
+--<boundary>
+Content-Disposition: form-data; name="usage"
+
+PET_PROFILE
+--<boundary>
+Content-Disposition: form-data; name="file"; filename="photo.jpg"
+Content-Type: image/jpeg
+
+<파일 바이너리>
+--<boundary>--
+```
+
+응답 예시 (`201`):
+
+```json
+{
+  "data": {
+    "mediaId": "media_01",
+    "fileName": "photo.jpg",
+    "contentType": "image/jpeg",
+    "fileSize": 1024,
+    "fileUrl": "/api/media/media_01/file",
+    "usage": "PET_PROFILE",
+    "status": "READY",
+    "createdAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `GET /api/media/{mediaId}`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `GET /api/media/{mediaId}` | 사용처에 따름 | 경로 mediaId | `MediaDetail` / 200 | 404 NOT_FOUND |
+
+요청 예시:
+
+```http
+GET /api/media/media_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "mediaId": "media_01",
+    "fileName": "photo.jpg",
+    "contentType": "image/jpeg",
+    "fileSize": 1024,
+    "fileUrl": "/api/media/media_01/file",
+    "usage": "PET_PROFILE",
+    "status": "READY",
+    "createdAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `GET /api/media/{mediaId}/file`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `GET /api/media/{mediaId}/file` | 사용처에 따름 | 경로 mediaId | 파일 바이너리 / 200 | 404 NOT_FOUND, 503 STORAGE_UNAVAILABLE |
+
+요청 예시:
+
+```http
+GET /api/media/media_01/file HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답: `200`과 파일 바이너리. Content-Type과 파일명은 검증된 파일 메타데이터에 따른다.
+
+### `DELETE /api/media/{mediaId}`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `DELETE /api/media/{mediaId}` | 필수 | 경로 mediaId | 본문 없음 / 204 | 404 NOT_FOUND, 409 MEDIA_IN_USE |
+
+요청 예시:
+
+```http
+DELETE /api/media/media_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답: `204`, 본문 없음.
+
 
 ## 처리 규칙
 

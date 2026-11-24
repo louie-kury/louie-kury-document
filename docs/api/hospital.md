@@ -17,10 +17,65 @@
 
 공개 조회를 가정한 설계안이며 비회원 접근 허용은 `D16`에서 확정한다.
 
+### `GET /api/hospitals`
+
 | 기능 | 요청 | 인증 초안 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
 | --- | --- | --- | --- | --- | --- | --- |
 | 지도 병원 목록 | `GET /api/hospitals` | 공개 제안 | Query `region?:string`, `latitude?:number`, `longitude?:number`, `specialty?:string`, `page`, `size` | `Page<HospitalItem>`, 200 | 400 VALIDATION_ERROR, 503 UPSTREAM_UNAVAILABLE | 지도·D16 |
+
+요청 예시:
+
+```http
+GET /api/hospitals?page=0&size=20 HTTP/1.1
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+### `GET /api/hospitals/{hospitalId}`
+
+| 기능 | 요청 | 인증 초안 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- | --- |
 | 병원 상세 | `GET /api/hospitals/{hospitalId}` | 공개 제안 | Path `hospitalId:string` | `HospitalDetail`, 200 | 404 NOT_FOUND, 503 UPSTREAM_UNAVAILABLE | 지도·D16 |
+
+요청 예시:
+
+```http
+GET /api/hospitals/hospital_01 HTTP/1.1
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "hospitalId": "hospital_01",
+    "name": "동물병원",
+    "address": "서울특별시",
+    "latitude": null,
+    "longitude": null,
+    "distanceMeters": null,
+    "specialties": [],
+    "detailAddress": null,
+    "phoneNumber": null,
+    "openingHours": null,
+    "supportedAnimals": []
+  }
+}
+```
+
 
 ## 처리 규칙
 

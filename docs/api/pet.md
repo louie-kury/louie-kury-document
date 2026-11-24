@@ -1,4 +1,4 @@
-# 반려동물 등록 관리
+# 반려동물 관리
 
 **우선 개발.** PRD `PET-01`, `MED-01`, `D11·D12·D18`, 요구사항정의서 `(필수3)` C18:H22 기준. 반려동물·소유 관계·종/품종은 MongoDB, 파일 메타데이터는 공통 미디어 저장소에서 관리한다.
 
@@ -18,14 +18,209 @@ PetWrite는 입력 가능한 전체 필드를 나열한 것이다. 생성 시 �
 
 ## 엔드포인트
 
+### `GET /api/pets`
+
 | 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
 | --- | --- | --- | --- | --- |
 | `GET /api/pets` | 필수 | `page,size` | `Page<PetSummary>` / 200 | 공통 오류 |
+
+요청 예시:
+
+```http
+GET /api/pets?page=0&size=20 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+### `GET /api/pets/{petId}`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `GET /api/pets/{petId}` | 필수 | 경로 petId | `PetDetail` / 200 | 404 NOT_FOUND |
+
+요청 예시:
+
+```http
+GET /api/pets/pet_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "petId": "pet_01",
+    "name": "루이",
+    "species": {
+      "speciesId": "species_01",
+      "name": "개"
+    },
+    "breed": null,
+    "profileMedia": null,
+    "age": null,
+    "sex": "MALE",
+    "birth": null,
+    "isNeutered": null,
+    "weight": null,
+    "basicVaccinationCompleted": null,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `POST /api/pets`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `POST /api/pets` | 필수 | JSON `PetWrite` | `PetDetail` / 201 | 400 VALIDATION_ERROR, 404 MEDIA_NOT_FOUND, 409 MEDIA_NOT_READY |
+
+요청 예시:
+
+```http
+POST /api/pets HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <요청별 고유 키>
+Content-Type: application/json
+
+{
+  "name": "루이",
+  "speciesId": "species_01",
+  "breedId": null,
+  "profileMediaId": null,
+  "birth": null,
+  "sex": "MALE",
+  "isNeutered": null,
+  "weight": null,
+  "basicVaccinationCompleted": null
+}
+```
+
+응답 예시 (`201`):
+
+```json
+{
+  "data": {
+    "petId": "pet_01",
+    "name": "루이",
+    "species": {
+      "speciesId": "species_01",
+      "name": "개"
+    },
+    "breed": null,
+    "profileMedia": null,
+    "age": null,
+    "sex": "MALE",
+    "birth": null,
+    "isNeutered": null,
+    "weight": null,
+    "basicVaccinationCompleted": null,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `PATCH /api/pets/{petId}`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `PATCH /api/pets/{petId}` | 필수 | JSON PetWrite의 변경 필드 | `PetDetail` / 200 | 400 EMPTY_UPDATE, 404 NOT_FOUND, 409 MEDIA_NOT_READY |
+
+요청 예시:
+
+```http
+PATCH /api/pets/pet_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Content-Type: application/json
+
+{
+  "name": "루이"
+}
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "petId": "pet_01",
+    "name": "루이",
+    "species": {
+      "speciesId": "species_01",
+      "name": "개"
+    },
+    "breed": null,
+    "profileMedia": null,
+    "age": null,
+    "sex": "MALE",
+    "birth": null,
+    "isNeutered": null,
+    "weight": null,
+    "basicVaccinationCompleted": null,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `DELETE /api/pets/{petId}`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `DELETE /api/pets/{petId}` | 필수 | 경로 petId | 본문 없음 / 204 | 404 NOT_FOUND, 409 PET_STATE_CONFLICT |
+
+요청 예시:
+
+```http
+DELETE /api/pets/pet_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답: `204`, 본문 없음.
+
+### `GET /api/pet-species`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `GET /api/pet-species` | 필수 | 없음 | `Species[]` / 200 | 503 REFERENCE_DATA_UNAVAILABLE |
+
+요청 예시:
+
+```http
+GET /api/pet-species HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": [
+    {
+      "speciesId": "species_01",
+      "name": "개",
+      "breeds": []
+    }
+  ]
+}
+```
+
 
 ## 처리 규칙
 

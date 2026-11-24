@@ -1,4 +1,4 @@
-# 예방접종 등록 관리
+# 예방접종 관리
 
 **우선 개발.** PRD `PET-02`, `D12·D18`, 요구사항정의서 C23:E28 기준. 접종 이력은 MongoDB, 접종명 기준 데이터는 MySQL에서 관리한다.
 
@@ -17,14 +17,196 @@
 
 ## 엔드포인트
 
+### `GET /api/vaccine-names`
+
 | 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
 | --- | --- | --- | --- | --- |
 | `GET /api/vaccine-names` | 필수 | `query?` 검색 문자열 | `VaccineName[]` / 200 | 503 REFERENCE_DATA_UNAVAILABLE |
+
+요청 예시:
+
+```http
+GET /api/vaccine-names?query=예방 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": [
+    {
+      "vaccineNameId": "vaccine_01",
+      "name": "예방접종"
+    }
+  ]
+}
+```
+
+### `GET /api/pets/{petId}/vaccinations`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `GET /api/pets/{petId}/vaccinations` | 필수 | 경로 petId, `page,size` | `Page<VaccinationSummary>` / 200 | 404 NOT_FOUND |
+
+요청 예시:
+
+```http
+GET /api/pets/pet_01/vaccinations?page=0&size=20 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+### `GET /api/pets/{petId}/vaccinations/{vaccinationId}`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `GET /api/pets/{petId}/vaccinations/{vaccinationId}` | 필수 | 경로 식별자 | `VaccinationDetail` / 200 | 404 NOT_FOUND |
+
+요청 예시:
+
+```http
+GET /api/pets/pet_01/vaccinations/vaccination_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "vaccinationId": "vaccination_01",
+    "vaccineName": {
+      "vaccineNameId": "vaccine_01",
+      "name": "예방접종"
+    },
+    "vaccinatedOn": "2026-11-19",
+    "nextVaccinationOn": null,
+    "petId": "pet_01",
+    "doseNumber": null,
+    "hospitalName": null,
+    "memo": null,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `POST /api/pets/{petId}/vaccinations`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `POST /api/pets/{petId}/vaccinations` | 필수 | JSON `VaccinationWrite` | `VaccinationDetail` / 201 | 400 VALIDATION_ERROR, 404 VACCINE_NAME_NOT_FOUND |
+
+요청 예시:
+
+```http
+POST /api/pets/pet_01/vaccinations HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <요청별 고유 키>
+Content-Type: application/json
+
+{
+  "vaccineNameId": "vaccine_01",
+  "vaccinatedOn": "2026-11-19",
+  "nextVaccinationOn": null,
+  "doseNumber": null,
+  "hospitalName": null,
+  "memo": null
+}
+```
+
+응답 예시 (`201`):
+
+```json
+{
+  "data": {
+    "vaccinationId": "vaccination_01",
+    "vaccineName": {
+      "vaccineNameId": "vaccine_01",
+      "name": "예방접종"
+    },
+    "vaccinatedOn": "2026-11-19",
+    "nextVaccinationOn": null,
+    "petId": "pet_01",
+    "doseNumber": null,
+    "hospitalName": null,
+    "memo": null,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `PATCH /api/pets/{petId}/vaccinations/{vaccinationId}`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `PATCH /api/pets/{petId}/vaccinations/{vaccinationId}` | 필수 | JSON VaccinationWrite의 변경 필드 | `VaccinationDetail` / 200 | 400 EMPTY_UPDATE, 404 NOT_FOUND |
+
+요청 예시:
+
+```http
+PATCH /api/pets/pet_01/vaccinations/vaccination_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Content-Type: application/json
+
+{
+  "memo": "접종 메모"
+}
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "vaccinationId": "vaccination_01",
+    "vaccineName": {
+      "vaccineNameId": "vaccine_01",
+      "name": "예방접종"
+    },
+    "vaccinatedOn": "2026-11-19",
+    "nextVaccinationOn": null,
+    "petId": "pet_01",
+    "doseNumber": null,
+    "hospitalName": null,
+    "memo": null,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `DELETE /api/pets/{petId}/vaccinations/{vaccinationId}`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `DELETE /api/pets/{petId}/vaccinations/{vaccinationId}` | 필수 | 경로 식별자 | 본문 없음 / 204 | 404 NOT_FOUND |
+
+요청 예시:
+
+```http
+DELETE /api/pets/pet_01/vaccinations/vaccination_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답: `204`, 본문 없음.
+
 
 ## 처리 규칙
 

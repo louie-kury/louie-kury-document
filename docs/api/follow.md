@@ -17,14 +17,150 @@
 
 목록·수 조회의 비회원 허용 여부는 D08 미정이다. 표의 로그인 표시는 검토할 잠정 인증안이며 비회원 공개 정책의 확정 근거로 사용하지 않는다. 변경과 본인 기준 상태 조회는 로그인한다.
 
+### `PUT /api/members/{memberId}/following`
+
 | 요청 | 인증 | 입력 | 성공 | 주요 오류 | 근거 |
 | --- | --- | --- | --- | --- | --- |
 | `PUT /api/members/{memberId}/following` | 로그인 | 경로 `memberId`, 본문 없음 | 200 `FollowStatus` (`following:true`) | 400 `SELF_FOLLOW_NOT_ALLOWED`, 401 `UNAUTHORIZED`, 404 `NOT_FOUND` | COM-03, 시트 12행 |
+
+요청 예시:
+
+```http
+PUT /api/members/member_02/following HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "memberId": "member_02",
+    "following": true
+  }
+}
+```
+
+### `DELETE /api/members/{memberId}/following`
+
+| 요청 | 인증 | 입력 | 성공 | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
 | `DELETE /api/members/{memberId}/following` | 로그인 | 경로 `memberId`, 본문 없음 | 204 | 400 `SELF_FOLLOW_NOT_ALLOWED`, 401 `UNAUTHORIZED`, 404 `NOT_FOUND` | COM-03, 시트 13행 |
+
+요청 예시:
+
+```http
+DELETE /api/members/member_02/following HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답: `204`, 본문 없음.
+
+### `GET /api/members/{memberId}/followers`
+
+| 요청 | 인증 | 입력 | 성공 | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
 | `GET /api/members/{memberId}/followers` | 로그인 잠정안 | 경로 `memberId`, 쿼리 `page`, `size` | 200 `Page<FollowMember>` | 400 `VALIDATION_ERROR`, 401 `UNAUTHORIZED`, 404 `NOT_FOUND` | COM-03, 시트 14행, D08 |
+
+요청 예시:
+
+```http
+GET /api/members/member_02/followers?page=0&size=20 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+### `GET /api/members/{memberId}/following`
+
+| 요청 | 인증 | 입력 | 성공 | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
 | `GET /api/members/{memberId}/following` | 로그인 잠정안 | 경로 `memberId`, 쿼리 `page`, `size` | 200 `Page<FollowMember>` | 400 `VALIDATION_ERROR`, 401 `UNAUTHORIZED`, 404 `NOT_FOUND` | COM-03, 시트 15행, D08 |
+
+요청 예시:
+
+```http
+GET /api/members/member_02/following?page=0&size=20 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+### `GET /api/members/{memberId}/follow-status`
+
+| 요청 | 인증 | 입력 | 성공 | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
 | `GET /api/members/{memberId}/follow-status` | 로그인 | 경로 `memberId` | 200 `FollowStatus` | 401 `UNAUTHORIZED`, 404 `NOT_FOUND` | COM-03, 시트 16행 |
+
+요청 예시:
+
+```http
+GET /api/members/member_02/follow-status HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "memberId": "member_02",
+    "following": true
+  }
+}
+```
+
+### `GET /api/members/{memberId}/follow-counts`
+
+| 요청 | 인증 | 입력 | 성공 | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
 | `GET /api/members/{memberId}/follow-counts` | 로그인 잠정안 | 경로 `memberId` | 200 `FollowCounts` | 401 `UNAUTHORIZED`, 404 `NOT_FOUND` | COM-03, 시트 17행, D08 |
+
+요청 예시:
+
+```http
+GET /api/members/member_02/follow-counts HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "memberId": "member_02",
+    "followerCount": 1,
+    "followingCount": 0
+  }
+}
+```
+
 
 ## 처리 규칙
 

@@ -30,20 +30,393 @@
 
 모든 API는 Bearer 인증이 필요하며 로그인 사용자의 상담에 한정한다.
 
+### `POST /api/consultations`
+
 | 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
 | --- | --- | --- | --- | --- | --- |
 | 실시간 상담 신청 | `POST /api/consultations` | Body `ConsultationInput`, Header `Idempotency-Key` | `ConsultationDetail`, 201 | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 MEDIA_NOT_READY·IDEMPOTENCY_CONFLICT, 503 UPSTREAM_UNAVAILABLE | CON-01·CON-05 |
+
+요청 예시:
+
+```http
+POST /api/consultations HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <요청별 고유 키>
+Content-Type: application/json
+
+{
+  "petId": "pet_01",
+  "channel": "CHAT",
+  "symptom": "상담 요청",
+  "mediaIds": [],
+  "location": {
+    "latitude": 37.5,
+    "longitude": 127.0
+  }
+}
+```
+
+응답 예시 (`201`):
+
+```json
+{
+  "data": {
+    "consultationId": "consult_01",
+    "pet": {
+      "petId": "pet_01",
+      "name": "루이"
+    },
+    "veterinarian": null,
+    "channel": "CHAT",
+    "status": "MATCHING",
+    "requestedAt": "2026-11-19T10:00:00+09:00",
+    "symptom": "상담 요청",
+    "media": [],
+    "matchedAt": null,
+    "startedAt": null,
+    "endedAt": null,
+    "durationSeconds": null,
+    "journalAvailability": "NOT_WRITTEN"
+  }
+}
+```
+
+### `GET /api/consultations`
+
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
 | 내 상담 목록 | `GET /api/consultations` | Query `petId?:string`, `status?:string`, `page`, `size` | `Page<ConsultationItem>`, 200 | 400 VALIDATION_ERROR, 404 NOT_FOUND | CON-04 |
+
+요청 예시:
+
+```http
+GET /api/consultations?page=0&size=20 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+### `GET /api/consultations/{consultationId}`
+
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
 | 상담 상세 | `GET /api/consultations/{consultationId}` | 없음 | `ConsultationDetail`, 200 | 404 NOT_FOUND | CON-04 |
+
+요청 예시:
+
+```http
+GET /api/consultations/consult_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "consultationId": "consult_01",
+    "pet": {
+      "petId": "pet_01",
+      "name": "루이"
+    },
+    "veterinarian": null,
+    "channel": "CHAT",
+    "status": "MATCHING",
+    "requestedAt": "2026-11-19T10:00:00+09:00",
+    "symptom": "상담 요청",
+    "media": [],
+    "matchedAt": null,
+    "startedAt": null,
+    "endedAt": null,
+    "durationSeconds": null,
+    "journalAvailability": "NOT_WRITTEN"
+  }
+}
+```
+
+### `GET /api/consultations/{consultationId}/matching`
+
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
 | 매칭 진행·결과 | `GET /api/consultations/{consultationId}/matching` | 없음 | `MatchingStatus`, 200 | 404 NOT_FOUND | CON-02·CON-05 |
+
+요청 예시:
+
+```http
+GET /api/consultations/consult_01/matching HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "consultationId": "consult_01",
+    "status": "MATCHING",
+    "requestedAt": "2026-11-19T10:00:00+09:00",
+    "expiresAt": null,
+    "elapsedSeconds": 0,
+    "veterinarian": null
+  }
+}
+```
+
+### `GET /api/consultations/{consultationId}/stream`
+
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
 | 매칭·상담 상태 구독 | `GET /api/consultations/{consultationId}/stream` | Header `Last-Event-ID?:string` | `ConsultationEvent` 스트림, 200 | 404 NOT_FOUND, 503 UPSTREAM_UNAVAILABLE | CON-02·CON-05 |
+
+요청 예시:
+
+```http
+GET /api/consultations/consult_01/stream HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200 text/event-stream`, 이벤트 유형은 미정):
+
+```text
+id: event_01
+event: <이벤트_유형>
+data: {"eventId":"event_01","type":"<이벤트_유형>","consultationId":"consult_01","occurredAt":"2026-11-19T10:00:00+09:00","data":{}}
+```
+
+### `POST /api/consultations/{consultationId}/cancellation`
+
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
 | 상담 취소 | `POST /api/consultations/{consultationId}/cancellation` | Body `{reason?:string}` | `ConsultationDetail`, 200 | 404 NOT_FOUND, 409 STATE_CONFLICT | CON-02·CON-04 |
+
+요청 예시:
+
+```http
+POST /api/consultations/consult_01/cancellation HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Content-Type: application/json
+
+{
+  "reason": "일정 변경"
+}
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "consultationId": "consult_01",
+    "pet": {
+      "petId": "pet_01",
+      "name": "루이"
+    },
+    "veterinarian": null,
+    "channel": "CHAT",
+    "status": "CANCELLED",
+    "requestedAt": "2026-11-19T10:00:00+09:00",
+    "symptom": "상담 요청",
+    "media": [],
+    "matchedAt": null,
+    "startedAt": null,
+    "endedAt": null,
+    "durationSeconds": null,
+    "journalAvailability": "NOT_WRITTEN"
+  }
+}
+```
+
+### `POST /api/consultations/{consultationId}/connections`
+
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
 | 상담 연결 | `POST /api/consultations/{consultationId}/connections` | Header `Idempotency-Key`, 본문 없음 | `Connection`, 201 | 404 NOT_FOUND, 409 STATE_CONFLICT·IDEMPOTENCY_CONFLICT, 503 UPSTREAM_UNAVAILABLE | CON-03 |
+
+요청 예시:
+
+```http
+POST /api/consultations/consult_01/connections HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <요청별 고유 키>
+```
+
+응답 예시 (`201`):
+
+```json
+{
+  "data": {
+    "connectionId": "connection_01",
+    "channel": "CHAT",
+    "status": "CONNECTING",
+    "expiresAt": null,
+    "access": {
+      "url": null,
+      "token": null
+    }
+  }
+}
+```
+
+### `POST /api/consultations/{consultationId}/termination`
+
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
 | 상담 종료 요청 | `POST /api/consultations/{consultationId}/termination` | Header `Idempotency-Key`, 본문 없음 | `EndAcceptance`, 202 | 404 NOT_FOUND, 409 STATE_CONFLICT·IDEMPOTENCY_CONFLICT, 503 UPSTREAM_UNAVAILABLE | CON-03·CON-04 |
+
+요청 예시:
+
+```http
+POST /api/consultations/consult_01/termination HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <요청별 고유 키>
+```
+
+응답 예시 (`202`):
+
+```json
+{
+  "data": {
+    "actionId": "action_01",
+    "consultationId": "consult_01",
+    "status": "ACCEPTED",
+    "requestedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `GET /api/consultations/{consultationId}/journal`
+
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
 | 제공된 상담 일지 | `GET /api/consultations/{consultationId}/journal` | 없음 | `JournalResult`, 200 | 404 NOT_FOUND, 503 UPSTREAM_UNAVAILABLE | LOG-01 |
+
+요청 예시:
+
+```http
+GET /api/consultations/consult_01/journal HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "availability": "NOT_WRITTEN",
+    "journal": null
+  }
+}
+```
+
+### `GET /api/consultations/{consultationId}/veterinarian`
+
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
 | 매칭 상대 정보 | `GET /api/consultations/{consultationId}/veterinarian` | 없음 | `VeterinarianInfo`, 200 | 404 NOT_FOUND, 409 STATE_CONFLICT, 503 UPSTREAM_UNAVAILABLE | VET-01 |
+
+요청 예시:
+
+```http
+GET /api/consultations/consult_01/veterinarian HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "veterinarianId": "vet_01",
+    "name": "수의사",
+    "hospital": {
+      "hospitalId": "hospital_01",
+      "name": "동물병원"
+    },
+    "profileMedia": null,
+    "introduction": null,
+    "averageRating": null,
+    "reviewCount": null
+  }
+}
+```
+
+### `POST /api/consultations/{consultationId}/reviews`
+
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
 | 완료 상담 평가 | `POST /api/consultations/{consultationId}/reviews` | Body `ReviewInput`, Header `Idempotency-Key` | `Review`, 201 | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 STATE_CONFLICT·IDEMPOTENCY_CONFLICT | REV-01 |
+
+요청 예시:
+
+```http
+POST /api/consultations/consult_01/reviews HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <요청별 고유 키>
+Content-Type: application/json
+
+{
+  "rating": 5,
+  "content": "감사합니다."
+}
+```
+
+응답 예시 (`201`):
+
+```json
+{
+  "data": {
+    "reviewId": "review_01",
+    "consultationId": "consult_01",
+    "rating": 5,
+    "content": "감사합니다.",
+    "createdAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `GET /api/consultations/{consultationId}/reviews`
+
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
 | 내 상담 평가 조회 | `GET /api/consultations/{consultationId}/reviews` | Query `page`, `size` | `Page<Review>`, 200 | 404 NOT_FOUND | REV-01 |
+
+요청 예시:
+
+```http
+GET /api/consultations/consult_01/reviews?page=0&size=20 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+
+### 상담 상태 구독 처리
 
 상태 구독은 SSE 방식의 설계 제안이며 `D17`의 전달 방식 확정 후 적용한다. 스트림은 JSON 래퍼를 사용하지 않으며 `id`에 `eventId`, `event`에 `type`, `data`에 ConsultationEvent JSON을 보낸다. 연결 이후 오류·종료·재연결 계약은 전달 채널과 함께 확정한다. Bearer 헤더를 지원하는 클라이언트 수신 방식을 정하고 접근 토큰을 URL 쿼리로 전달하지 않는다.
 
@@ -71,7 +444,7 @@
 - 상담 내역과 종료 결과는 일지가 없어도 조회한다. 외부 제공자가 미작성을 정상 응답으로 확인한 경우 `{"availability":"NOT_WRITTEN","journal":null}`을 반환한다.
 - 제공된 일지가 있으면 `availability:AVAILABLE`과 본문·첨부를 반환한다. 원본 제공자의 장애·타임아웃은 503이며 미작성으로 바꾸지 않는다. 일지·첨부 직접 URL에도 해당 상담 보호자의 접근 권한을 검사한다.
 - 평가는 본인 완료 상담에만 작성하며 `rating`은 필수, `content`는 선택이다. 별점 범위·상담당 평가 수·수정/삭제·집계 범위는 `D16`에서 정한다. 현재 목록 응답은 허용 평가 수를 하나로 확정하지 않도록 Page 모델을 사용하는 설계안이다.
-- 동일 평가 요청의 재시도는 같은 평가를 반환하고 평균·개수 집계를 중복 증가시키지 않는다. 평가 등록 후 표시하는 집계의 반영 시점·실패 복구는 상세 설계에서 정한다.
+- 동일 평가 요청의 재시도는 같은 평가를 반환하고 평균·개수 집계를 중복 증가시키지 않는다. 평가 작성 후 표시하는 집계의 반영 시점·실패 복구는 상세 설계에서 정한다.
 
 ## 구현 전 확인
 

@@ -24,27 +24,577 @@
 
 ## 엔드포인트
 
+### `GET /api/boards`
+
 | 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
 | --- | --- | --- | --- | --- |
 | `GET /api/boards` | 공개 | 없음 | `Board[]` / 200 | 공통 오류 |
+
+요청 예시:
+
+```http
+GET /api/boards HTTP/1.1
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": [
+    {
+      "boardId": "board_01",
+      "name": "자유게시판"
+    }
+  ]
+}
+```
+
+### `GET /api/boards/{boardId}/categories`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `GET /api/boards/{boardId}/categories` | 공개 | 경로 boardId | `Category[]` / 200 | 404 NOT_FOUND |
+
+요청 예시:
+
+```http
+GET /api/boards/board_01/categories HTTP/1.1
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": [
+    {
+      "categoryId": "category_01",
+      "name": "일상"
+    }
+  ]
+}
+```
+
+### `GET /api/posts`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `GET /api/posts` | 공개 | `boardId,categoryId?,page,size` | `Page<PostSummary>` / 200 | 400 INVALID_FILTER, 404 NOT_FOUND |
+
+요청 예시:
+
+```http
+GET /api/posts?boardId=board_01&page=0&size=20 HTTP/1.1
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+### `GET /api/posts/{postId}`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `GET /api/posts/{postId}` | 공개 | 경로 postId | `PostDetail` / 200 | 404 NOT_FOUND |
+
+요청 예시:
+
+```http
+GET /api/posts/post_01 HTTP/1.1
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "postId": "post_01",
+    "boardId": "board_01",
+    "category": {
+      "categoryId": "category_01",
+      "name": "일상"
+    },
+    "title": "안녕하세요",
+    "author": {
+      "memberId": "member_01",
+      "nickname": "루이집사",
+      "profileMedia": null
+    },
+    "likeCount": 0,
+    "viewCount": 1,
+    "commentCount": 0,
+    "likedByMe": null,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": null,
+    "content": "반갑습니다.",
+    "media": []
+  }
+}
+```
+
+### `POST /api/posts`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `POST /api/posts` | 필수 | JSON `PostWrite` | `PostDetail` / 201 | 400 VALIDATION_ERROR, 409 MEDIA_NOT_READY, 422 ATTACHMENT_LIMIT_EXCEEDED |
+
+요청 예시:
+
+```http
+POST /api/posts HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <요청별 고유 키>
+Content-Type: application/json
+
+{
+  "boardId": "board_01",
+  "categoryId": "category_01",
+  "title": "안녕하세요",
+  "content": "반갑습니다.",
+  "mediaIds": []
+}
+```
+
+응답 예시 (`201`):
+
+```json
+{
+  "data": {
+    "postId": "post_01",
+    "boardId": "board_01",
+    "category": {
+      "categoryId": "category_01",
+      "name": "일상"
+    },
+    "title": "안녕하세요",
+    "author": {
+      "memberId": "member_01",
+      "nickname": "루이집사",
+      "profileMedia": null
+    },
+    "likeCount": 0,
+    "viewCount": 1,
+    "commentCount": 0,
+    "likedByMe": false,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": null,
+    "content": "반갑습니다.",
+    "media": []
+  }
+}
+```
+
+### `PATCH /api/posts/{postId}`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `PATCH /api/posts/{postId}` | 필수·작성자 | JSON `title?,content?,mediaIds?` | `PostDetail` / 200 | 400 EMPTY_UPDATE, 404 NOT_FOUND, 422 ATTACHMENT_LIMIT_EXCEEDED |
+
+요청 예시:
+
+```http
+PATCH /api/posts/post_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Content-Type: application/json
+
+{
+  "title": "수정한 제목"
+}
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "postId": "post_01",
+    "boardId": "board_01",
+    "category": {
+      "categoryId": "category_01",
+      "name": "일상"
+    },
+    "title": "안녕하세요",
+    "author": {
+      "memberId": "member_01",
+      "nickname": "루이집사",
+      "profileMedia": null
+    },
+    "likeCount": 0,
+    "viewCount": 1,
+    "commentCount": 0,
+    "likedByMe": false,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": null,
+    "content": "반갑습니다.",
+    "media": []
+  }
+}
+```
+
+### `DELETE /api/posts/{postId}`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `DELETE /api/posts/{postId}` | 필수·작성자 | 경로 postId | 본문 없음 / 204 | 404 NOT_FOUND |
+
+요청 예시:
+
+```http
+DELETE /api/posts/post_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답: `204`, 본문 없음.
+
+### `PUT /api/posts/{postId}/like`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `PUT /api/posts/{postId}/like` | 필수 | 본문 없음 | `Reaction` / 200 | 404 NOT_FOUND |
+
+요청 예시:
+
+```http
+PUT /api/posts/post_01/like HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "liked": true,
+    "likeCount": 1
+  }
+}
+```
+
+### `DELETE /api/posts/{postId}/like`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `DELETE /api/posts/{postId}/like` | 필수 | 본문 없음 | `Reaction` / 200 | 404 NOT_FOUND |
+
+요청 예시:
+
+```http
+DELETE /api/posts/post_01/like HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "liked": false,
+    "likeCount": 0
+  }
+}
+```
+
+### `GET /api/posts/{postId}/comments`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `GET /api/posts/{postId}/comments` | 공개 | `page,size` 최상위만 | `Page<Comment>` / 200 | 404 NOT_FOUND |
+
+요청 예시:
+
+```http
+GET /api/posts/post_01/comments?page=0&size=20 HTTP/1.1
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+### `GET /api/comments/{commentId}/replies`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `GET /api/comments/{commentId}/replies` | 필수 | `page,size` 직계 답글 | `Page<Comment>` / 200 | 404 NOT_FOUND |
+
+요청 예시:
+
+```http
+GET /api/comments/comment_01/replies?page=0&size=20 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "hasNext": false
+  }
+}
+```
+
+### `POST /api/posts/{postId}/comments`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `POST /api/posts/{postId}/comments` | 필수 | JSON `content:string,parentCommentId?:string` | `Comment` / 201 | 400 INVALID_PARENT, 409 COMMENT_DEPTH_EXCEEDED, 404 NOT_FOUND |
+
+요청 예시:
+
+```http
+POST /api/posts/post_01/comments HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <요청별 고유 키>
+Content-Type: application/json
+
+{
+  "content": "안녕하세요"
+}
+```
+
+응답 예시 (`201`):
+
+```json
+{
+  "data": {
+    "commentId": "comment_01",
+    "postId": "post_01",
+    "parentCommentId": null,
+    "depth": 1,
+    "author": {
+      "memberId": "member_01",
+      "nickname": "루이집사",
+      "profileMedia": null
+    },
+    "content": "안녕하세요",
+    "deleted": false,
+    "likeCount": 0,
+    "replyCount": 0,
+    "likedByMe": false,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": null
+  }
+}
+```
+
+### `PATCH /api/comments/{commentId}`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `PATCH /api/comments/{commentId}` | 필수·작성자 | JSON `content:string` | `Comment` / 200 | 404 NOT_FOUND, 409 COMMENT_HAS_REPLIES |
+
+요청 예시:
+
+```http
+PATCH /api/comments/comment_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Content-Type: application/json
+
+{
+  "content": "수정한 댓글"
+}
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "commentId": "comment_01",
+    "postId": "post_01",
+    "parentCommentId": null,
+    "depth": 1,
+    "author": {
+      "memberId": "member_01",
+      "nickname": "루이집사",
+      "profileMedia": null
+    },
+    "content": "안녕하세요",
+    "deleted": false,
+    "likeCount": 0,
+    "replyCount": 0,
+    "likedByMe": false,
+    "createdAt": "2026-11-19T10:00:00+09:00",
+    "updatedAt": null
+  }
+}
+```
+
+### `DELETE /api/comments/{commentId}`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `DELETE /api/comments/{commentId}` | 필수·작성자 | 경로 commentId | 본문 없음 / 204 | 404 NOT_FOUND |
+
+요청 예시:
+
+```http
+DELETE /api/comments/comment_01 HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답: `204`, 본문 없음.
+
+### `PUT /api/comments/{commentId}/like`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `PUT /api/comments/{commentId}/like` | 필수 | 본문 없음 | `Reaction` / 200 | 404 NOT_FOUND |
+
+요청 예시:
+
+```http
+PUT /api/comments/comment_01/like HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "liked": true,
+    "likeCount": 1
+  }
+}
+```
+
+### `DELETE /api/comments/{commentId}/like`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `DELETE /api/comments/{commentId}/like` | 필수 | 본문 없음 | `Reaction` / 200 | 404 NOT_FOUND |
+
+요청 예시:
+
+```http
+DELETE /api/comments/comment_01/like HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "liked": false,
+    "likeCount": 0
+  }
+}
+```
+
+### `GET /api/report-reasons`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `GET /api/report-reasons` | 필수 | `targetType:POST 또는 COMMENT 또는 MEMBER` | `ReportReason[]` / 200 | 400 INVALID_TARGET_TYPE |
+
+요청 예시:
+
+```http
+GET /api/report-reasons?targetType=POST HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": [
+    {
+      "reasonCode": "<조회한 신고 사유 코드>",
+      "name": "스팸"
+    }
+  ]
+}
+```
+
+### `POST /api/reports`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `POST /api/reports` | 필수 | JSON `ReportWrite` | `ReportReceipt` / 201 | 400 INVALID_REPORT_REASON, 404 NOT_FOUND |
+
+요청 예시:
+
+```http
+POST /api/reports HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <요청별 고유 키>
+Content-Type: application/json
+
+{
+  "targetType": "POST",
+  "targetId": "post_01",
+  "reasonCodes": [
+    "<조회한 신고 사유 코드>"
+  ],
+  "content": "신고 내용"
+}
+```
+
+응답 예시 (`201`):
+
+```json
+{
+  "data": {
+    "reportId": "report_01",
+    "receivedAt": "2026-11-19T10:00:00+09:00"
+  }
+}
+```
+
+### `GET /api/members/{memberId}/profile`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
 | `GET /api/members/{memberId}/profile` | 필수 | 경로 memberId | `{memberId,nickname,profileMedia}` / 200 | 404 NOT_FOUND |
+
+요청 예시:
+
+```http
+GET /api/members/member_02/profile HTTP/1.1
+Authorization: Bearer <액세스 토큰>
+```
+
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "memberId": "member_02",
+    "nickname": "루이집사",
+    "profileMedia": null
+  }
+}
+```
+
 
 ## 처리 규칙
 
