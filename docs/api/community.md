@@ -15,7 +15,7 @@
 | PostSummary | `postId:string`, `boardId:string`, `category:Category`, `title:string`, `author:Author`, `likeCount:integer`, `viewCount:integer`, `commentCount:integer`, `likedByMe:boolean 또는 null`, `createdAt:timestamp`, `updatedAt:timestamp 또는 null` |
 | PostDetail | PostSummary + `content:string`, `media:MediaRef[]` |
 | Comment | `commentId:string`, `postId:string`, `parentCommentId:string 또는 null`, `depth:integer`, `author:Author 또는 null`, `content:string 또는 null`, `deleted:boolean`, `likeCount:integer`, `replyCount:integer`, `likedByMe:boolean 또는 null`, `createdAt:timestamp`, `updatedAt:timestamp 또는 null` |
-| Reaction | `liked:boolean`, `likeCount:integer` |
+| ReactionReceipt | `requestId:string`, `requestedLiked:boolean` |
 | ReportReason | `reasonCode:string`, `name:string` |
 | ReportWrite | `targetType:string`, `targetId:string`, `reasonCode:string`, `content:string`, `contextPostId?:string` (MEMBER 신고에서 필요) |
 | ReportReceipt | `reportId:string`, `receivedAt:timestamp` |
@@ -265,22 +265,23 @@ Authorization: Bearer <액세스 토큰>
 
 | 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
 | --- | --- | --- | --- | --- |
-| `PUT /api/posts/{postId}/like` | 필수 | 본문 없음 | `Reaction` / 200 | 404 NOT_FOUND |
+| `PUT /api/posts/{postId}/like` | 필수 | 본문 없음 | `ReactionReceipt` / 202 | 404 NOT_FOUND, 503 REACTION_UNAVAILABLE |
 
 요청 예시:
 
 ```http
 PUT /api/posts/post_01/like HTTP/1.1
 Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <동작별 고유 키>
 ```
 
-응답 예시 (`200`):
+접수 응답 예시 (`202`):
 
 ```json
 {
   "data": {
-    "liked": true,
-    "likeCount": 1
+    "requestId": "<동작별 고유 키>",
+    "requestedLiked": true
   }
 }
 ```
@@ -289,22 +290,23 @@ Authorization: Bearer <액세스 토큰>
 
 | 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
 | --- | --- | --- | --- | --- |
-| `DELETE /api/posts/{postId}/like` | 필수 | 본문 없음 | `Reaction` / 200 | 404 NOT_FOUND |
+| `DELETE /api/posts/{postId}/like` | 필수 | 본문 없음 | `ReactionReceipt` / 202 | 404 NOT_FOUND, 503 REACTION_UNAVAILABLE |
 
 요청 예시:
 
 ```http
 DELETE /api/posts/post_01/like HTTP/1.1
 Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <동작별 고유 키>
 ```
 
-응답 예시 (`200`):
+접수 응답 예시 (`202`):
 
 ```json
 {
   "data": {
-    "liked": false,
-    "likeCount": 0
+    "requestId": "<동작별 고유 키>",
+    "requestedLiked": false
   }
 }
 ```
@@ -470,22 +472,23 @@ Authorization: Bearer <액세스 토큰>
 
 | 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
 | --- | --- | --- | --- | --- |
-| `PUT /api/comments/{commentId}/like` | 필수 | 본문 없음 | `Reaction` / 200 | 404 NOT_FOUND |
+| `PUT /api/comments/{commentId}/like` | 필수 | 본문 없음 | `ReactionReceipt` / 202 | 404 NOT_FOUND, 503 REACTION_UNAVAILABLE |
 
 요청 예시:
 
 ```http
 PUT /api/comments/comment_01/like HTTP/1.1
 Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <동작별 고유 키>
 ```
 
-응답 예시 (`200`):
+접수 응답 예시 (`202`):
 
 ```json
 {
   "data": {
-    "liked": true,
-    "likeCount": 1
+    "requestId": "<동작별 고유 키>",
+    "requestedLiked": true
   }
 }
 ```
@@ -494,22 +497,23 @@ Authorization: Bearer <액세스 토큰>
 
 | 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
 | --- | --- | --- | --- | --- |
-| `DELETE /api/comments/{commentId}/like` | 필수 | 본문 없음 | `Reaction` / 200 | 404 NOT_FOUND |
+| `DELETE /api/comments/{commentId}/like` | 필수 | 본문 없음 | `ReactionReceipt` / 202 | 404 NOT_FOUND, 503 REACTION_UNAVAILABLE |
 
 요청 예시:
 
 ```http
 DELETE /api/comments/comment_01/like HTTP/1.1
 Authorization: Bearer <액세스 토큰>
+Idempotency-Key: <동작별 고유 키>
 ```
 
-응답 예시 (`200`):
+접수 응답 예시 (`202`):
 
 ```json
 {
   "data": {
-    "liked": false,
-    "likeCount": 0
+    "requestId": "<동작별 고유 키>",
+    "requestedLiked": false
   }
 }
 ```
@@ -645,7 +649,7 @@ Authorization: Bearer <액세스 토큰>
 - parentCommentId가 없으면 depth=1이다. 부모와 같은 postId인지 확인하고 부모 depth+1이 4를 넘으면 거절한다. 대댓글 조회에서도 원본 게시글의 공개·삭제 상태를 확인한다.
 - 하위 답글의 존재 검사와 댓글 수정은 경쟁 요청에서도 일관되게 처리한다. 하위 답글이 있으면 수정 불가다. 삭제 댓글 중 답글이 남은 노드는 자리 표시를 유지하고, 답글이 없는 노드는 목록에서 숨긴다. 깊이와 부모 관계를 임의로 재배치하지 않는다.
 - 게시글·댓글의 삭제·숨김은 직접 URL 접근과 관련 첨부에 반영한다. 삭제·숨김 글에 신규 댓글과 반응을 추가할 수 없다. 작성자만 수정·삭제한다.
-- 좋아요 PUT/DELETE는 목표 상태를 지정한다. 중복·동시 요청으로 동일 반응이나 수가 증가하지 않으며 응답 카운트는 반영 결과와 일치한다.
+- 좋아요 PUT/DELETE는 목표 상태를 지정한다. Kafka 저장 확인 후 202 접수증을 반환한다. 같은 동작의 재시도에는 같은 Idempotency-Key를, 새로운 좋아요·취소에는 새 키를 사용한다. 키를 생략하면 서버가 생성한다. 좋아요 수와 내 상태는 배치 반영 후 목록·상세 조회에서 확인한다.
 - 게시글 PATCH의 mediaIds는 최종 첨부 목록이다. 생략하면 유지, 빈 배열이면 전부 제거다. 저장 실패 시 기존 첨부를 보존한다.
 - 댓글 생성 성공과 연결된 알림 이벤트를 유실 없이 전달하고 재시도 시 중복 알림을 만들지 않는다. 대댓글은 직접 답글 대상 댓글 작성자에게 알린다. 자기 댓글·자기 대댓글 세부는 [알림 명세](notifications.md)를 따른다.
 - ReportWrite의 targetType은 POST, COMMENT, MEMBER 설계안이며 대댓글도 COMMENT다. MEMBER는 게시글 작성자 신고를 뜻하며 접근 가능한 게시글 ID를 `contextPostId`로 함께 제출하는 안을 적용한다. 서버는 그 게시글 작성자가 targetId와 일치하는지 검증한다. 신고자는 인증 주체에서 결정한다.

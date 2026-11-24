@@ -131,7 +131,7 @@ erDiagram
 | `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
 | `comment_id` | `BIGINT` | NOT NULL | — | — |
 | `actor_uuid` | `CHAR(36)` | NOT NULL | — | — |
-| `actor_role` | `VARCHAR(20)` | NOT NULL | — | — |
+| `actor_role` | `VARCHAR(20)` | NULL | — | — |
 | `created_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
@@ -270,7 +270,7 @@ community 트랜잭셔널 아웃박스
 | `id` | `BIGINT` | NOT NULL | — | AUTO_INCREMENT |
 | `post_id` | `BIGINT` | NOT NULL | — | — |
 | `actor_uuid` | `CHAR(36)` | NOT NULL | — | — |
-| `actor_role` | `VARCHAR(20)` | NOT NULL | — | — |
+| `actor_role` | `VARCHAR(20)` | NULL | — | — |
 | `created_at` | `DATETIME` | NOT NULL | — | — |
 
 **인덱스**
