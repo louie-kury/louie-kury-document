@@ -24,52 +24,11 @@
 
 ## 엔드포인트
 
+### `GET /api/boards`
+
 | 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
 | --- | --- | --- | --- | --- |
 | `GET /api/boards` | 공개 | 없음 | `Board[]` / 200 | 공통 오류 |
-| `GET /api/boards/{boardId}/categories` | 공개 | 경로 boardId | `Category[]` / 200 | 404 NOT_FOUND |
-| `GET /api/posts` | 공개 | `boardId,categoryId?,page,size` | `Page<PostSummary>` / 200 | 400 INVALID_FILTER, 404 NOT_FOUND |
-| `GET /api/posts/{postId}` | 공개 | 경로 postId | `PostDetail` / 200 | 404 NOT_FOUND |
-| `POST /api/posts` | 필수 | JSON `PostWrite` | `PostDetail` / 201 | 400 VALIDATION_ERROR, 409 MEDIA_NOT_READY, 422 ATTACHMENT_LIMIT_EXCEEDED |
-| `PATCH /api/posts/{postId}` | 필수·작성자 | JSON `title?,content?,mediaIds?` | `PostDetail` / 200 | 400 EMPTY_UPDATE, 404 NOT_FOUND, 422 ATTACHMENT_LIMIT_EXCEEDED |
-| `DELETE /api/posts/{postId}` | 필수·작성자 | 경로 postId | 본문 없음 / 204 | 404 NOT_FOUND |
-| `PUT /api/posts/{postId}/like` | 필수 | 본문 없음 | `Reaction` / 200 | 404 NOT_FOUND |
-| `DELETE /api/posts/{postId}/like` | 필수 | 본문 없음 | `Reaction` / 200 | 404 NOT_FOUND |
-| `GET /api/posts/{postId}/comments` | 공개 | `page,size` 최상위만 | `Page<Comment>` / 200 | 404 NOT_FOUND |
-| `GET /api/comments/{commentId}/replies` | 필수 | `page,size` 직계 답글 | `Page<Comment>` / 200 | 404 NOT_FOUND |
-| `POST /api/posts/{postId}/comments` | 필수 | JSON `content:string,parentCommentId?:string` | `Comment` / 201 | 400 INVALID_PARENT, 409 COMMENT_DEPTH_EXCEEDED, 404 NOT_FOUND |
-| `PATCH /api/comments/{commentId}` | 필수·작성자 | JSON `content:string` | `Comment` / 200 | 404 NOT_FOUND, 409 COMMENT_HAS_REPLIES |
-| `DELETE /api/comments/{commentId}` | 필수·작성자 | 경로 commentId | 본문 없음 / 204 | 404 NOT_FOUND |
-| `PUT /api/comments/{commentId}/like` | 필수 | 본문 없음 | `Reaction` / 200 | 404 NOT_FOUND |
-| `DELETE /api/comments/{commentId}/like` | 필수 | 본문 없음 | `Reaction` / 200 | 404 NOT_FOUND |
-| `GET /api/report-reasons` | 필수 | `targetType:POST 또는 COMMENT 또는 MEMBER` | `ReportReason[]` / 200 | 400 INVALID_TARGET_TYPE |
-| `POST /api/reports` | 필수 | JSON `ReportWrite` | `ReportReceipt` / 201 | 400 INVALID_REPORT_REASON, 404 NOT_FOUND |
-| `GET /api/members/{memberId}/profile` | 필수 | 경로 memberId | `{memberId,nickname,profileMedia}` / 200 | 404 NOT_FOUND |
-
-## 처리 규칙
-
-- 공개 게시글의 목록·상세·미디어·최상위 댓글은 비회원 열람이 가능하다. 글쓰기·좋아요·답글 조회·신고는 인증이 필요하다. 프런트의 로그인 안내와 서버의 401 검사를 함께 적용한다.
-- 공개 Author에는 닉네임·프로필만 담고 이메일·전화번호·로그인 ID를 노출하지 않는다. 사용자 프로필 단독 조회의 비회원 허용 여부는 D08에서 정하며 현재 경로는 로그인 설계안이다.
-- parentCommentId가 없으면 depth=1이다. 부모와 같은 postId인지 확인하고 부모 depth+1이 4를 넘으면 거절한다. 대댓글 조회에서도 원본 게시글의 공개·삭제 상태를 확인한다.
-- 하위 답글의 존재 검사와 댓글 수정은 경쟁 요청에서도 일관되게 처리한다. 하위 답글이 있으면 수정 불가다. 삭제 댓글 중 답글이 남은 노드는 자리 표시를 유지하고, 답글이 없는 노드는 목록에서 숨긴다. 깊이와 부모 관계를 임의로 재배치하지 않는다.
-- 게시글·댓글의 삭제·숨김은 직접 URL 접근과 관련 첨부에 반영한다. 삭제·숨김 글에 신규 댓글과 반응을 추가할 수 없다. 작성자만 수정·삭제한다.
-- 좋아요 PUT/DELETE는 목표 상태를 지정한다. 중복·동시 요청으로 동일 반응이나 수가 증가하지 않으며 응답 카운트는 반영 결과와 일치한다.
-- 게시글 PATCH의 mediaIds는 최종 첨부 목록이다. 생략하면 유지, 빈 배열이면 전부 제거다. 저장 실패 시 기존 첨부를 보존한다.
-- 댓글 생성 성공과 연결된 알림 이벤트를 유실 없이 전달하고 재시도 시 중복 알림을 만들지 않는다. 대댓글은 직접 답글 대상 댓글 작성자에게 알린다. 자기 댓글·자기 대댓글 세부는 [알림 명세](notifications.md)를 따른다.
-- ReportWrite의 targetType은 POST, COMMENT, MEMBER 설계안이며 대댓글도 COMMENT다. MEMBER는 게시글 작성자 신고를 뜻하며 접근 가능한 게시글 ID를 `contextPostId`로 함께 제출하는 안을 적용한다. 서버는 그 게시글 작성자가 targetId와 일치하는지 검증한다. 신고자는 인증 주체에서 결정한다.
-- 신고 생성에는 공통 Idempotency-Key 제안을 적용한다. 같은 제출 재시도는 같은 접수 결과를 반환한다. 신고자·운영 처리 내용을 공개 프로필·댓글·알림에 노출하지 않는다.
-
-## 구현 전 확인
-
-- D08 — 게시글/댓글 길이·필수값, 신고 입력·사유, 중복 신고 정책, 목록 정렬, 프로필 공개 범위와 팔로우 목록의 비회원 접근.
-- D15 — 자기 대댓글 알림과 이벤트 중복 방지·재전달 기준.
-- D18·D19 — 작성자 UUID 타입 정합성, 부모/깊이·삭제 표시, 미디어 연결과 제한 설정.
-
-## 요청·응답 예시
-
-아래 값은 형식 설명용이며 미정 정책, 제한값, 상태 전이나 실제 서버 동작을 확정하지 않는다. 인증·멱등성 등 공통 헤더는 [공통 계약](README.md#공통-계약)을 따른다. 각 예시는 별도의 상황이다.
-
-### `GET /api/boards`
 
 요청 예시:
 
@@ -92,6 +51,10 @@ GET /api/boards HTTP/1.1
 
 ### `GET /api/boards/{boardId}/categories`
 
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
+| `GET /api/boards/{boardId}/categories` | 공개 | 경로 boardId | `Category[]` / 200 | 404 NOT_FOUND |
+
 요청 예시:
 
 ```http
@@ -112,6 +75,10 @@ GET /api/boards/board_01/categories HTTP/1.1
 ```
 
 ### `GET /api/posts`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
+| `GET /api/posts` | 공개 | `boardId,categoryId?,page,size` | `Page<PostSummary>` / 200 | 400 INVALID_FILTER, 404 NOT_FOUND |
 
 요청 예시:
 
@@ -135,6 +102,10 @@ GET /api/posts?boardId=board_01&page=0&size=20 HTTP/1.1
 ```
 
 ### `GET /api/posts/{postId}`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
+| `GET /api/posts/{postId}` | 공개 | 경로 postId | `PostDetail` / 200 | 404 NOT_FOUND |
 
 요청 예시:
 
@@ -172,6 +143,10 @@ GET /api/posts/post_01 HTTP/1.1
 ```
 
 ### `POST /api/posts`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
+| `POST /api/posts` | 필수 | JSON `PostWrite` | `PostDetail` / 201 | 400 VALIDATION_ERROR, 409 MEDIA_NOT_READY, 422 ATTACHMENT_LIMIT_EXCEEDED |
 
 요청 예시:
 
@@ -221,6 +196,10 @@ Content-Type: application/json
 
 ### `PATCH /api/posts/{postId}`
 
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
+| `PATCH /api/posts/{postId}` | 필수·작성자 | JSON `title?,content?,mediaIds?` | `PostDetail` / 200 | 400 EMPTY_UPDATE, 404 NOT_FOUND, 422 ATTACHMENT_LIMIT_EXCEEDED |
+
 요청 예시:
 
 ```http
@@ -264,6 +243,10 @@ Content-Type: application/json
 
 ### `DELETE /api/posts/{postId}`
 
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
+| `DELETE /api/posts/{postId}` | 필수·작성자 | 경로 postId | 본문 없음 / 204 | 404 NOT_FOUND |
+
 요청 예시:
 
 ```http
@@ -274,6 +257,10 @@ Authorization: Bearer <액세스 토큰>
 응답: `204`, 본문 없음.
 
 ### `PUT /api/posts/{postId}/like`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
+| `PUT /api/posts/{postId}/like` | 필수 | 본문 없음 | `Reaction` / 200 | 404 NOT_FOUND |
 
 요청 예시:
 
@@ -295,6 +282,10 @@ Authorization: Bearer <액세스 토큰>
 
 ### `DELETE /api/posts/{postId}/like`
 
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
+| `DELETE /api/posts/{postId}/like` | 필수 | 본문 없음 | `Reaction` / 200 | 404 NOT_FOUND |
+
 요청 예시:
 
 ```http
@@ -314,6 +305,10 @@ Authorization: Bearer <액세스 토큰>
 ```
 
 ### `GET /api/posts/{postId}/comments`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
+| `GET /api/posts/{postId}/comments` | 공개 | `page,size` 최상위만 | `Page<Comment>` / 200 | 404 NOT_FOUND |
 
 요청 예시:
 
@@ -338,6 +333,10 @@ GET /api/posts/post_01/comments?page=0&size=20 HTTP/1.1
 
 ### `GET /api/comments/{commentId}/replies`
 
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
+| `GET /api/comments/{commentId}/replies` | 필수 | `page,size` 직계 답글 | `Page<Comment>` / 200 | 404 NOT_FOUND |
+
 요청 예시:
 
 ```http
@@ -361,6 +360,10 @@ Authorization: Bearer <액세스 토큰>
 ```
 
 ### `POST /api/posts/{postId}/comments`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
+| `POST /api/posts/{postId}/comments` | 필수 | JSON `content:string,parentCommentId?:string` | `Comment` / 201 | 400 INVALID_PARENT, 409 COMMENT_DEPTH_EXCEEDED, 404 NOT_FOUND |
 
 요청 예시:
 
@@ -402,6 +405,10 @@ Content-Type: application/json
 
 ### `PATCH /api/comments/{commentId}`
 
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
+| `PATCH /api/comments/{commentId}` | 필수·작성자 | JSON `content:string` | `Comment` / 200 | 404 NOT_FOUND, 409 COMMENT_HAS_REPLIES |
+
 요청 예시:
 
 ```http
@@ -441,6 +448,10 @@ Content-Type: application/json
 
 ### `DELETE /api/comments/{commentId}`
 
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
+| `DELETE /api/comments/{commentId}` | 필수·작성자 | 경로 commentId | 본문 없음 / 204 | 404 NOT_FOUND |
+
 요청 예시:
 
 ```http
@@ -451,6 +462,10 @@ Authorization: Bearer <액세스 토큰>
 응답: `204`, 본문 없음.
 
 ### `PUT /api/comments/{commentId}/like`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
+| `PUT /api/comments/{commentId}/like` | 필수 | 본문 없음 | `Reaction` / 200 | 404 NOT_FOUND |
 
 요청 예시:
 
@@ -472,6 +487,10 @@ Authorization: Bearer <액세스 토큰>
 
 ### `DELETE /api/comments/{commentId}/like`
 
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
+| `DELETE /api/comments/{commentId}/like` | 필수 | 본문 없음 | `Reaction` / 200 | 404 NOT_FOUND |
+
 요청 예시:
 
 ```http
@@ -491,6 +510,10 @@ Authorization: Bearer <액세스 토큰>
 ```
 
 ### `GET /api/report-reasons`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
+| `GET /api/report-reasons` | 필수 | `targetType:POST 또는 COMMENT 또는 MEMBER` | `ReportReason[]` / 200 | 400 INVALID_TARGET_TYPE |
 
 요청 예시:
 
@@ -513,6 +536,10 @@ Authorization: Bearer <액세스 토큰>
 ```
 
 ### `POST /api/reports`
+
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
+| `POST /api/reports` | 필수 | JSON `ReportWrite` | `ReportReceipt` / 201 | 400 INVALID_REPORT_REASON, 404 NOT_FOUND |
 
 요청 예시:
 
@@ -545,6 +572,10 @@ Content-Type: application/json
 
 ### `GET /api/members/{memberId}/profile`
 
+| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
+| --- | --- | --- | --- | --- |
+| `GET /api/members/{memberId}/profile` | 필수 | 경로 memberId | `{memberId,nickname,profileMedia}` / 200 | 404 NOT_FOUND |
+
 요청 예시:
 
 ```http
@@ -563,3 +594,23 @@ Authorization: Bearer <액세스 토큰>
   }
 }
 ```
+
+
+## 처리 규칙
+
+- 공개 게시글의 목록·상세·미디어·최상위 댓글은 비회원 열람이 가능하다. 글쓰기·좋아요·답글 조회·신고는 인증이 필요하다. 프런트의 로그인 안내와 서버의 401 검사를 함께 적용한다.
+- 공개 Author에는 닉네임·프로필만 담고 이메일·전화번호·로그인 ID를 노출하지 않는다. 사용자 프로필 단독 조회의 비회원 허용 여부는 D08에서 정하며 현재 경로는 로그인 설계안이다.
+- parentCommentId가 없으면 depth=1이다. 부모와 같은 postId인지 확인하고 부모 depth+1이 4를 넘으면 거절한다. 대댓글 조회에서도 원본 게시글의 공개·삭제 상태를 확인한다.
+- 하위 답글의 존재 검사와 댓글 수정은 경쟁 요청에서도 일관되게 처리한다. 하위 답글이 있으면 수정 불가다. 삭제 댓글 중 답글이 남은 노드는 자리 표시를 유지하고, 답글이 없는 노드는 목록에서 숨긴다. 깊이와 부모 관계를 임의로 재배치하지 않는다.
+- 게시글·댓글의 삭제·숨김은 직접 URL 접근과 관련 첨부에 반영한다. 삭제·숨김 글에 신규 댓글과 반응을 추가할 수 없다. 작성자만 수정·삭제한다.
+- 좋아요 PUT/DELETE는 목표 상태를 지정한다. 중복·동시 요청으로 동일 반응이나 수가 증가하지 않으며 응답 카운트는 반영 결과와 일치한다.
+- 게시글 PATCH의 mediaIds는 최종 첨부 목록이다. 생략하면 유지, 빈 배열이면 전부 제거다. 저장 실패 시 기존 첨부를 보존한다.
+- 댓글 생성 성공과 연결된 알림 이벤트를 유실 없이 전달하고 재시도 시 중복 알림을 만들지 않는다. 대댓글은 직접 답글 대상 댓글 작성자에게 알린다. 자기 댓글·자기 대댓글 세부는 [알림 명세](notifications.md)를 따른다.
+- ReportWrite의 targetType은 POST, COMMENT, MEMBER 설계안이며 대댓글도 COMMENT다. MEMBER는 게시글 작성자 신고를 뜻하며 접근 가능한 게시글 ID를 `contextPostId`로 함께 제출하는 안을 적용한다. 서버는 그 게시글 작성자가 targetId와 일치하는지 검증한다. 신고자는 인증 주체에서 결정한다.
+- 신고 생성에는 공통 Idempotency-Key 제안을 적용한다. 같은 제출 재시도는 같은 접수 결과를 반환한다. 신고자·운영 처리 내용을 공개 프로필·댓글·알림에 노출하지 않는다.
+
+## 구현 전 확인
+
+- D08 — 게시글/댓글 길이·필수값, 신고 입력·사유, 중복 신고 정책, 목록 정렬, 프로필 공개 범위와 팔로우 목록의 비회원 접근.
+- D15 — 자기 대댓글 알림과 이벤트 중복 방지·재전달 기준.
+- D18·D19 — 작성자 UUID 타입 정합성, 부모/깊이·삭제 표시, 미디어 연결과 제한 설정.

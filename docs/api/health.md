@@ -37,41 +37,11 @@
 
 모든 API는 Bearer 인증이 필요하다. `{petId}`는 로그인 사용자의 현재 관리 대상 반려동물이어야 한다.
 
+### `GET /api/pets/{petId}/health-records`
+
 | 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
 | --- | --- | --- | --- | --- | --- |
 | 건강 기록 목록 | `GET /api/pets/{petId}/health-records` | Query `date?:date`, `type?:string`, `page`, `size` | `Page<HealthRecordItem>`, 200 | 400 VALIDATION_ERROR, 404 NOT_FOUND | HLT-02 |
-| 달력 표시 | `GET /api/pets/{petId}/health-records/calendar` | Query `month:YYYY-MM` | `{"month":"2026-11","days":[{"date":"2026-11-19","recordCount":2}]}`, 200 | 400 VALIDATION_ERROR, 404 NOT_FOUND | HLT-02 |
-| 건강 기록 상세 | `GET /api/pets/{petId}/health-records/{recordId}` | 없음 | `HealthRecordDetail`, 200 | 404 NOT_FOUND | HLT-01 |
-| 건강 기록 추가 | `POST /api/pets/{petId}/health-records` | Body `HealthRecordInput` | `HealthRecordDetail`, 201 | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 MEDIA_NOT_READY | HLT-01·HLT-04 |
-| 건강 기록 수정 | `PATCH /api/pets/{petId}/health-records/{recordId}` | Body 변경할 HealthRecordInput 필드 | `HealthRecordDetail`, 200 | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 MEDIA_NOT_READY | HLT-01·HLT-04 |
-| 건강 기록 삭제 | `DELETE /api/pets/{petId}/health-records/{recordId}` | 없음 | 본문 없음, 204 | 404 NOT_FOUND | HLT-01 |
-| 병원진료 목록 | `GET /api/pets/{petId}/visits` | Query `page`, `size` | `Page<VisitItem>`, 200 | 404 NOT_FOUND | PET-03 |
-| 병원진료 상세 | `GET /api/pets/{petId}/visits/{visitId}` | 없음 | `VisitDetail`, 200 | 404 NOT_FOUND | PET-03 |
-| 병원진료 기록 추가 | `POST /api/pets/{petId}/visits` | Body `VisitInput` | `VisitDetail`, 201 | 400 VALIDATION_ERROR, 404 NOT_FOUND | PET-03 |
-| 병원진료 수정 | `PATCH /api/pets/{petId}/visits/{visitId}` | Body 변경할 VisitInput 필드 | `VisitDetail`, 200 | 400 VALIDATION_ERROR, 404 NOT_FOUND | PET-03 |
-| 병원진료 삭제 | `DELETE /api/pets/{petId}/visits/{visitId}` | 없음 | 본문 없음, 204 | 404 NOT_FOUND | PET-03 |
-
-## 처리 규칙
-
-- 반려동물과 각 기록의 소유권·연결 관계를 모두 검사한다. `{petId}`를 바꿔 다른 동물의 `{recordId}`·`{visitId}`를 조회하거나 수정할 수 없다. 존재하지 않음·타인 소유·삭제 상태는 404로 통일한다.
-- 목록은 발생 시각 내림차순·동률 식별자 순으로 정렬하는 설계안이다. 서버는 서버 작성 시각을 별도로 기록한다. 달력은 삭제되지 않은 기록이 있는 날짜만 반환하며 빈 달은 `days:[]`다.
-- 기록을 삭제하면 원본과 첨부를 보관하면서 달력·목록·상세 및 기존 공유 경로에서 제외한다. 같은 날짜에 다른 기록이 있으면 해당 날짜 표시를 유지한다.
-- 미디어는 [공통 미디어](media.md)로 먼저 업로드한 식별자를 연결한다. 저장 전 존재·완료·권한을 검사하고 저장 실패 시 기존 첨부를 유지한다. 파일 직접 조회에도 원본 기록의 현재 권한·삭제 상태를 적용한다.
-- 새 기록 추가 요청의 중복 처리 정책은 공통 멱등성 계약을 적용한다. 저장과 미디어 연결이 나뉘면 보상·재처리 방식을 정하여 한쪽만 성공한 상태를 복구한다.
-
-## 구현 전 확인
-
-- `D12` — 유형별 필수값·코드·단위·정밀도·날짜·변경 범위, 프로필 체중 연계, 같은 시각 다건 처리
-- `D11`·`D19` — 반려동물 삭제에 따른 기록·파일 접근과 보관·파기, 파일 제한
-- `D18` — MongoDB 문서·인덱스와 미디어 식별자 연결, 달력 날짜 경계와 조회 정렬
-
-후순위 초안의 경로와 모델은 위 정책을 확정한 뒤 구현 계약으로 고정한다. 실제 API·MongoDB 실행 검증은 아직 수행하지 않았다.
-
-## 요청·응답 예시
-
-아래 값은 형식 설명용이며 미정 정책, 제한값, 상태 전이나 실제 서버 동작을 확정하지 않는다. 인증·멱등성 등 공통 헤더는 [공통 계약](README.md#공통-계약)을 따른다. 각 예시는 별도의 상황이다.
-
-### `GET /api/pets/{petId}/health-records`
 
 요청 예시:
 
@@ -97,6 +67,10 @@ Authorization: Bearer <액세스 토큰>
 
 ### `GET /api/pets/{petId}/health-records/calendar`
 
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
+| 달력 표시 | `GET /api/pets/{petId}/health-records/calendar` | Query `month:YYYY-MM` | `{"month":"2026-11","days":[{"date":"2026-11-19","recordCount":2}]}`, 200 | 400 VALIDATION_ERROR, 404 NOT_FOUND | HLT-02 |
+
 요청 예시:
 
 ```http
@@ -121,6 +95,10 @@ Authorization: Bearer <액세스 토큰>
 ```
 
 ### `GET /api/pets/{petId}/health-records/{recordId}`
+
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
+| 건강 기록 상세 | `GET /api/pets/{petId}/health-records/{recordId}` | 없음 | `HealthRecordDetail`, 200 | 404 NOT_FOUND | HLT-01 |
 
 요청 예시:
 
@@ -150,6 +128,10 @@ Authorization: Bearer <액세스 토큰>
 ```
 
 ### `POST /api/pets/{petId}/health-records`
+
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
+| 건강 기록 추가 | `POST /api/pets/{petId}/health-records` | Body `HealthRecordInput` | `HealthRecordDetail`, 201 | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 MEDIA_NOT_READY | HLT-01·HLT-04 |
 
 요청 예시:
 
@@ -191,6 +173,10 @@ Content-Type: application/json
 
 ### `PATCH /api/pets/{petId}/health-records/{recordId}`
 
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
+| 건강 기록 수정 | `PATCH /api/pets/{petId}/health-records/{recordId}` | Body 변경할 HealthRecordInput 필드 | `HealthRecordDetail`, 200 | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 MEDIA_NOT_READY | HLT-01·HLT-04 |
+
 요청 예시:
 
 ```http
@@ -227,6 +213,10 @@ Content-Type: application/json
 
 ### `DELETE /api/pets/{petId}/health-records/{recordId}`
 
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
+| 건강 기록 삭제 | `DELETE /api/pets/{petId}/health-records/{recordId}` | 없음 | 본문 없음, 204 | 404 NOT_FOUND | HLT-01 |
+
 요청 예시:
 
 ```http
@@ -237,6 +227,10 @@ Authorization: Bearer <액세스 토큰>
 응답: `204`, 본문 없음.
 
 ### `GET /api/pets/{petId}/visits`
+
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
+| 병원진료 목록 | `GET /api/pets/{petId}/visits` | Query `page`, `size` | `Page<VisitItem>`, 200 | 404 NOT_FOUND | PET-03 |
 
 요청 예시:
 
@@ -261,6 +255,10 @@ Authorization: Bearer <액세스 토큰>
 ```
 
 ### `GET /api/pets/{petId}/visits/{visitId}`
+
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
+| 병원진료 상세 | `GET /api/pets/{petId}/visits/{visitId}` | 없음 | `VisitDetail`, 200 | 404 NOT_FOUND | PET-03 |
 
 요청 예시:
 
@@ -293,6 +291,10 @@ Authorization: Bearer <액세스 토큰>
 ```
 
 ### `POST /api/pets/{petId}/visits`
+
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
+| 병원진료 기록 추가 | `POST /api/pets/{petId}/visits` | Body `VisitInput` | `VisitDetail`, 201 | 400 VALIDATION_ERROR, 404 NOT_FOUND | PET-03 |
 
 요청 예시:
 
@@ -341,6 +343,10 @@ Content-Type: application/json
 
 ### `PATCH /api/pets/{petId}/visits/{visitId}`
 
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
+| 병원진료 수정 | `PATCH /api/pets/{petId}/visits/{visitId}` | Body 변경할 VisitInput 필드 | `VisitDetail`, 200 | 400 VALIDATION_ERROR, 404 NOT_FOUND | PET-03 |
+
 요청 예시:
 
 ```http
@@ -378,6 +384,10 @@ Content-Type: application/json
 
 ### `DELETE /api/pets/{petId}/visits/{visitId}`
 
+| 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
+| --- | --- | --- | --- | --- | --- |
+| 병원진료 삭제 | `DELETE /api/pets/{petId}/visits/{visitId}` | 없음 | 본문 없음, 204 | 404 NOT_FOUND | PET-03 |
+
 요청 예시:
 
 ```http
@@ -386,3 +396,20 @@ Authorization: Bearer <액세스 토큰>
 ```
 
 응답: `204`, 본문 없음.
+
+
+## 처리 규칙
+
+- 반려동물과 각 기록의 소유권·연결 관계를 모두 검사한다. `{petId}`를 바꿔 다른 동물의 `{recordId}`·`{visitId}`를 조회하거나 수정할 수 없다. 존재하지 않음·타인 소유·삭제 상태는 404로 통일한다.
+- 목록은 발생 시각 내림차순·동률 식별자 순으로 정렬하는 설계안이다. 서버는 서버 작성 시각을 별도로 기록한다. 달력은 삭제되지 않은 기록이 있는 날짜만 반환하며 빈 달은 `days:[]`다.
+- 기록을 삭제하면 원본과 첨부를 보관하면서 달력·목록·상세 및 기존 공유 경로에서 제외한다. 같은 날짜에 다른 기록이 있으면 해당 날짜 표시를 유지한다.
+- 미디어는 [공통 미디어](media.md)로 먼저 업로드한 식별자를 연결한다. 저장 전 존재·완료·권한을 검사하고 저장 실패 시 기존 첨부를 유지한다. 파일 직접 조회에도 원본 기록의 현재 권한·삭제 상태를 적용한다.
+- 새 기록 추가 요청의 중복 처리 정책은 공통 멱등성 계약을 적용한다. 저장과 미디어 연결이 나뉘면 보상·재처리 방식을 정하여 한쪽만 성공한 상태를 복구한다.
+
+## 구현 전 확인
+
+- `D12` — 유형별 필수값·코드·단위·정밀도·날짜·변경 범위, 프로필 체중 연계, 같은 시각 다건 처리
+- `D11`·`D19` — 반려동물 삭제에 따른 기록·파일 접근과 보관·파기, 파일 제한
+- `D18` — MongoDB 문서·인덱스와 미디어 식별자 연결, 달력 날짜 경계와 조회 정렬
+
+후순위 초안의 경로와 모델은 위 정책을 확정한 뒤 구현 계약으로 고정한다. 실제 API·MongoDB 실행 검증은 아직 수행하지 않았다.

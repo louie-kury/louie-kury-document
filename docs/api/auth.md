@@ -43,131 +43,11 @@
 
 이메일 비교 시 입력의 앞뒤 공백을 제거하고 `@` 뒤 도메인만 소문자로 변환한다. `@` 앞부분은 대소문자를 유지하고 점이나 `+` 뒤 문자열을 제거하지 않는다. 예를 들어 `User@EXAMPLE.com`과 `User@example.com`은 같지만 `user@example.com`과는 다르다. 이 규칙은 가입·중복 확인·인증·이메일 변경·계정 복구 등 이메일을 비교하는 모든 흐름에 적용한다. 발송과 표시에 사용할 이메일은 대소문자를 유지해 암호화 저장한다.
 
+### `POST /api/auth/email-verifications`
+
 | Method·경로 | 인증 | 요청 | 성공 응답의 data | 주요 오류 | 근거 |
 | --- | --- | --- | --- | --- | --- |
 | `POST /api/auth/email-verifications` | SIGNUP 공개, EMAIL_CHANGE 본인 Bearer | EmailVerificationRequest | `202 VerificationChallenge` | 400 VALIDATION_ERROR, 409 EMAIL_ALREADY_REGISTERED, 429 RATE_LIMITED, 503 VERIFICATION_DELIVERY_FAILED | ACC-01, D11 |
-| `POST /api/auth/email-verifications/{verificationId}/confirm` | 발급 목적·세션에 연결된 인증 절차 | VerificationConfirmRequest | `200 EmailVerificationProof` | 400 INVALID_VERIFICATION_CODE, 404 NOT_FOUND, 409 VERIFICATION_EXPIRED, 429 RATE_LIMITED | ACC-01, D11 |
-| `POST /api/auth/signup` | 공개, SIGNUP 인증 증명 | SignupRequest, `Idempotency-Key` | `201 SignupResult` | 400 VALIDATION_ERROR, 400 INVALID_EMAIL_VERIFICATION, 409 ACCOUNT_CONFLICT, 409 IDEMPOTENCY_CONFLICT, 503 SIGNUP_PENDING | ACC-01, D11·D18 |
-
-1. 일반·소셜 가입 모두 사용자가 직접 입력한 이메일로 인증번호를 발송하고 확인한다. 소셜 제공자의 이메일 인증 상태를 근거로 이 절차를 생략하지 않는다.
-2. 인증 증명은 서버에서 이메일·목적·발급 절차·유효기간을 확인한다. 다른 이메일, EMAIL_CHANGE 증명 또는 만료된 증명으로 가입할 수 없다. EMAIL_CHANGE 인증 절차와 증명은 발급 요청자의 memberId에도 연결하고 이메일 변경 시 같은 본인인지 확인한다.
-3. 한 이메일당 계정 하나를 허용하고 로그인 ID 중복도 거부한다. 동일 이메일의 일반·소셜 계정을 자동 병합하지 않는다.
-4. 가입 성공 시 `Location: /api/members/me`를 반환한다. 가입 이후 로그인은 별도 로그인 API로 수행한다.
-5. 계정·인증 데이터는 MySQL, 일반 회원 프로필은 MongoDB에 저장한다. 두 저장소의 가입 작업을 하나의 복구 가능한 가입 절차로 관리하고, 프로필 저장까지 완료된 계정만 로그인 가능한 상태로 만든다.
-6. 동일 키·동일 입력의 가입 재시도는 진행 중 절차를 복구하거나 기존 성공 결과를 반환한다. 같은 키에 다른 입력은 409다. 인증 증명은 해당 가입 절차에 한 번 연결하며 부분 실패 재시도 때문에 이메일 증명이 다른 계정에 재사용되지 않도록 한다. 키·증명 보관 기간은 D11·D18에서 정한다.
-
-### 일반 가입 이메일 인증 정책
-
-- 서버는 암호학적으로 안전한 난수로 숫자 6자리 인증번호를 발급한다. 번호는 5분간 유효하며 성공 시 한 번만 사용할 수 있다.
-- 재발송은 60초 후 가능하며, 새 번호를 발급하면 이전 번호를 무효화한다. 동일 이메일의 발송은 1시간당 5회로 제한하고 IP별 발송 제한도 적용한다. IP 제한의 구체적인 기준은 구현 시 정한다.
-- 한 번호의 입력이 5회 실패하면 해당 번호를 무효화한다. 재발송해도 이메일별 누적 실패 횟수는 초기화하지 않으며 누적 제한과 해제 기준은 구현 시 정한다.
-- 인증 성공 시 해당 이메일과 SIGNUP 목적에 연결된 일회성 가입 증명을 발급한다. 증명은 10분간 유효하며 이메일을 변경하면 다시 인증한다. 화면에는 가장 최근에 발송한 번호를 입력하도록 안내한다.
-- 인증 요청 ID, 이메일 확인값, 인증번호 확인값, 목적, 만료 시각, 실패 횟수와 발송 제한 정보, 가입 증명은 Redis에 저장하고 각 유효기간에 맞는 TTL을 적용한다. 이메일과 인증번호 확인값은 각각 별도 비밀키로 HMAC을 계산해 저장한다. 인증번호와 증명 원문은 로그에 남기지 않는다.
-- 가입 시작 시 유효한 증명을 해당 가입 절차에 원자적으로 연결하고 그 연결과 멱등성 상태를 지속 저장한다. 이후 Redis 증명 만료나 유실이 있어도 같은 키·같은 입력의 재시도는 연결된 절차를 복구한다. 다른 가입 절차가 같은 증명을 사용할 수 없도록 한다. Redis 장애로 새 인증을 확인할 수 없으면 가입을 완료하지 않고 인증을 다시 진행하도록 한다.
-
-### 일반 가입 요청 예시
-
-```json
-{
-  "name": "김보호",
-  "phoneNumber": "01000000000",
-  "gender": "<확정된 성별 코드>",
-  "birthDate": "1995-01-01",
-  "address": "서울특별시",
-  "nickname": "루이집사",
-  "loginId": "loui-care",
-  "password": "Example!123",
-  "email": "caregiver@example.com",
-  "emailVerificationToken": "<이메일 인증 증명>"
-}
-```
-
-## 로그인·소셜 가입·세션
-
-`provider`의 경로 값은 `kakao`, `naver`만 허용한다. 제공자의 인가 응답은 서버가 직접 검증하고 계정 식별값을 얻는다.
-
-| Method·경로 | 인증 | 요청 | 성공 응답의 data 또는 헤더 | 주요 오류 | 근거 |
-| --- | --- | --- | --- | --- | --- |
-| `POST /api/auth/login` | 공개 | LoginRequest | `200 SessionResult`, refresh cookie 설정 | 400 VALIDATION_ERROR, 401 INVALID_CREDENTIALS, 403 ACCOUNT_UNAVAILABLE | ACC-01 |
-| `GET /api/auth/oauth/{provider}/authorize` | 공개 | 브라우저 이동, 임의 redirect URL 입력 없음 | `302 Location` 제공자 인가 화면, 본문 없음 | 400 UNSUPPORTED_PROVIDER, 503 OAUTH_UNAVAILABLE | ACC-01, D11 |
-| `GET /api/auth/oauth/{provider}/callback` | 서버가 시작한 OAuth 절차 | 제공자 `code`, `state`, 실패 시 제공자 오류 | `302 Location` 허용된 프런트 완료 화면, 본문 없음 | 제공자 거절·state 불일치·검증 실패는 프런트 실패 화면으로 이동 | ACC-01, D11 |
-| `POST /api/auth/oauth/exchanges` | 일회성 교환 증명 | `{exchangeTicket:string}` | `200 OAuthLoginResult` 또는 `OAuthSignupRequiredResult`; LOGIN이면 refresh cookie 설정 | 400 INVALID_OAUTH_TICKET, 403 ACCOUNT_UNAVAILABLE, 409 OAUTH_TICKET_USED | ACC-01, D11 |
-| `POST /api/auth/oauth/signup` | signupTicket·SIGNUP 이메일 증명 | OAuthSignupRequest, `Idempotency-Key` | `201 SignupResult` | 400 INVALID_OAUTH_TICKET, 400 INVALID_EMAIL_VERIFICATION, 409 EMAIL_ALREADY_REGISTERED, 409 ACCOUNT_CONFLICT, 409 IDEMPOTENCY_CONFLICT, 503 SIGNUP_PENDING | ACC-01, D11·D18 |
-| `POST /api/auth/refresh` | refresh cookie | 본문 없음, 쿠키 요청 보호 정보 | `200 SessionResult`, refresh cookie 교체 | 401 INVALID_REFRESH_TOKEN, 403 ACCOUNT_UNAVAILABLE | ACC-01, D11 |
-| `POST /api/auth/logout` | 현재 세션·refresh cookie | 본문 없음, 쿠키 요청 보호 정보 | `204`, cookie 만료 | 403 REQUEST_ORIGIN_REJECTED | ACC-01, D11 |
-
-- 서버는 `state`를 시작 세션과 연결하여 검증한다. 실패 콜백을 정상 로그인으로 처리하지 않는다. 제공자 거절·state 오류·제공자 장애는 고정된 프런트 완료 경로에서 구분 가능한 오류 코드로 안내한다.
-- 콜백은 허용 목록의 프런트 완료 URL로만 이동한다. URL에는 짧게 유지하는 일회성 `exchangeTicket` 또는 공개 가능한 오류 코드만 담고 액세스·리프레시 토큰을 담지 않는다. 교환 증명은 시작한 브라우저 절차와 연결하고 교환 시 한 번만 사용한다.
-- `LOGIN`은 이미 연결된 제공자·식별값의 계정이다. `SIGNUP_REQUIRED`는 서버가 검증한 제공자 식별값에 연결된 가입 증명만 발급한다. 클라이언트가 제출한 `providerId`로 소셜 계정을 만들지 않는다.
-- 가입하지 않은 소셜 계정은 직접 입력한 이메일의 인증을 완료한 뒤 가입한다. 이미 가입된 이메일이면 신규 가입을 제한하고 기존 계정 로그인으로 안내한다. 자동 계정 연결은 수행하지 않는다. 기존 계정과의 수동 연결 정책은 D11 미정이다.
-- 소셜 계정의 비밀번호는 NULL이다. 소셜 가입 요청은 비밀번호를 받지 않는다. 기존 계정 비밀번호를 소셜 제공자에 전달하지 않는다.
-- 가입과 세션 발급의 재시도는 계정·소셜 연결·프로필을 중복 생성하지 않는다. 가입된 계정이 이용 불가 상태면 세션을 발급하지 않는다.
-
-### 소셜 교환 응답 예시
-
-```json
-{
-  "data": {
-    "result": "SIGNUP_REQUIRED",
-    "signupTicket": "<서버가 검증한 소셜 가입 증명>",
-    "expiresAt": "2026-11-19T15:00:00+09:00",
-    "suggestedNickname": null
-  }
-}
-```
-
-### 세션 설계 제안
-
-액세스 토큰은 Bearer로 전달하고 리프레시 토큰은 `HttpOnly`, `Secure` 쿠키로 보관하는 안이다. 배포 도메인에 맞는 `SameSite`·쿠키 범위·CORS·CSRF 보호 방식과 토큰 유효기간은 D11에서 확정한다. 쿠키 기반 갱신·로그아웃은 요청 Origin과 확정된 CSRF 증명을 검증한다.
-
-갱신 성공 시 리프레시 토큰을 회전하고 이전 토큰 재사용을 탐지한다. 동시에 갱신하거나 네트워크 실패로 재시도할 때 정상 세션이 손실되지 않도록 회전·재시도 계약을 함께 확정한다. 로그아웃은 서버의 해당 갱신 세션을 폐기하고, 이미 종료된 세션으로 다시 요청해도 204를 반환한다. 액세스 토큰의 로그아웃 후 효력·전체 기기 로그아웃 여부도 D11에서 정한다.
-
-## 아이디 찾기와 비밀번호 복구
-
-아이디 찾기는 입력한 가입 이메일로 인증번호를 보내고 확인된 경우에만 아이디를 반환한다. 비밀번호 복구의 본인확인 수단은 D11 미정이다. 아래 비밀번호 복구는 가입 이메일 인증번호를 사용하는 설계 제안이며, 이름·아이디 일치만으로 변경 권한을 부여하지 않는다.
-
-| Method·경로 | 인증 | 요청 | 성공 응답의 data | 주요 오류 | 근거 |
-| --- | --- | --- | --- | --- | --- |
-| `POST /api/auth/login-id/recovery-requests` | 공개 | RecoveryRequest | `202 VerificationChallenge` | 400 VALIDATION_ERROR, 429 RATE_LIMITED, 503 VERIFICATION_DELIVERY_FAILED | ACC-01, D11 |
-| `POST /api/auth/login-id/recoveries` | 아이디 찾기용 인증 절차 | LoginIdRecoveryRequest | `200 LoginIdResult` | 400 INVALID_VERIFICATION_CODE, 404 NOT_FOUND, 409 VERIFICATION_EXPIRED, 429 RATE_LIMITED | ACC-01, D11 |
-| `POST /api/auth/password/reset-requests` | 공개 | PasswordResetRequest | `202 VerificationChallenge` | 400 VALIDATION_ERROR, 429 RATE_LIMITED, 503 VERIFICATION_DELIVERY_FAILED | ACC-01, D11 |
-| `POST /api/auth/password/reset-verifications` | 비밀번호 복구용 인증 절차 | PasswordResetVerificationRequest | `200 PasswordResetProof` | 400 INVALID_VERIFICATION_CODE, 404 NOT_FOUND, 409 VERIFICATION_EXPIRED, 429 RATE_LIMITED | ACC-01, D11 |
-| `POST /api/auth/password/resets` | 비밀번호 복구 증명 | PasswordResetCompleteRequest | `204`, 본문 없음 | 400 INVALID_PASSWORD_RESET, 400 VALIDATION_ERROR, 409 PASSWORD_UNAVAILABLE | ACC-01, D11 |
-
-- 복구 요청의 접수 응답은 계정 존재 여부를 구별하지 않는 형식으로 제안한다. 해당 계정이 확인되고 발송이 가능한 경우에만 실제 인증번호를 보내며, 유효한 증명을 확인하기 전에는 아이디·가입 이메일 등 계정 정보를 공개하지 않는다.
-- 가입 이메일 인증, 이메일 변경, 아이디 찾기, 비밀번호 재설정의 증명은 서로 바꿔 사용할 수 없다. 각 절차의 확인 완료와 결과 사용을 서버에서 기록한다.
-- `passwordResetToken`은 대상 계정·목적·유효기간에 연결하고 비밀번호 변경 성공 시 한 번만 사용한다. 재시도로 다른 비밀번호가 덮어써지지 않도록 소비와 계정 갱신을 일관되게 처리한다.
-- 소셜 전용 계정에 일반 비밀번호를 생성하는 동작은 D11 확정 후 제공한다. 기존 세션 폐기 범위와 재설정 완료 안내도 함께 정한다.
-
-## 내 회원정보와 탈퇴
-
-| Method·경로 | 인증 | 요청 | 성공 응답의 data | 주요 오류 | 근거 |
-| --- | --- | --- | --- | --- | --- |
-| `GET /api/members/me` | 본인 Bearer | 없음 | `200 MemberProfile` | 401 UNAUTHORIZED, 403 ACCOUNT_UNAVAILABLE | ACC-01 |
-| `PATCH /api/members/me` | 본인 Bearer | MemberPatchRequest | `200 MemberProfile` | 400 VALIDATION_ERROR, 400 INVALID_EMAIL_VERIFICATION, 409 EMAIL_ALREADY_REGISTERED, 409 PROFILE_UPDATE_CONFLICT, 400 INVALID_MEDIA_REFERENCE | ACC-01, MED-01, D11·D18·D19 |
-| `PUT /api/members/me/password` | 본인 Bearer | PasswordChangeRequest | `204`, 본문 없음 | 400 VALIDATION_ERROR, 401 INVALID_CREDENTIALS, 409 PASSWORD_UNAVAILABLE | ACC-01, D11 |
-| `DELETE /api/members/me` | 본인 Bearer·D11의 재확인 절차 | 본문 없음; 재확인 증명의 전달 방식은 D11 | `204`, 본문 없음 | 401 UNAUTHORIZED, 409 ACTIVE_CONSULTATION_CONFLICT | ACC-03, D11 |
-
-- PATCH에서 생략한 값은 유지하며, 변경 필드가 없으면 400이다. 비밀번호는 별도 경로에서 변경한다. 이메일을 바꾸면 변경할 이메일과 목적 `EMAIL_CHANGE`에 묶인 인증 증명이 필수다. 다른 이메일·가입용 증명으로 변경할 수 없다. 이메일 변경 인증을 요구하는 방식은 D11의 계정 변경 세부 설계안으로 검토한다.
-- 프로필 이미지는 [공통 미디어](media.md)의 `MEMBER_PROFILE` 사용처로 업로드한 뒤 `profileMediaId`로 연결한다. 서버는 현재 사용자의 파일인지, 업로드가 완료됐는지, 사용처·연결 권한이 맞는지 검사한다. 생략하면 기존 이미지를 유지하고 명시적 `null`은 이미지 연결을 제거한다. 응답의 `profileMedia`는 현재 연결된 `MediaRef` 또는 null이며 `MediaRef` 필드는 공통 미디어 문서를 따른다.
-- 프로필 이미지 연결·교체·제거는 계정·MongoDB 프로필 저장과 연결 상태 갱신이 성공한 후 확정한다. 저장이 실패하면 이전 연결을 유지하고 부분 실패는 복구한다. 기존 파일의 보관·정리는 공통 미디어 정책을 따른다.
-- 회원정보 변경은 계정(MySQL)과 프로필(MongoDB)의 식별자를 기준으로 일관되게 반영한다. 두 저장소 중 하나만 바뀐 상태를 최종 성공으로 응답하지 않으며 재조회·복구 기준을 둔다.
-- 반려동물 수는 삭제되지 않은 본인 반려동물 기준으로 조회한다. 탈퇴의 소프트 삭제·진행 중 매칭/상담·기록 보관·세션 폐기 정책은 D11 확정 후 구현한다. `ACTIVE_CONSULTATION_CONFLICT`는 진행 중 상담을 가진 탈퇴 요청을 보류하는 설계안이며 최종 정책은 미정이다.
-
-## 구현 전 확인
-
-| PRD 항목 | 확인할 내용 |
-| --- | --- |
-| D11 | 소셜 가입·이메일 변경의 인증 세부 정책, 토큰·쿠키·CSRF·CORS, 비밀번호 복구 본인확인, 소셜 계정 연결, 정보 변경·탈퇴 재확인과 진행 중 상담 처리 |
-| D18 | MySQL 계정과 MongoDB 프로필의 식별자·속성 배치·가입/변경 부분 실패 복구, 이메일·로그인 ID·소셜 식별값의 유일성 |
-
-이 문서는 요청·응답 설계이며 실제 서버·DB·메일·OAuth 제공자 연동 검증은 수행하지 않았다.
-
-## 요청·응답 예시
-
-아래 값은 형식 설명용이며 미정 정책, 제한값, 상태 전이나 실제 서버 동작을 확정하지 않는다. 인증·멱등성 등 공통 헤더는 [공통 계약](README.md#공통-계약)을 따른다. 각 예시는 별도의 상황이다.
-
-### `POST /api/auth/email-verifications`
 
 요청 예시:
 
@@ -194,6 +74,10 @@ Content-Type: application/json
 
 ### `POST /api/auth/email-verifications/{verificationId}/confirm`
 
+| Method·경로 | 인증 | 요청 | 성공 응답의 data | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
+| `POST /api/auth/email-verifications/{verificationId}/confirm` | 발급 목적·세션에 연결된 인증 절차 | VerificationConfirmRequest | `200 EmailVerificationProof` | 400 INVALID_VERIFICATION_CODE, 404 NOT_FOUND, 409 VERIFICATION_EXPIRED, 429 RATE_LIMITED | ACC-01, D11 |
+
 요청 예시:
 
 ```http
@@ -217,6 +101,10 @@ Content-Type: application/json
 ```
 
 ### `POST /api/auth/signup`
+
+| Method·경로 | 인증 | 요청 | 성공 응답의 data | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
+| `POST /api/auth/signup` | 공개, SIGNUP 인증 증명 | SignupRequest, `Idempotency-Key` | `201 SignupResult` | 400 VALIDATION_ERROR, 400 INVALID_EMAIL_VERIFICATION, 409 ACCOUNT_CONFLICT, 409 IDEMPOTENCY_CONFLICT, 503 SIGNUP_PENDING | ACC-01, D11·D18 |
 
 요청 예시:
 
@@ -249,7 +137,34 @@ Content-Type: application/json
 }
 ```
 
+
+### 가입 공통 처리
+
+1. 일반·소셜 가입 모두 사용자가 직접 입력한 이메일로 인증번호를 발송하고 확인한다. 소셜 제공자의 이메일 인증 상태를 근거로 이 절차를 생략하지 않는다.
+2. 인증 증명은 서버에서 이메일·목적·발급 절차·유효기간을 확인한다. 다른 이메일, EMAIL_CHANGE 증명 또는 만료된 증명으로 가입할 수 없다. EMAIL_CHANGE 인증 절차와 증명은 발급 요청자의 memberId에도 연결하고 이메일 변경 시 같은 본인인지 확인한다.
+3. 한 이메일당 계정 하나를 허용하고 로그인 ID 중복도 거부한다. 동일 이메일의 일반·소셜 계정을 자동 병합하지 않는다.
+4. 가입 성공 시 `Location: /api/members/me`를 반환한다. 가입 이후 로그인은 별도 로그인 API로 수행한다.
+5. 계정·인증 데이터는 MySQL, 일반 회원 프로필은 MongoDB에 저장한다. 두 저장소의 가입 작업을 하나의 복구 가능한 가입 절차로 관리하고, 프로필 저장까지 완료된 계정만 로그인 가능한 상태로 만든다.
+6. 동일 키·동일 입력의 가입 재시도는 진행 중 절차를 복구하거나 기존 성공 결과를 반환한다. 같은 키에 다른 입력은 409다. 인증 증명은 해당 가입 절차에 한 번 연결하며 부분 실패 재시도 때문에 이메일 증명이 다른 계정에 재사용되지 않도록 한다. 키·증명 보관 기간은 D11·D18에서 정한다.
+
+### 일반 가입 이메일 인증 정책
+
+- 서버는 암호학적으로 안전한 난수로 숫자 6자리 인증번호를 발급한다. 번호는 5분간 유효하며 성공 시 한 번만 사용할 수 있다.
+- 재발송은 60초 후 가능하며, 새 번호를 발급하면 이전 번호를 무효화한다. 동일 이메일의 발송은 1시간당 5회로 제한하고 IP별 발송 제한도 적용한다. IP 제한의 구체적인 기준은 구현 시 정한다.
+- 한 번호의 입력이 5회 실패하면 해당 번호를 무효화한다. 재발송해도 이메일별 누적 실패 횟수는 초기화하지 않으며 누적 제한과 해제 기준은 구현 시 정한다.
+- 인증 성공 시 해당 이메일과 SIGNUP 목적에 연결된 일회성 가입 증명을 발급한다. 증명은 10분간 유효하며 이메일을 변경하면 다시 인증한다. 화면에는 가장 최근에 발송한 번호를 입력하도록 안내한다.
+- 인증 요청 ID, 이메일 확인값, 인증번호 확인값, 목적, 만료 시각, 실패 횟수와 발송 제한 정보, 가입 증명은 Redis에 저장하고 각 유효기간에 맞는 TTL을 적용한다. 이메일과 인증번호 확인값은 각각 별도 비밀키로 HMAC을 계산해 저장한다. 인증번호와 증명 원문은 로그에 남기지 않는다.
+- 가입 시작 시 유효한 증명을 해당 가입 절차에 원자적으로 연결하고 그 연결과 멱등성 상태를 지속 저장한다. 이후 Redis 증명 만료나 유실이 있어도 같은 키·같은 입력의 재시도는 연결된 절차를 복구한다. 다른 가입 절차가 같은 증명을 사용할 수 없도록 한다. Redis 장애로 새 인증을 확인할 수 없으면 가입을 완료하지 않고 인증을 다시 진행하도록 한다.
+
+## 로그인·소셜 가입·세션
+
+`provider`의 경로 값은 `kakao`, `naver`만 허용한다. 제공자의 인가 응답은 서버가 직접 검증하고 계정 식별값을 얻는다.
+
 ### `POST /api/auth/login`
+
+| Method·경로 | 인증 | 요청 | 성공 응답의 data 또는 헤더 | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
+| `POST /api/auth/login` | 공개 | LoginRequest | `200 SessionResult`, refresh cookie 설정 | 400 VALIDATION_ERROR, 401 INVALID_CREDENTIALS, 403 ACCOUNT_UNAVAILABLE | ACC-01 |
 
 요청 예시:
 
@@ -278,6 +193,10 @@ Content-Type: application/json
 
 ### `GET /api/auth/oauth/{provider}/authorize`
 
+| Method·경로 | 인증 | 요청 | 성공 응답의 data 또는 헤더 | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
+| `GET /api/auth/oauth/{provider}/authorize` | 공개 | 브라우저 이동, 임의 redirect URL 입력 없음 | `302 Location` 제공자 인가 화면, 본문 없음 | 400 UNSUPPORTED_PROVIDER, 503 OAUTH_UNAVAILABLE | ACC-01, D11 |
+
 요청 예시:
 
 ```http
@@ -288,6 +207,10 @@ GET /api/auth/oauth/kakao/authorize HTTP/1.1
 
 ### `GET /api/auth/oauth/{provider}/callback`
 
+| Method·경로 | 인증 | 요청 | 성공 응답의 data 또는 헤더 | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
+| `GET /api/auth/oauth/{provider}/callback` | 서버가 시작한 OAuth 절차 | 제공자 `code`, `state`, 실패 시 제공자 오류 | `302 Location` 허용된 프런트 완료 화면, 본문 없음 | 제공자 거절·state 불일치·검증 실패는 프런트 실패 화면으로 이동 | ACC-01, D11 |
+
 요청 예시:
 
 ```http
@@ -297,6 +220,10 @@ GET /api/auth/oauth/kakao/callback?code=<제공자_인가_코드>&state=<요청_
 응답: `302`와 `Location` 헤더. 이동 URL은 제공자 또는 허용된 프런트 설정에 따른다. 본문은 없다.
 
 ### `POST /api/auth/oauth/exchanges`
+
+| Method·경로 | 인증 | 요청 | 성공 응답의 data 또는 헤더 | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
+| `POST /api/auth/oauth/exchanges` | 일회성 교환 증명 | `{exchangeTicket:string}` | `200 OAuthLoginResult` 또는 `OAuthSignupRequiredResult`; LOGIN이면 refresh cookie 설정 | 400 INVALID_OAUTH_TICKET, 403 ACCOUNT_UNAVAILABLE, 409 OAUTH_TICKET_USED | ACC-01, D11 |
 
 요청 예시:
 
@@ -326,6 +253,10 @@ Content-Type: application/json
 
 ### `POST /api/auth/oauth/signup`
 
+| Method·경로 | 인증 | 요청 | 성공 응답의 data 또는 헤더 | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
+| `POST /api/auth/oauth/signup` | signupTicket·SIGNUP 이메일 증명 | OAuthSignupRequest, `Idempotency-Key` | `201 SignupResult` | 400 INVALID_OAUTH_TICKET, 400 INVALID_EMAIL_VERIFICATION, 409 EMAIL_ALREADY_REGISTERED, 409 ACCOUNT_CONFLICT, 409 IDEMPOTENCY_CONFLICT, 503 SIGNUP_PENDING | ACC-01, D11·D18 |
+
 요청 예시:
 
 ```http
@@ -354,6 +285,10 @@ Content-Type: application/json
 
 ### `POST /api/auth/refresh`
 
+| Method·경로 | 인증 | 요청 | 성공 응답의 data 또는 헤더 | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
+| `POST /api/auth/refresh` | refresh cookie | 본문 없음, 쿠키 요청 보호 정보 | `200 SessionResult`, refresh cookie 교체 | 401 INVALID_REFRESH_TOKEN, 403 ACCOUNT_UNAVAILABLE | ACC-01, D11 |
+
 요청 예시:
 
 ```http
@@ -377,6 +312,10 @@ POST /api/auth/refresh HTTP/1.1
 
 ### `POST /api/auth/logout`
 
+| Method·경로 | 인증 | 요청 | 성공 응답의 data 또는 헤더 | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
+| `POST /api/auth/logout` | 현재 세션·refresh cookie | 본문 없음, 쿠키 요청 보호 정보 | `204`, cookie 만료 | 403 REQUEST_ORIGIN_REJECTED | ACC-01, D11 |
+
 요청 예시:
 
 ```http
@@ -387,7 +326,31 @@ POST /api/auth/logout HTTP/1.1
 
 응답: `204`, 본문 없음.
 
+
+### 로그인·소셜 가입 공통 처리
+
+- 서버는 `state`를 시작 세션과 연결하여 검증한다. 실패 콜백을 정상 로그인으로 처리하지 않는다. 제공자 거절·state 오류·제공자 장애는 고정된 프런트 완료 경로에서 구분 가능한 오류 코드로 안내한다.
+- 콜백은 허용 목록의 프런트 완료 URL로만 이동한다. URL에는 짧게 유지하는 일회성 `exchangeTicket` 또는 공개 가능한 오류 코드만 담고 액세스·리프레시 토큰을 담지 않는다. 교환 증명은 시작한 브라우저 절차와 연결하고 교환 시 한 번만 사용한다.
+- `LOGIN`은 이미 연결된 제공자·식별값의 계정이다. `SIGNUP_REQUIRED`는 서버가 검증한 제공자 식별값에 연결된 가입 증명만 발급한다. 클라이언트가 제출한 `providerId`로 소셜 계정을 만들지 않는다.
+- 가입하지 않은 소셜 계정은 직접 입력한 이메일의 인증을 완료한 뒤 가입한다. 이미 가입된 이메일이면 신규 가입을 제한하고 기존 계정 로그인으로 안내한다. 자동 계정 연결은 수행하지 않는다. 기존 계정과의 수동 연결 정책은 D11 미정이다.
+- 소셜 계정의 비밀번호는 NULL이다. 소셜 가입 요청은 비밀번호를 받지 않는다. 기존 계정 비밀번호를 소셜 제공자에 전달하지 않는다.
+- 가입과 세션 발급의 재시도는 계정·소셜 연결·프로필을 중복 생성하지 않는다. 가입된 계정이 이용 불가 상태면 세션을 발급하지 않는다.
+
+### 세션 설계 제안
+
+액세스 토큰은 Bearer로 전달하고 리프레시 토큰은 `HttpOnly`, `Secure` 쿠키로 보관하는 안이다. 배포 도메인에 맞는 `SameSite`·쿠키 범위·CORS·CSRF 보호 방식과 토큰 유효기간은 D11에서 확정한다. 쿠키 기반 갱신·로그아웃은 요청 Origin과 확정된 CSRF 증명을 검증한다.
+
+갱신 성공 시 리프레시 토큰을 회전하고 이전 토큰 재사용을 탐지한다. 동시에 갱신하거나 네트워크 실패로 재시도할 때 정상 세션이 손실되지 않도록 회전·재시도 계약을 함께 확정한다. 로그아웃은 서버의 해당 갱신 세션을 폐기하고, 이미 종료된 세션으로 다시 요청해도 204를 반환한다. 액세스 토큰의 로그아웃 후 효력·전체 기기 로그아웃 여부도 D11에서 정한다.
+
+## 아이디 찾기와 비밀번호 복구
+
+아이디 찾기는 입력한 가입 이메일로 인증번호를 보내고 확인된 경우에만 아이디를 반환한다. 비밀번호 복구의 본인확인 수단은 D11 미정이다. 아래 비밀번호 복구는 가입 이메일 인증번호를 사용하는 설계 제안이며, 이름·아이디 일치만으로 변경 권한을 부여하지 않는다.
+
 ### `POST /api/auth/login-id/recovery-requests`
+
+| Method·경로 | 인증 | 요청 | 성공 응답의 data | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
+| `POST /api/auth/login-id/recovery-requests` | 공개 | RecoveryRequest | `202 VerificationChallenge` | 400 VALIDATION_ERROR, 429 RATE_LIMITED, 503 VERIFICATION_DELIVERY_FAILED | ACC-01, D11 |
 
 요청 예시:
 
@@ -413,6 +376,10 @@ Content-Type: application/json
 
 ### `POST /api/auth/login-id/recoveries`
 
+| Method·경로 | 인증 | 요청 | 성공 응답의 data | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
+| `POST /api/auth/login-id/recoveries` | 아이디 찾기용 인증 절차 | LoginIdRecoveryRequest | `200 LoginIdResult` | 400 INVALID_VERIFICATION_CODE, 404 NOT_FOUND, 409 VERIFICATION_EXPIRED, 429 RATE_LIMITED | ACC-01, D11 |
+
 요청 예시:
 
 ```http
@@ -436,6 +403,10 @@ Content-Type: application/json
 ```
 
 ### `POST /api/auth/password/reset-requests`
+
+| Method·경로 | 인증 | 요청 | 성공 응답의 data | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
+| `POST /api/auth/password/reset-requests` | 공개 | PasswordResetRequest | `202 VerificationChallenge` | 400 VALIDATION_ERROR, 429 RATE_LIMITED, 503 VERIFICATION_DELIVERY_FAILED | ACC-01, D11 |
 
 요청 예시:
 
@@ -462,6 +433,10 @@ Content-Type: application/json
 
 ### `POST /api/auth/password/reset-verifications`
 
+| Method·경로 | 인증 | 요청 | 성공 응답의 data | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
+| `POST /api/auth/password/reset-verifications` | 비밀번호 복구용 인증 절차 | PasswordResetVerificationRequest | `200 PasswordResetProof` | 400 INVALID_VERIFICATION_CODE, 404 NOT_FOUND, 409 VERIFICATION_EXPIRED, 429 RATE_LIMITED | ACC-01, D11 |
+
 요청 예시:
 
 ```http
@@ -487,6 +462,10 @@ Content-Type: application/json
 
 ### `POST /api/auth/password/resets`
 
+| Method·경로 | 인증 | 요청 | 성공 응답의 data | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
+| `POST /api/auth/password/resets` | 비밀번호 복구 증명 | PasswordResetCompleteRequest | `204`, 본문 없음 | 400 INVALID_PASSWORD_RESET, 400 VALIDATION_ERROR, 409 PASSWORD_UNAVAILABLE | ACC-01, D11 |
+
 요청 예시:
 
 ```http
@@ -501,7 +480,21 @@ Content-Type: application/json
 
 응답: `204`, 본문 없음.
 
+
+### 계정 복구 공통 처리
+
+- 복구 요청의 접수 응답은 계정 존재 여부를 구별하지 않는 형식으로 제안한다. 해당 계정이 확인되고 발송이 가능한 경우에만 실제 인증번호를 보내며, 유효한 증명을 확인하기 전에는 아이디·가입 이메일 등 계정 정보를 공개하지 않는다.
+- 가입 이메일 인증, 이메일 변경, 아이디 찾기, 비밀번호 재설정의 증명은 서로 바꿔 사용할 수 없다. 각 절차의 확인 완료와 결과 사용을 서버에서 기록한다.
+- `passwordResetToken`은 대상 계정·목적·유효기간에 연결하고 비밀번호 변경 성공 시 한 번만 사용한다. 재시도로 다른 비밀번호가 덮어써지지 않도록 소비와 계정 갱신을 일관되게 처리한다.
+- 소셜 전용 계정에 일반 비밀번호를 생성하는 동작은 D11 확정 후 제공한다. 기존 세션 폐기 범위와 재설정 완료 안내도 함께 정한다.
+
+## 내 회원정보와 탈퇴
+
 ### `GET /api/members/me`
+
+| Method·경로 | 인증 | 요청 | 성공 응답의 data | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
+| `GET /api/members/me` | 본인 Bearer | 없음 | `200 MemberProfile` | 401 UNAUTHORIZED, 403 ACCOUNT_UNAVAILABLE | ACC-01 |
 
 요청 예시:
 
@@ -526,6 +519,10 @@ Authorization: Bearer <액세스 토큰>
 ```
 
 ### `PATCH /api/members/me`
+
+| Method·경로 | 인증 | 요청 | 성공 응답의 data | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
+| `PATCH /api/members/me` | 본인 Bearer | MemberPatchRequest | `200 MemberProfile` | 400 VALIDATION_ERROR, 400 INVALID_EMAIL_VERIFICATION, 409 EMAIL_ALREADY_REGISTERED, 409 PROFILE_UPDATE_CONFLICT, 400 INVALID_MEDIA_REFERENCE | ACC-01, MED-01, D11·D18·D19 |
 
 요청 예시:
 
@@ -556,6 +553,10 @@ Content-Type: application/json
 
 ### `PUT /api/members/me/password`
 
+| Method·경로 | 인증 | 요청 | 성공 응답의 data | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
+| `PUT /api/members/me/password` | 본인 Bearer | PasswordChangeRequest | `204`, 본문 없음 | 400 VALIDATION_ERROR, 401 INVALID_CREDENTIALS, 409 PASSWORD_UNAVAILABLE | ACC-01, D11 |
+
 요청 예시:
 
 ```http
@@ -573,6 +574,10 @@ Content-Type: application/json
 
 ### `DELETE /api/members/me`
 
+| Method·경로 | 인증 | 요청 | 성공 응답의 data | 주요 오류 | 근거 |
+| --- | --- | --- | --- | --- | --- |
+| `DELETE /api/members/me` | 본인 Bearer·D11의 재확인 절차 | 본문 없음; 재확인 증명의 전달 방식은 D11 | `204`, 본문 없음 | 401 UNAUTHORIZED, 409 ACTIVE_CONSULTATION_CONFLICT | ACC-03, D11 |
+
 요청 예시:
 
 ```http
@@ -581,3 +586,21 @@ Authorization: Bearer <액세스 토큰>
 ```
 
 응답: `204`, 본문 없음.
+
+
+### 회원정보 변경·탈퇴 처리
+
+- PATCH에서 생략한 값은 유지하며, 변경 필드가 없으면 400이다. 비밀번호는 별도 경로에서 변경한다. 이메일을 바꾸면 변경할 이메일과 목적 `EMAIL_CHANGE`에 묶인 인증 증명이 필수다. 다른 이메일·가입용 증명으로 변경할 수 없다. 이메일 변경 인증을 요구하는 방식은 D11의 계정 변경 세부 설계안으로 검토한다.
+- 프로필 이미지는 [공통 미디어](media.md)의 `MEMBER_PROFILE` 사용처로 업로드한 뒤 `profileMediaId`로 연결한다. 서버는 현재 사용자의 파일인지, 업로드가 완료됐는지, 사용처·연결 권한이 맞는지 검사한다. 생략하면 기존 이미지를 유지하고 명시적 `null`은 이미지 연결을 제거한다. 응답의 `profileMedia`는 현재 연결된 `MediaRef` 또는 null이며 `MediaRef` 필드는 공통 미디어 문서를 따른다.
+- 프로필 이미지 연결·교체·제거는 계정·MongoDB 프로필 저장과 연결 상태 갱신이 성공한 후 확정한다. 저장이 실패하면 이전 연결을 유지하고 부분 실패는 복구한다. 기존 파일의 보관·정리는 공통 미디어 정책을 따른다.
+- 회원정보 변경은 계정(MySQL)과 프로필(MongoDB)의 식별자를 기준으로 일관되게 반영한다. 두 저장소 중 하나만 바뀐 상태를 최종 성공으로 응답하지 않으며 재조회·복구 기준을 둔다.
+- 반려동물 수는 삭제되지 않은 본인 반려동물 기준으로 조회한다. 탈퇴의 소프트 삭제·진행 중 매칭/상담·기록 보관·세션 폐기 정책은 D11 확정 후 구현한다. `ACTIVE_CONSULTATION_CONFLICT`는 진행 중 상담을 가진 탈퇴 요청을 보류하는 설계안이며 최종 정책은 미정이다.
+
+## 구현 전 확인
+
+| PRD 항목 | 확인할 내용 |
+| --- | --- |
+| D11 | 소셜 가입·이메일 변경의 인증 세부 정책, 토큰·쿠키·CSRF·CORS, 비밀번호 복구 본인확인, 소셜 계정 연결, 정보 변경·탈퇴 재확인과 진행 중 상담 처리 |
+| D18 | MySQL 계정과 MongoDB 프로필의 식별자·속성 배치·가입/변경 부분 실패 복구, 이메일·로그인 ID·소셜 식별값의 유일성 |
+
+이 문서는 요청·응답 설계이며 실제 서버·DB·메일·OAuth 제공자 연동 검증은 수행하지 않았다.
