@@ -10,7 +10,8 @@
 | --- | --- |
 | MediaRef | `mediaId:string`, `fileName:string`, `contentType:string`, `fileSize:integer`, `fileUrl:string` |
 | MediaDetail | MediaRef + `usage:string`, `status:string`, `createdAt:timestamp` |
-| MediaPolicy | `usage:string`, `allowedContentTypes:string[]`, `maxFileSizeBytes:integer`, `maxAttachments:integer` |
+| MediaPolicy | `usage:string`, `fileLimits:MediaFileLimit[]`, `maxAttachments:integer` |
+| MediaFileLimit | `contentType:string`, `maxFileSizeBytes:integer` |
 
 `usage` 값은 `POST_ATTACHMENT`, `MEMBER_PROFILE`, `PET_PROFILE`, `HEALTH_ATTACHMENT`, `CONSULTATION_ATTACHMENT` 설계안이다. 설정되지 않은 사용처는 허용하지 않는다. 사용처별 제한은 서버가 제공하며 `fileSize` 단위는 byte다.
 
@@ -23,6 +24,8 @@
 | 회원·반려동물 프로필 | JPEG·PNG·WebP 이미지, 파일당 최대 10MB |
 | 게시글 | JPEG·PNG·WebP 이미지 파일당 최대 10MB, MP4 파일당 최대 100MB, 이미지와 동영상을 합해 최대 5개 |
 | 건강 기록·상담 첨부 | JPEG·PNG·WebP 이미지 파일당 최대 10MB, 각각 최대 3개 |
+
+1MB는 1,000,000바이트다. 이미지 최대 크기는 10,000,000바이트, MP4 최대 크기는 100,000,000바이트다.
 
 삭제 실패는 최초 시도 후 최대 3회 재시도하며 각 실패 후 1분·3분·7분을 기다린다. 최종 실패는 운영자가 확인한다. DB에는 삭제 대상·상태·시도 횟수·다음 시도 시각 등 작업 정보를 저장하고 오류 내용은 애플리케이션 로그에 남긴다. 로그 항목과 운영자 확인 절차는 미정이다.
 
@@ -41,11 +44,38 @@
 요청 예시:
 
 ```http
-GET /api/media/policies?usage=PET_PROFILE HTTP/1.1
+GET /api/media/policies?usage=POST_ATTACHMENT HTTP/1.1
 Authorization: Bearer <액세스 토큰>
 ```
 
-응답: `200`의 `data`는 `MediaPolicy`다. 사용처별 허용 형식·용량·개수는 위 정책을 따른다.
+응답 예시 (`200`):
+
+```json
+{
+  "data": {
+    "usage": "POST_ATTACHMENT",
+    "fileLimits": [
+      {
+        "contentType": "image/jpeg",
+        "maxFileSizeBytes": 10000000
+      },
+      {
+        "contentType": "image/png",
+        "maxFileSizeBytes": 10000000
+      },
+      {
+        "contentType": "image/webp",
+        "maxFileSizeBytes": 10000000
+      },
+      {
+        "contentType": "video/mp4",
+        "maxFileSizeBytes": 100000000
+      }
+    ],
+    "maxAttachments": 5
+  }
+}
+```
 
 ### `POST /api/media`
 
@@ -132,7 +162,7 @@ GET /api/media/550e8400-e29b-41d4-a716-446655440000/file HTTP/1.1
 Authorization: Bearer <액세스 토큰>
 ```
 
-응답: `200`과 파일 바이너리. Content-Type과 파일명은 검증된 파일 메타데이터에 따른다.
+응답: `200`과 파일 바이너리. `Content-Type`과 파일명은 검증된 파일 메타데이터에 따르며 이미지와 동영상은 `Content-Disposition: inline`을 사용한다.
 
 ### `DELETE /api/media/{mediaId}`
 
@@ -162,6 +192,8 @@ Authorization: Bearer <액세스 토큰>
 - 교체는 새 파일 업로드와 부모 저장이 모두 성공한 후 기존 연결을 해제한다. 첨부 제거도 부모 PATCH 성공 후 반영한다. 부모 저장 실패 시 이전 연결을 보존한다.
 - DELETE는 본인이 업로드한 미연결 파일의 사용 포기 계약이다. 연결된 파일을 부모와 무관하게 삭제하지 못하게 409로 거절한다. 실제 보관·파기는 D19 정책과 정리 작업이 수행한다.
 - 공개 게시글 미디어는 공개 권한으로, 프로필·건강·상담 파일 등은 현재 사용처의 권한으로 제공한다. 삭제·숨김 부모의 이전 URL 접근은 거절한다.
+- 공개 게시글 파일은 `Cache-Control: no-cache`, 비공개 파일은 `Cache-Control: private, no-cache`를 반환한다. 캐시 재검증과 304 응답 전에도 사용처의 현재 권한·삭제·숨김 상태를 확인한다. 검증자와 서비스 간 권한 확인 방식은 구현 전에 정한다.
+- MP4 구간 요청은 초기 범위에서 지원하지 않는다. `Range`를 무시하고 `200`과 전체 파일을 반환한다. 실제 브라우저에서 큰 MP4의 재생과 구간 이동을 검증한다.
 - `fileUrl`은 권한 검사 경로다. 비공개 파일은 인증된 fetch 등으로 조회하며 영구 공개 URL을 발급하지 않는다. 다운로드 파일명·Content-Type은 검증한 메타데이터로 설정한다.
 - 저장소 파일이 사라진 경우를 정상 파일 응답으로 숨기지 않는다. 프런트는 404 등 조회 실패 시 이미지 대체 화면 또는 동영상·문서 안내를 표시한다.
 - 연결 해제 파일은 해제 후 24시간이 지나면 정리 대상으로 삼는다. 소프트 삭제된 부모의 첨부 원본은 부모와 함께 보관하고 접근을 차단한다. 정리 직전 활성 연결과 진행 중인 저장을 확인한다. S3 삭제 실패 시 작업 상태를 기록하고 자동 재시도하며 오류 내용은 애플리케이션 로그에 남긴다. 정리는 내부 작업이며 공개 관리 API를 만들지 않는다.
@@ -169,4 +201,4 @@ Authorization: Bearer <액세스 토큰>
 ## 구현 전 확인
 
 - D19 — 실제 파일 유형 검증의 세부 방식, 상세 오류 로그 항목과 반복 실패 운영자 확인 절차 등 선택되지 않은 세부 사항은 미정이다.
-- D18 — 임시 첨부·업로드 작업·활동 기록의 구체 저장 구조, 신호·복구 계약과 경합 제어를 구체화한다. `media_id` UNIQUE 추가는 후속 합의이며 SQL의 현재 컬럼 길이·키·인덱스는 서비스별 미디어 ERD을 따른다.
+- D18 — 임시 첨부·업로드 작업·활동 기록의 구체 저장 구조, 신호·복구 계약과 경합 제어를 구체화한다. `media_id` UNIQUE 추가는 후속 합의이며 SQL의 현재 컬럼 길이·키·인덱스는 서비스별 미디어 ERD를 따른다.
