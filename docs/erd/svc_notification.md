@@ -1,0 +1,70 @@
+# svc_notification ERD
+
+[전체 ERD 목록](../erd.md)
+
+
+관계도는 외래키가 가리키는 방향을 화살표로 표시한다.
+
+```mermaid
+flowchart LR
+    T0["svc_notification.notification"]
+    T1["svc_notification.outbox"]
+```
+
+#### `svc_notification.notification`
+
+알림 수신함. 생산자 테이블 FK 없음. event_id 로 멱등
+
+| 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
+| --- | --- | --- | --- | --- |
+| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
+| `uuid` | `CHAR(36)` | 불가 | — | — |
+| `recipient_uuid` | `CHAR(36)` | 불가 | — | — |
+| `actor_uuid` | `CHAR(36)` | 불가 | — | — |
+| `event_id` | `CHAR(36)` | 불가 | — | — |
+| `type` | `VARCHAR(30)` | 불가 | — | — |
+| `title` | `VARCHAR(200)` | 불가 | — | — |
+| `content` | `VARCHAR(500)` | 불가 | — | — |
+| `target_type` | `VARCHAR(30)` | 불가 | — | — |
+| `target_uuid` | `CHAR(36)` | 불가 | — | — |
+| `read_at` | `DATETIME` | 허용 | `NULL` | — |
+| `created_at` | `DATETIME` | 불가 | — | — |
+
+**인덱스**
+
+| 이름 | 종류 | 컬럼 |
+| --- | --- | --- |
+| `PRIMARY` | PRIMARY KEY | `id` |
+| `uk_notification_uuid` | UNIQUE | `uuid` |
+| `uk_notification_event` | UNIQUE | `recipient_uuid`, `event_id` |
+| `idx_notification_inbox` | INDEX | `recipient_uuid`, `read_at`, `created_at` |
+
+**외래키**
+
+모델에 명시된 외래키가 없습니다.
+
+#### `svc_notification.outbox`
+
+notification 트랜잭셔널 아웃박스
+
+| 컬럼 | 타입 | NULL | 기본값 | 속성 / 주석 |
+| --- | --- | --- | --- | --- |
+| `id` | `BIGINT` | 불가 | — | AUTO_INCREMENT |
+| `event_id` | `CHAR(36)` | 불가 | — | — |
+| `event_type` | `VARCHAR(100)` | 불가 | — | — |
+| `aggregate_uuid` | `CHAR(36)` | 불가 | — | — |
+| `payload` | `JSON` | 불가 | — | — |
+| `occurred_at` | `DATETIME(6)` | 불가 | — | — |
+| `published_at` | `DATETIME(6)` | 허용 | `NULL` | — |
+
+**인덱스**
+
+| 이름 | 종류 | 컬럼 |
+| --- | --- | --- |
+| `PRIMARY` | PRIMARY KEY | `id` |
+| `uk_outbox_event` | UNIQUE | `event_id` |
+| `idx_outbox_unpublished` | INDEX | `published_at`, `id` |
+
+**외래키**
+
+모델에 명시된 외래키가 없습니다.
