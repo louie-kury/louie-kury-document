@@ -5,7 +5,7 @@
 
 ## 테이블 구조
 
-컬럼 타입은 기본 타입으로 표시한다. 길이·NULL 허용·기본값과 복합 인덱스는 아래 상세 표를 따른다. 관계선은 참조 대상이 확인된 외래키이며, 필수 여부와 유일성은 모델의 컬럼과 인덱스를 기준으로 표시한다. 참조 대상이 미확정인 관계는 아래 외래키 관계도에 점선으로 표시한다.
+컬럼 타입은 기본 타입으로 표시한다. 길이·NULL 허용·기본값과 복합 인덱스는 아래 상세 표를 따른다. 관계선은 참조 대상이 확인된 외래키이며, 필수 여부와 유일성은 모델의 컬럼과 인덱스를 기준으로 표시한다. 참조 대상을 확인하지 못한 관계는 [별도 확인 목록](pending-foreign-keys.md)에 기록한다.
 
 ```mermaid
 erDiagram
@@ -36,7 +36,7 @@ erDiagram
         BIGINT id PK
         CHAR uuid
         BIGINT request_id FK
-        BIGINT wave_id FK
+        BIGINT wave_id
         CHAR vet_uuid
         CHAR hospital_uuid
         INT distance_m
@@ -71,23 +71,6 @@ erDiagram
     consultation_request ||--o{ match_offer : "request_id"
     consultation_request ||--o{ match_wave : "request_id"
     consultation_request ||--o{ request_symptom : "request_id"
-```
-
-## 외래키 관계
-관계도는 외래키가 가리키는 방향을 화살표로 표시한다.
-
-```mermaid
-flowchart LR
-    T0["svc_matching.consultation_request"]
-    T1["svc_matching.match_offer"]
-    T2["svc_matching.match_wave"]
-    T3["svc_matching.outbox"]
-    T4["svc_matching.request_symptom"]
-    T1 -->|"request_id"| T0
-    T5["미확정.{B5383881-2446-4F34-9B6B-5C3FFA82FDFD}"]
-    T1 -.->|"wave_id"| T5
-    T2 -->|"request_id"| T0
-    T4 -->|"request_id"| T0
 ```
 
 #### `svc_matching.consultation_request`
@@ -168,7 +151,6 @@ flowchart LR
 | 이름 | 컬럼 | 참조 대상 | 삭제 / 수정 규칙 | 비고 |
 | --- | --- | --- | --- | --- |
 | `fk_offer_request` | `request_id` | `svc_matching.consultation_request` (`id`) | 미지정 / 미지정 | — |
-| `fk_offer_wave` | `wave_id` | `미확정 {B5383881-2446-4F34-9B6B-5C3FFA82FDFD}` (`미확정 {2723F9ED-B05B-4DDC-9B89-CC893B554C4E}`) | 미지정 / 미지정 | — |
 
 #### `svc_matching.match_wave`
 

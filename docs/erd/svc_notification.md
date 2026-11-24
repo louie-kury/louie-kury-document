@@ -5,7 +5,7 @@
 
 ## 테이블 구조
 
-컬럼 타입은 기본 타입으로 표시한다. 길이·NULL 허용·기본값과 복합 인덱스는 아래 상세 표를 따른다. 관계선은 참조 대상이 확인된 외래키이며, 필수 여부와 유일성은 모델의 컬럼과 인덱스를 기준으로 표시한다. 참조 대상이 미확정인 관계는 아래 외래키 관계도에 점선으로 표시한다.
+컬럼 타입은 기본 타입으로 표시한다. 길이·NULL 허용·기본값과 복합 인덱스는 아래 상세 표를 따른다. 관계선은 참조 대상이 확인된 외래키이며, 필수 여부와 유일성은 모델의 컬럼과 인덱스를 기준으로 표시한다. 참조 대상을 확인하지 못한 관계는 [별도 확인 목록](pending-foreign-keys.md)에 기록한다.
 
 ```mermaid
 erDiagram
@@ -32,15 +32,6 @@ erDiagram
         DATETIME occurred_at
         DATETIME published_at
     }
-```
-
-## 외래키 관계
-관계도는 외래키가 가리키는 방향을 화살표로 표시한다.
-
-```mermaid
-flowchart LR
-    T0["svc_notification.notification"]
-    T1["svc_notification.outbox"]
 ```
 
 #### `svc_notification.notification`

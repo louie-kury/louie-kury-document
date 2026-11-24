@@ -5,7 +5,7 @@
 
 ## 테이블 구조
 
-컬럼 타입은 기본 타입으로 표시한다. 길이·NULL 허용·기본값과 복합 인덱스는 아래 상세 표를 따른다. 관계선은 참조 대상이 확인된 외래키이며, 필수 여부와 유일성은 모델의 컬럼과 인덱스를 기준으로 표시한다. 참조 대상이 미확정인 관계는 아래 외래키 관계도에 점선으로 표시한다.
+컬럼 타입은 기본 타입으로 표시한다. 길이·NULL 허용·기본값과 복합 인덱스는 아래 상세 표를 따른다. 관계선은 참조 대상이 확인된 외래키이며, 필수 여부와 유일성은 모델의 컬럼과 인덱스를 기준으로 표시한다. 참조 대상을 확인하지 못한 관계는 [별도 확인 목록](pending-foreign-keys.md)에 기록한다.
 
 ```mermaid
 erDiagram
@@ -89,14 +89,14 @@ erDiagram
     vet_date_off {
         BIGINT id PK
         CHAR uuid
-        BIGINT vet_id FK
+        BIGINT vet_id
         DATE off_date
         VARCHAR reason
     }
     vet_duty_session {
         BIGINT id PK
         CHAR uuid
-        BIGINT vet_id FK
+        BIGINT vet_id
         BIGINT hospital_id FK
         TINYINT accept_chat
         TINYINT accept_video
@@ -110,7 +110,7 @@ erDiagram
     vet_hospital_affiliation {
         BIGINT id PK
         CHAR uuid
-        BIGINT vet_id FK
+        BIGINT vet_id
         BIGINT hospital_id FK
         DATETIME started_at
         DATETIME ended_at
@@ -119,7 +119,7 @@ erDiagram
     vet_weekday_off {
         BIGINT id PK
         CHAR uuid
-        BIGINT vet_id FK
+        BIGINT vet_id
         TINYINT day_of_week
     }
     veterinarian {
@@ -154,39 +154,6 @@ erDiagram
     hospital ||--o{ vet_duty_session : "hospital_id"
     hospital ||--o{ vet_hospital_affiliation : "hospital_id"
     hospital ||--o{ visit_arrival : "hospital_id"
-```
-
-## 외래키 관계
-관계도는 외래키가 가리키는 방향을 화살표로 표시한다.
-
-```mermaid
-flowchart LR
-    T0["svc_clinic.hospital"]
-    T1["svc_clinic.hospital_admin"]
-    T2["svc_clinic.hospital_consult_policy"]
-    T3["svc_clinic.hospital_hours"]
-    T4["svc_clinic.hospital_runtime"]
-    T5["svc_clinic.hospital_staff"]
-    T6["svc_clinic.outbox"]
-    T7["svc_clinic.vet_date_off"]
-    T8["svc_clinic.vet_duty_session"]
-    T9["svc_clinic.vet_hospital_affiliation"]
-    T10["svc_clinic.vet_weekday_off"]
-    T11["svc_clinic.veterinarian"]
-    T12["svc_clinic.visit_arrival"]
-    T1 -->|"hospital_id"| T0
-    T2 -->|"hospital_id"| T0
-    T3 -->|"hospital_id"| T0
-    T4 -->|"hospital_id"| T0
-    T5 -->|"hospital_id"| T0
-    T13["미확정.{3F2BEE92-D382-4C40-B203-6F060A03B308}"]
-    T7 -.->|"vet_id"| T13
-    T8 -->|"hospital_id"| T0
-    T8 -.->|"vet_id"| T13
-    T9 -->|"hospital_id"| T0
-    T9 -.->|"vet_id"| T13
-    T10 -.->|"vet_id"| T13
-    T12 -->|"hospital_id"| T0
 ```
 
 #### `svc_clinic.hospital`
@@ -418,9 +385,7 @@ clinic 트랜잭셔널 아웃박스
 
 **외래키**
 
-| 이름 | 컬럼 | 참조 대상 | 삭제 / 수정 규칙 | 비고 |
-| --- | --- | --- | --- | --- |
-| `fk_date_off_vet` | `vet_id` | `미확정 {3F2BEE92-D382-4C40-B203-6F060A03B308}` (`미확정 {E606EE3F-6004-4845-B0D2-4C6DE6D51A21}`) | 미지정 / 미지정 | — |
+확인된 외래키가 없습니다.
 
 #### `svc_clinic.vet_duty_session`
 
@@ -455,7 +420,6 @@ clinic 트랜잭셔널 아웃박스
 | 이름 | 컬럼 | 참조 대상 | 삭제 / 수정 규칙 | 비고 |
 | --- | --- | --- | --- | --- |
 | `fk_duty_hospital` | `hospital_id` | `svc_clinic.hospital` (`id`) | 미지정 / 미지정 | — |
-| `fk_duty_vet` | `vet_id` | `미확정 {3F2BEE92-D382-4C40-B203-6F060A03B308}` (`미확정 {E606EE3F-6004-4845-B0D2-4C6DE6D51A21}`) | 미지정 / 미지정 | — |
 
 #### `svc_clinic.vet_hospital_affiliation`
 
@@ -485,7 +449,6 @@ clinic 트랜잭셔널 아웃박스
 | 이름 | 컬럼 | 참조 대상 | 삭제 / 수정 규칙 | 비고 |
 | --- | --- | --- | --- | --- |
 | `fk_affiliation_hospital` | `hospital_id` | `svc_clinic.hospital` (`id`) | 미지정 / 미지정 | — |
-| `fk_affiliation_vet` | `vet_id` | `미확정 {3F2BEE92-D382-4C40-B203-6F060A03B308}` (`미확정 {E606EE3F-6004-4845-B0D2-4C6DE6D51A21}`) | 미지정 / 미지정 | — |
 
 #### `svc_clinic.vet_weekday_off`
 
@@ -508,9 +471,7 @@ clinic 트랜잭셔널 아웃박스
 
 **외래키**
 
-| 이름 | 컬럼 | 참조 대상 | 삭제 / 수정 규칙 | 비고 |
-| --- | --- | --- | --- | --- |
-| `fk_vet_off_vet` | `vet_id` | `미확정 {3F2BEE92-D382-4C40-B203-6F060A03B308}` (`미확정 {E606EE3F-6004-4845-B0D2-4C6DE6D51A21}`) | 미지정 / 미지정 | — |
+확인된 외래키가 없습니다.
 
 #### `svc_clinic.veterinarian`
 
