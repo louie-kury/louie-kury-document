@@ -3,6 +3,127 @@
 [전체 ERD 목록](../erd.md)
 
 
+## 테이블 구조
+
+컬럼 타입은 기본 타입으로 표시한다. 길이·NULL 허용·기본값과 복합 인덱스는 아래 상세 표를 따른다.
+
+```mermaid
+erDiagram
+    chat_room {
+        BIGINT id PK
+        CHAR uuid
+        BIGINT consultation_id FK
+        VARCHAR status
+        DATETIME created_at
+        DATETIME closed_at
+    }
+    consultation {
+        BIGINT id PK
+        CHAR uuid
+        CHAR request_uuid
+        CHAR caregiver_uuid
+        CHAR pet_uuid
+        CHAR vet_uuid
+        CHAR hospital_uuid
+        BIGINT medical_subject_id FK
+        VARCHAR status
+        VARCHAR consult_type
+        TINYINT is_emergency
+        TEXT content
+        TEXT clinical_note
+        TEXT summary
+        VARCHAR recommendation
+        DATETIME created_at
+        DATETIME accepted_at
+        DATETIME completed_at
+    }
+    consultation_participant {
+        BIGINT consultation_id PK,FK
+        CHAR participant_uuid PK
+        VARCHAR participant_role
+        DATETIME joined_at
+        DATETIME left_at
+    }
+    consultation_symptom {
+        BIGINT id PK
+        CHAR uuid
+        BIGINT consultation_id FK
+        BIGINT symptom_id FK
+    }
+    medical_subject {
+        BIGINT id PK
+        CHAR uuid
+        VARCHAR name
+    }
+    outbox {
+        BIGINT id PK
+        CHAR event_id
+        VARCHAR event_type
+        CHAR aggregate_uuid
+        JSON payload
+        DATETIME occurred_at
+        DATETIME published_at
+    }
+    symptom {
+        BIGINT id PK
+        CHAR uuid
+        VARCHAR name
+    }
+    video_participant {
+        BIGINT id PK
+        BIGINT video_session_id FK
+        CHAR participant_uuid
+        VARCHAR participant_role
+        DATETIME joined_at
+        DATETIME left_at
+    }
+    video_session {
+        BIGINT id PK
+        CHAR uuid
+        BIGINT consultation_id FK
+        VARCHAR provider
+        VARCHAR room_key
+        VARCHAR status
+        DATETIME started_at
+        DATETIME ended_at
+    }
+    visit_reservation {
+        BIGINT id PK
+        CHAR uuid
+        CHAR hospital_uuid
+        CHAR caregiver_uuid
+        CHAR pet_uuid
+        BIGINT medical_subject_id FK
+        BIGINT visit_slot_id FK
+        VARCHAR status
+        DATE hoped_visit_date
+        TIME hoped_start_time
+        VARCHAR symptom_memo
+        DATETIME created_at
+        DATETIME accepted_at
+    }
+    visit_reservation_symptom {
+        BIGINT id PK
+        CHAR uuid
+        BIGINT visit_reservation_id FK
+        BIGINT symptom_id FK
+    }
+    visit_slot {
+        BIGINT id PK
+        CHAR uuid
+        CHAR hospital_uuid
+        CHAR vet_uuid
+        CHAR vet_key
+        DATE slot_date
+        TIME start_time
+        TIME end_time
+        VARCHAR status
+        DATETIME created_at
+        DATETIME updated_at
+    }
+```
+
+## 외래키 관계
 관계도는 외래키가 가리키는 방향을 화살표로 표시한다.
 
 ```mermaid

@@ -3,6 +3,74 @@
 [전체 ERD 목록](../erd.md)
 
 
+## 테이블 구조
+
+컬럼 타입은 기본 타입으로 표시한다. 길이·NULL 허용·기본값과 복합 인덱스는 아래 상세 표를 따른다.
+
+```mermaid
+erDiagram
+    consultation_request {
+        BIGINT id PK
+        CHAR uuid
+        CHAR caregiver_uuid
+        CHAR pet_uuid
+        CHAR medical_subject_uuid
+        VARCHAR channel
+        TINYINT is_emergency
+        VARCHAR status
+        DECIMAL origin_lat
+        DECIMAL origin_lng
+        VARCHAR geohash
+        VARCHAR region
+        VARCHAR si
+        VARCHAR gu
+        INT search_radius_m
+        VARCHAR symptom_memo
+        DATETIME requested_at
+        DATETIME expire_at
+        CHAR assigned_vet_uuid
+        CHAR assigned_hospital_uuid
+        DATETIME assigned_at
+    }
+    match_offer {
+        BIGINT id PK
+        CHAR uuid
+        BIGINT request_id FK
+        BIGINT wave_id FK
+        CHAR vet_uuid
+        CHAR hospital_uuid
+        INT distance_m
+        DECIMAL score
+        VARCHAR status
+        DATETIME offered_at
+        DATETIME respond_by
+        DATETIME responded_at
+    }
+    match_wave {
+        BIGINT id PK
+        CHAR uuid
+        BIGINT request_id FK
+        INT wave_no
+        INT radius_m
+        DATETIME started_at
+        DATETIME finished_at
+    }
+    outbox {
+        BIGINT id PK
+        CHAR event_id
+        VARCHAR event_type
+        CHAR aggregate_uuid
+        JSON payload
+        DATETIME occurred_at
+        DATETIME published_at
+    }
+    request_symptom {
+        BIGINT request_id PK,FK
+        CHAR symptom_uuid PK
+    }
+```
+
+## 외래키 관계
 관계도는 외래키가 가리키는 방향을 화살표로 표시한다.
 
 ```mermaid

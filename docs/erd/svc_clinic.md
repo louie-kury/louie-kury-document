@@ -3,6 +3,152 @@
 [전체 ERD 목록](../erd.md)
 
 
+## 테이블 구조
+
+컬럼 타입은 기본 타입으로 표시한다. 길이·NULL 허용·기본값과 복합 인덱스는 아래 상세 표를 따른다.
+
+```mermaid
+erDiagram
+    hospital {
+        BIGINT id PK
+        CHAR uuid
+        VARCHAR region
+        VARCHAR si
+        VARCHAR gun
+        VARCHAR gu
+        VARCHAR name
+        VARCHAR zip_code
+        VARCHAR road_address
+        VARCHAR lot_address
+        VARCHAR tel
+        VARCHAR mgmt_no
+        DATE licensed_at
+        VARCHAR business_no
+        VARCHAR homepage_url
+        VARCHAR logo_url
+        VARCHAR remark
+        DECIMAL latitude
+        DECIMAL longitude
+        VARCHAR geohash
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    hospital_admin {
+        BIGINT id PK
+        CHAR uuid
+        CHAR admin_uuid
+        BIGINT hospital_id FK
+        DATETIME assigned_at
+    }
+    hospital_consult_policy {
+        BIGINT hospital_id PK,FK
+        TINYINT chat_enabled
+        TINYINT video_enabled
+        TINYINT emergency_enabled
+        INT max_concurrent
+        INT service_radius_m
+        DATETIME updated_at
+    }
+    hospital_hours {
+        BIGINT id PK
+        CHAR uuid
+        BIGINT hospital_id FK
+        TINYINT day_of_week
+        TINYINT is_closed
+        TIME open_time
+        TIME close_time
+        TIME break_start
+        TIME break_end
+        DATETIME updated_at
+    }
+    hospital_runtime {
+        BIGINT hospital_id PK,FK
+        TINYINT is_accepting_visit
+        TINYINT is_accepting_consult
+        VARCHAR pause_reason
+        DATETIME updated_at
+    }
+    hospital_staff {
+        BIGINT id PK
+        CHAR uuid
+        BIGINT hospital_id FK
+        CHAR account_uuid
+        VARCHAR staff_role
+        VARCHAR status
+        DATETIME created_at
+    }
+    outbox {
+        BIGINT id PK
+        CHAR event_id
+        VARCHAR event_type
+        CHAR aggregate_uuid
+        JSON payload
+        DATETIME occurred_at
+        DATETIME published_at
+    }
+    vet_date_off {
+        BIGINT id PK
+        CHAR uuid
+        BIGINT vet_id FK
+        DATE off_date
+        VARCHAR reason
+    }
+    vet_duty_session {
+        BIGINT id PK
+        CHAR uuid
+        BIGINT vet_id FK
+        BIGINT hospital_id FK
+        TINYINT accept_chat
+        TINYINT accept_video
+        INT service_radius_m
+        DECIMAL origin_lat
+        DECIMAL origin_lng
+        DATETIME started_at
+        DATETIME ended_at
+        TINYINT current_flag
+    }
+    vet_hospital_affiliation {
+        BIGINT id PK
+        CHAR uuid
+        BIGINT vet_id FK
+        BIGINT hospital_id FK
+        DATETIME started_at
+        DATETIME ended_at
+        TINYINT current_flag
+    }
+    vet_weekday_off {
+        BIGINT id PK
+        CHAR uuid
+        BIGINT vet_id FK
+        TINYINT day_of_week
+    }
+    veterinarian {
+        BIGINT id PK
+        CHAR uuid
+        CHAR account_uuid
+        VARCHAR name
+        VARCHAR major
+        VARCHAR specialty
+        VARCHAR license_no
+        TINYINT is_available
+        VARCHAR status
+        VARCHAR status_reason
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    visit_arrival {
+        BIGINT id PK
+        CHAR uuid
+        BIGINT hospital_id FK
+        CHAR reservation_uuid
+        VARCHAR status
+        DATETIME arrived_at
+        DATETIME called_at
+        DATETIME completed_at
+    }
+```
+
+## 외래키 관계
 관계도는 외래키가 가리키는 방향을 화살표로 표시한다.
 
 ```mermaid

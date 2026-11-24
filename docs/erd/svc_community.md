@@ -3,6 +3,77 @@
 [전체 ERD 목록](../erd.md)
 
 
+## 테이블 구조
+
+컬럼 타입은 기본 타입으로 표시한다. 길이·NULL 허용·기본값과 복합 인덱스는 아래 상세 표를 따른다.
+
+```mermaid
+erDiagram
+    board {
+        BIGINT id PK
+        CHAR uuid
+        VARCHAR name
+    }
+    category {
+        BIGINT id PK
+        CHAR uuid
+        VARCHAR name
+    }
+    comment_like {
+        BIGINT id PK
+        BIGINT comment_id FK
+        CHAR actor_uuid
+        VARCHAR actor_role
+        DATETIME created_at
+    }
+    follow {
+        CHAR follower_uuid PK
+        CHAR following_uuid PK
+        DATETIME created_at
+    }
+    outbox {
+        BIGINT id PK
+        CHAR event_id
+        VARCHAR event_type
+        CHAR aggregate_uuid
+        JSON payload
+        DATETIME occurred_at
+        DATETIME published_at
+    }
+    post {
+        BIGINT id PK
+        CHAR uuid
+        BIGINT board_id FK
+        BIGINT category_id FK
+        CHAR author_uuid
+        VARCHAR title
+        TEXT content
+        DATETIME created_at
+        DATETIME updated_at
+        DATETIME deleted_at
+    }
+    post_comment {
+        BIGINT id PK
+        CHAR uuid
+        BIGINT post_id FK
+        BIGINT parent_comment_id FK
+        CHAR author_uuid
+        TINYINT depth
+        VARCHAR content
+        DATETIME created_at
+        DATETIME updated_at
+        DATETIME deleted_at
+    }
+    post_like {
+        BIGINT id PK
+        BIGINT post_id FK
+        CHAR actor_uuid
+        VARCHAR actor_role
+        DATETIME created_at
+    }
+```
+
+## 외래키 관계
 관계도는 외래키가 가리키는 방향을 화살표로 표시한다.
 
 ```mermaid

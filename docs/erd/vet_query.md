@@ -3,6 +3,225 @@
 [전체 ERD 목록](../erd.md)
 
 
+## 테이블 구조
+
+컬럼 타입은 기본 타입으로 표시한다. 길이·NULL 허용·기본값과 복합 인덱스는 아래 상세 표를 따른다.
+
+```mermaid
+erDiagram
+    agg_community_daily {
+        DATE stat_date PK
+        VARCHAR board_name PK
+        INT post_count
+        INT comment_count
+        INT like_count
+    }
+    agg_consultation_daily {
+        DATE stat_date PK
+        VARCHAR subject_name PK
+        VARCHAR status PK
+        TINYINT is_emergency PK
+        INT consultation_count
+    }
+    agg_match_daily {
+        DATE stat_date PK
+        VARCHAR region PK
+        VARCHAR channel PK
+        VARCHAR status PK
+        TINYINT is_emergency PK
+        INT request_count
+        INT avg_match_sec
+    }
+    agg_visit_daily {
+        DATE stat_date PK
+        CHAR hospital_uuid PK
+        VARCHAR hospital_name
+        VARCHAR region
+        VARCHAR status PK
+        INT reservation_count
+    }
+    processed_event {
+        CHAR event_id PK
+        VARCHAR event_type
+        DATETIME processed_at
+    }
+    q_consultation {
+        CHAR consultation_uuid PK
+        VARCHAR status
+        VARCHAR consult_type
+        TINYINT is_emergency
+        VARCHAR summary
+        CHAR caregiver_uuid
+        VARCHAR caregiver_nickname
+        CHAR pet_uuid
+        VARCHAR pet_name
+        VARCHAR species_name
+        CHAR vet_uuid
+        VARCHAR vet_name
+        VARCHAR subject_name
+        CHAR hospital_uuid
+        VARCHAR hospital_name
+        VARCHAR region
+        DATETIME created_at
+        DATETIME accepted_at
+        DATETIME completed_at
+    }
+    q_consultation_symptom {
+        CHAR consultation_uuid PK
+        CHAR symptom_uuid PK
+        VARCHAR symptom_name
+    }
+    q_hospital {
+        CHAR hospital_uuid PK
+        VARCHAR region
+        VARCHAR si
+        VARCHAR gun
+        VARCHAR gu
+        VARCHAR name
+        VARCHAR road_address
+        VARCHAR lot_address
+        VARCHAR tel
+    }
+    q_hospital_hours {
+        CHAR hospital_uuid PK
+        TINYINT day_of_week PK
+        TINYINT is_closed
+        TIME open_time
+        TIME close_time
+    }
+    q_match_request {
+        CHAR request_uuid PK
+        VARCHAR status
+        VARCHAR channel
+        TINYINT is_emergency
+        VARCHAR region
+        VARCHAR gu
+        DECIMAL origin_lat
+        DECIMAL origin_lng
+        VARCHAR caregiver_nickname
+        VARCHAR pet_name
+        VARCHAR subject_name
+        VARCHAR assigned_vet_name
+        VARCHAR assigned_hospital_name
+        INT distance_m
+        DATETIME requested_at
+        DATETIME assigned_at
+    }
+    q_notification {
+        CHAR notification_uuid PK
+        CHAR recipient_uuid
+        VARCHAR type
+        VARCHAR title
+        DATETIME read_at
+        DATETIME created_at
+        TINYINT is_unread
+    }
+    q_pet {
+        CHAR pet_uuid PK
+        CHAR caregiver_uuid PK
+        VARCHAR caregiver_nickname
+        VARCHAR name
+        VARCHAR species_name
+        VARCHAR breed_name
+        VARCHAR sex
+        DATE birth_date
+        DECIMAL weight_kg
+        TINYINT is_neutered
+        VARCHAR status
+    }
+    q_post {
+        CHAR post_uuid PK
+        VARCHAR board_name
+        VARCHAR category_name
+        CHAR author_uuid
+        VARCHAR author_nickname
+        VARCHAR author_type
+        VARCHAR title
+        TEXT content
+        INT like_count
+        INT comment_count
+        DATETIME created_at
+    }
+    q_profile {
+        CHAR account_uuid PK
+        VARCHAR nickname
+        VARCHAR user_type
+        VARCHAR status
+        VARCHAR name
+    }
+    q_report {
+        CHAR report_uuid PK
+        VARCHAR status
+        VARCHAR reporter_type
+        CHAR reporter_uuid
+        VARCHAR target_type
+        CHAR target_uuid
+        VARCHAR reason_codes
+        DATETIME created_at
+        DATETIME reviewed_at
+    }
+    q_vet {
+        CHAR vet_uuid PK
+        CHAR account_uuid
+        VARCHAR name
+        VARCHAR major
+        VARCHAR specialty
+        TINYINT is_available
+        VARCHAR status
+        CHAR hospital_uuid
+        VARCHAR hospital_name
+        VARCHAR region
+        VARCHAR si
+        VARCHAR gu
+    }
+    q_vet_on_duty {
+        CHAR vet_uuid PK
+        VARCHAR vet_name
+        CHAR hospital_uuid
+        VARCHAR hospital_name
+        VARCHAR region
+        TINYINT accept_chat
+        TINYINT accept_video
+        INT service_radius_m
+        DECIMAL origin_lat
+        DECIMAL origin_lng
+        DATETIME started_at
+    }
+    q_vet_weekday_off {
+        CHAR vet_uuid PK
+        TINYINT day_of_week PK
+    }
+    q_visit_reservation {
+        CHAR reservation_uuid PK
+        VARCHAR status
+        DATE hoped_visit_date
+        TIME hoped_start_time
+        VARCHAR symptom_memo
+        CHAR hospital_uuid
+        VARCHAR hospital_name
+        VARCHAR region
+        VARCHAR si
+        VARCHAR gu
+        VARCHAR subject_name
+        CHAR slot_uuid
+        TIME slot_start
+        TIME slot_end
+        CHAR caregiver_uuid
+        VARCHAR caregiver_nickname
+        CHAR pet_uuid
+        VARCHAR pet_name
+        VARCHAR species_name
+        VARCHAR breed_name
+        DATETIME created_at
+    }
+    q_visit_symptom {
+        CHAR reservation_uuid PK
+        CHAR symptom_uuid PK
+        VARCHAR symptom_name
+    }
+```
+
+## 외래키 관계
 관계도는 외래키가 가리키는 방향을 화살표로 표시한다.
 
 ```mermaid

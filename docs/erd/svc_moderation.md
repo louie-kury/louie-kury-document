@@ -3,6 +3,51 @@
 [전체 ERD 목록](../erd.md)
 
 
+## 테이블 구조
+
+컬럼 타입은 기본 타입으로 표시한다. 길이·NULL 허용·기본값과 복합 인덱스는 아래 상세 표를 따른다.
+
+```mermaid
+erDiagram
+    outbox {
+        BIGINT id PK
+        CHAR event_id
+        VARCHAR event_type
+        CHAR aggregate_uuid
+        JSON payload
+        DATETIME occurred_at
+        DATETIME published_at
+    }
+    report {
+        BIGINT id PK
+        CHAR uuid
+        CHAR reporter_uuid
+        VARCHAR reporter_type
+        CHAR target_uuid
+        VARCHAR target_type
+        VARCHAR content
+        VARCHAR status
+        CHAR reviewer_admin_uuid
+        VARCHAR resolution_note
+        DATETIME created_at
+        DATETIME reviewed_at
+    }
+    report_reason {
+        BIGINT id PK
+        CHAR uuid
+        VARCHAR target_type
+        VARCHAR code
+        VARCHAR name
+        TINYINT active
+    }
+    report_reason_pick {
+        BIGINT id PK
+        BIGINT report_id FK
+        BIGINT report_reason_id FK
+    }
+```
+
+## 외래키 관계
 관계도는 외래키가 가리키는 방향을 화살표로 표시한다.
 
 ```mermaid

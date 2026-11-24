@@ -3,6 +3,88 @@
 [전체 ERD 목록](../erd.md)
 
 
+## 테이블 구조
+
+컬럼 타입은 기본 타입으로 표시한다. 길이·NULL 허용·기본값과 복합 인덱스는 아래 상세 표를 따른다.
+
+```mermaid
+erDiagram
+    account {
+        BIGINT id PK
+        CHAR uuid
+        VARCHAR status
+        VARCHAR name
+        VARCHAR phone_number
+        VARCHAR gender
+        DATE birth_date
+        VARCHAR address
+        VARCHAR email
+        TINYINT terms_agreed
+        DATETIME created_at
+        DATETIME updated_at
+        DATETIME deleted_at
+    }
+    admin_account {
+        BIGINT id PK
+        CHAR uuid
+        VARCHAR name
+        VARCHAR phone_number
+        VARCHAR email
+        TINYINT is_super_admin
+        VARCHAR status
+        DATETIME created_at
+        DATETIME updated_at
+        DATETIME deleted_at
+    }
+    admin_login {
+        BIGINT id PK
+        BIGINT admin_account_id FK
+        VARCHAR login_id
+        VARCHAR password_hash
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    login_credential {
+        BIGINT id PK
+        BIGINT account_id FK
+        VARCHAR login_id
+        VARCHAR password_hash
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    login_history {
+        BIGINT id PK
+        BIGINT account_id FK
+        DATETIME authenticated_at
+        VARCHAR login_type
+    }
+    outbox {
+        BIGINT id PK
+        CHAR event_id
+        VARCHAR event_type
+        CHAR aggregate_uuid
+        JSON payload
+        DATETIME occurred_at
+        DATETIME published_at
+    }
+    social_auth {
+        BIGINT id PK
+        BIGINT account_id FK
+        VARCHAR provider
+        VARCHAR provider_id
+        DATETIME created_at
+    }
+    user_profile {
+        BIGINT id PK
+        BIGINT account_id FK
+        VARCHAR nickname
+        VARCHAR user_type
+        DATETIME created_at
+        DATETIME updated_at
+    }
+```
+
+## 외래키 관계
 관계도는 외래키가 가리키는 방향을 화살표로 표시한다.
 
 ```mermaid
