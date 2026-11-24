@@ -42,12 +42,12 @@
 | 건강 기록 목록 | `GET /api/pets/{petId}/health-records` | Query `date?:date`, `type?:string`, `page`, `size` | `Page<HealthRecordItem>`, 200 | 400 VALIDATION_ERROR, 404 NOT_FOUND | HLT-02 |
 | 달력 표시 | `GET /api/pets/{petId}/health-records/calendar` | Query `month:YYYY-MM` | `{"month":"2026-11","days":[{"date":"2026-11-19","recordCount":2}]}`, 200 | 400 VALIDATION_ERROR, 404 NOT_FOUND | HLT-02 |
 | 건강 기록 상세 | `GET /api/pets/{petId}/health-records/{recordId}` | 없음 | `HealthRecordDetail`, 200 | 404 NOT_FOUND | HLT-01 |
-| 건강 기록 등록 | `POST /api/pets/{petId}/health-records` | Body `HealthRecordInput` | `HealthRecordDetail`, 201 | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 MEDIA_NOT_READY | HLT-01·HLT-04 |
+| 건강 기록 추가 | `POST /api/pets/{petId}/health-records` | Body `HealthRecordInput` | `HealthRecordDetail`, 201 | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 MEDIA_NOT_READY | HLT-01·HLT-04 |
 | 건강 기록 수정 | `PATCH /api/pets/{petId}/health-records/{recordId}` | Body 변경할 HealthRecordInput 필드 | `HealthRecordDetail`, 200 | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 MEDIA_NOT_READY | HLT-01·HLT-04 |
 | 건강 기록 삭제 | `DELETE /api/pets/{petId}/health-records/{recordId}` | 없음 | 본문 없음, 204 | 404 NOT_FOUND | HLT-01 |
 | 병원진료 목록 | `GET /api/pets/{petId}/visits` | Query `page`, `size` | `Page<VisitItem>`, 200 | 404 NOT_FOUND | PET-03 |
 | 병원진료 상세 | `GET /api/pets/{petId}/visits/{visitId}` | 없음 | `VisitDetail`, 200 | 404 NOT_FOUND | PET-03 |
-| 병원진료 등록 | `POST /api/pets/{petId}/visits` | Body `VisitInput` | `VisitDetail`, 201 | 400 VALIDATION_ERROR, 404 NOT_FOUND | PET-03 |
+| 병원진료 기록 추가 | `POST /api/pets/{petId}/visits` | Body `VisitInput` | `VisitDetail`, 201 | 400 VALIDATION_ERROR, 404 NOT_FOUND | PET-03 |
 | 병원진료 수정 | `PATCH /api/pets/{petId}/visits/{visitId}` | Body 변경할 VisitInput 필드 | `VisitDetail`, 200 | 400 VALIDATION_ERROR, 404 NOT_FOUND | PET-03 |
 | 병원진료 삭제 | `DELETE /api/pets/{petId}/visits/{visitId}` | 없음 | 본문 없음, 204 | 404 NOT_FOUND | PET-03 |
 
@@ -57,7 +57,7 @@
 - 목록은 발생 시각 내림차순·동률 식별자 순으로 정렬하는 설계안이다. 서버는 서버 작성 시각을 별도로 기록한다. 달력은 삭제되지 않은 기록이 있는 날짜만 반환하며 빈 달은 `days:[]`다.
 - 기록을 삭제하면 원본과 첨부를 보관하면서 달력·목록·상세 및 기존 공유 경로에서 제외한다. 같은 날짜에 다른 기록이 있으면 해당 날짜 표시를 유지한다.
 - 미디어는 [공통 미디어](media.md)로 먼저 업로드한 식별자를 연결한다. 저장 전 존재·완료·권한을 검사하고 저장 실패 시 기존 첨부를 유지한다. 파일 직접 조회에도 원본 기록의 현재 권한·삭제 상태를 적용한다.
-- 새 등록 요청의 중복 처리 정책은 공통 멱등성 계약을 적용한다. 저장과 미디어 연결이 나뉘면 보상·재처리 방식을 정하여 한쪽만 성공한 상태를 복구한다.
+- 새 기록 추가 요청의 중복 처리 정책은 공통 멱등성 계약을 적용한다. 저장과 미디어 연결이 나뉘면 보상·재처리 방식을 정하여 한쪽만 성공한 상태를 복구한다.
 
 ## 구현 전 확인
 
