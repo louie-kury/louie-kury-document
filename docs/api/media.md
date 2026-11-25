@@ -10,10 +10,8 @@
 | --- | --- |
 | MediaRef | `mediaId:string`, `fileName:string`, `contentType:string`, `fileSize:integer`, `fileUrl:string` |
 | MediaDetail | MediaRef + `usage:string`, `status:string`, `createdAt:timestamp` |
-| MediaPolicy | `usage:string`, `fileLimits:MediaFileLimit[]`, `maxAttachments:integer` |
-| MediaFileLimit | `contentType:string`, `maxFileSizeBytes:integer` |
 
-`usage` 값은 `POST_ATTACHMENT`, `MEMBER_PROFILE`, `PET_PROFILE`, `HEALTH_ATTACHMENT`, `CONSULTATION_ATTACHMENT` 설계안이다. 설정되지 않은 사용처는 허용하지 않는다. 사용처별 제한은 서버가 제공하며 `fileSize` 단위는 byte다.
+`usage` 값은 `POST_ATTACHMENT`, `MEMBER_PROFILE`, `PET_PROFILE`, `HEALTH_ATTACHMENT`, `CONSULTATION_ATTACHMENT` 설계안이다. 설정되지 않은 사용처는 허용하지 않는다. 화면은 사용처별 제한을 미리 안내하고, 서버는 업로드와 연결 시 해당 제한을 검증한다. 정책 조회 API는 제공하지 않는다. 정책이 바뀌면 화면 안내도 함께 갱신한다. `fileSize` 단위는 byte다.
 
 ### 사용자 대화에서 선택한 제한
 
@@ -34,48 +32,6 @@
 미디어 테이블은 파일 메타데이터를, `media_attachment`는 파일과 사용처의 연결을 기록한다. 한 파일의 동시 사용처는 한 곳이며 작성 화면 단위로 활동 신호를 관리한다. 제공 SQL의 복합 UNIQUE는 단일 활성 연결을 보장하지 않아 후속 합의로 `media_attachment.media_id`에 UNIQUE를 추가할 예정이다. SQL의 `target_uuid`가 NOT NULL이므로 연결 전 임시 첨부는 별도로 관리한다. 임시 첨부와 `usage`, 활동·정리 보호 정보의 구체 저장 구조와 신호 전송 계약은 미정이다.
 
 ## 엔드포인트
-
-### `GET /api/media/policies`
-
-| 메서드·경로 | 인증 | 요청 | 성공 data / 상태 | 주요 오류 |
-| --- | --- | --- | --- | --- |
-| `GET /api/media/policies` | 필수 | `usage` | `MediaPolicy` / 200 | 400 UNKNOWN_USAGE, 503 MEDIA_POLICY_UNAVAILABLE |
-
-요청 예시:
-
-```http
-GET /api/media/policies?usage=POST_ATTACHMENT HTTP/1.1
-Authorization: Bearer <액세스 토큰>
-```
-
-응답 예시 (`200`):
-
-```json
-{
-  "data": {
-    "usage": "POST_ATTACHMENT",
-    "fileLimits": [
-      {
-        "contentType": "image/jpeg",
-        "maxFileSizeBytes": 10000000
-      },
-      {
-        "contentType": "image/png",
-        "maxFileSizeBytes": 10000000
-      },
-      {
-        "contentType": "image/webp",
-        "maxFileSizeBytes": 10000000
-      },
-      {
-        "contentType": "video/mp4",
-        "maxFileSizeBytes": 100000000
-      }
-    ],
-    "maxAttachments": 5
-  }
-}
-```
 
 ### `POST /api/media`
 
