@@ -2,7 +2,7 @@
 
 우선 개발 대상은 일반·카카오·네이버 가입과 로그인, 아이디·비밀번호 찾기다. 마이페이지·탈퇴는 PRD의 후속 계정 기능으로 함께 기록한다. 근거는 [PRD ACC-01·ACC-03](../prd.md#61-보호자-계정--acc)과 요구사항정의서 `(필수3)요구사항정의서` 6~11행·34~36행이다. 공통 응답·오류 형식은 [API 안내](README.md)를 따른다.
 
-아래 경로·필드·토큰 교환 흐름은 구현을 위한 API 설계 초안이다. PRD에서 미정인 본인확인 세부 정책은 D11·D18에 따라 확정한 후 구현한다.
+이메일 인증과 일반 가입에는 현재 인증 서비스 구현을 함께 표시한다. 그 밖의 경로·필드·토큰 교환 흐름은 API 설계 초안이다. PRD에서 미정인 본인확인 세부 정책은 D11·D18에 따라 확정한 후 구현한다.
 
 ## 데이터 모델
 
@@ -32,22 +32,24 @@
 | MemberPatchRequest | `nickname?:string`, `email?:string`, `emailVerificationToken?:string`, `phoneNumber?:string`, `profileMediaId?:string 또는 null` |
 | PasswordChangeRequest | `currentPassword:string`, `newPassword:string` |
 
-- `date`는 `YYYY-MM-DD`, `datetime`은 오프셋을 포함한 ISO 8601이다. 일반 가입의 성별은 남자·여자만 허용하고, 전화번호는 하이픈 없이 숫자만 받는다. 기본 주소는 외부 주소 검색 도구로 선택하고 상세 주소는 직접 입력한다. 성별 코드와 주소·상세 주소의 요청 필드 및 저장 형식은 구현 전 확정한다.
-- 일반 가입의 필수 입력은 PRD의 이름·전화번호·성별·생년월일·주소·닉네임·아이디·비밀번호·이메일이다. 닉네임은 최대 30자, 비밀번호는 영문·숫자·특수문자를 포함한 8~20자다.
-- 약관 내용은 MongoDB에, 계정의 약관 동의 여부는 MySQL에 저장한다. 가입 요청의 동의 필드와 약관별 필수 여부는 상세 정책 확정 후 정한다.
+- `date`는 `YYYY-MM-DD`, `datetime`은 오프셋을 포함한 ISO 8601이다. 일반 가입 구현은 성별 코드 `MALE`·`FEMALE`, 숫자로만 된 전화번호와 단일 주소 문자열을 받는다. 주소 검색·상세 주소 방식은 별도 설계 사항이다.
+- 일반 가입 필수 입력은 이름·전화번호·성별·생년월일·주소·닉네임·아이디·비밀번호·이메일과 이메일 인증 증명이다. 현재 구현의 입력 제한은 아래 가입 API에 적는다. 비밀번호 기준은 PRD의 8~20자와 조합 요구와 다르므로 정책 차이를 확인해야 한다.
+- 약관 내용은 MongoDB에, 계정의 약관 동의 여부는 MySQL에 저장하는 기존 설계다. 현재 가입 구현의 동의 값은 임시 처리이며 실제 동의 기록이 아니다. 가입 요청의 동의 필드와 약관별 필수 여부·버전은 상세 정책 확정 후 정한다.
 - 소셜 이름·전화번호는 서버가 검증한 제공자 정보로 보완할 수 있으며, 누락된 값은 가입 완료 전에 직접 입력한다. `OAuthSignupRequest`의 필드는 제공값을 적용한 최종 제출값이다.
 - 소셜 닉네임을 입력하지 않으면 검증된 제공자 닉네임을 사용하고, 제공값도 없으면 서버가 랜덤 생성한다. 생성값은 나중에 수정할 수 있다.
 - 비밀번호·인증번호·검증 토큰은 요청 또는 해당 검증 응답에서만 전달한다. 계정·프로필 조회 응답에 비밀번호나 비밀번호 해시를 포함하지 않는다.
 
 ## 이메일 인증과 일반 가입
 
-이메일 비교 시 입력의 앞뒤 공백을 제거하고 `@` 뒤 도메인만 소문자로 변환한다. `@` 앞부분은 대소문자를 유지하고 점이나 `+` 뒤 문자열을 제거하지 않는다. 예를 들어 `User@EXAMPLE.com`과 `User@example.com`은 같지만 `user@example.com`과는 다르다. 이 규칙은 가입·중복 확인·인증·이메일 변경·계정 복구 등 이메일을 비교하는 모든 흐름에 적용한다. 발송과 표시에 사용할 이메일은 대소문자를 유지해 암호화 저장한다.
+일반 회원가입 이메일 인증에는 앞뒤 공백을 제거한 ASCII 이메일만 허용하고, 비교할 때는 이메일 전체의 대소문자를 구분하지 않는다. 예를 들어 `User@example.com`과 `user@example.com`은 같다. 점이나 `+` 뒤 문자열을 임의로 제거하지 않는다. 실제 메일 발송에는 앞뒤 공백을 제거한 입력 주소의 대소문자를 유지한다. 다른 이메일 관련 흐름에 적용할 때도 이 비교 기준과 저장소 제약의 일관성을 확인한다. 개인정보 저장 방식에 관한 기존 PRD와 #3 결정의 차이는 별도 확인 사항이다.
 
 ### `POST /api/auth/email-verifications`
 
 | Method·경로 | 인증 | 요청 | 성공 응답의 data | 주요 오류 | 근거 |
 | --- | --- | --- | --- | --- | --- |
-| `POST /api/auth/email-verifications` | SIGNUP 공개, EMAIL_CHANGE 본인 Bearer | EmailVerificationRequest | `202 VerificationChallenge` | 400 VALIDATION_ERROR, 409 EMAIL_ALREADY_REGISTERED, 429 RATE_LIMITED, 503 VERIFICATION_DELIVERY_FAILED | ACC-01, D11 |
+| `POST /api/auth/email-verifications` | SIGNUP 공개, EMAIL_CHANGE 본인 Bearer | EmailVerificationRequest | `202 VerificationChallenge` | 400 VALIDATION_ERROR, 409 EMAIL_ALREADY_EXISTS, 429 RATE_LIMITED, 503 VERIFICATION_DELIVERY_FAILED·VERIFICATION_UNAVAILABLE | ACC-01, D11 |
+
+현재 인증 서비스는 `SIGNUP` 발송을 구현했다. `EMAIL_CHANGE`는 설계 초안이며 이번 구현 범위가 아니다. `202`는 Brevo의 발송 요청 수락을 뜻하며 실제 수신을 보장하지 않는다. 이전 구현에서 실제 발송·수신, 확인 및 발급된 증명을 이용한 가입을 확인했다. 최신 변경 후 실제 서버 연동은 재검증하지 않았다.
 
 요청 예시:
 
@@ -74,9 +76,15 @@ Content-Type: application/json
 
 ### `POST /api/auth/email-verifications/{verificationId}/confirm`
 
+인증 서비스에 `SIGNUP` 확인과 가입 증명 발급 및 가입 API의 일회성 증명 소비를 구현했다.
+
 | Method·경로 | 인증 | 요청 | 성공 응답의 data | 주요 오류 | 근거 |
 | --- | --- | --- | --- | --- | --- |
-| `POST /api/auth/email-verifications/{verificationId}/confirm` | 발급 목적·세션에 연결된 인증 절차 | VerificationConfirmRequest | `200 EmailVerificationProof` | 400 INVALID_VERIFICATION_CODE, 404 NOT_FOUND, 409 VERIFICATION_EXPIRED, 429 RATE_LIMITED | ACC-01, D11 |
+| `POST /api/auth/email-verifications/{verificationId}/confirm` | 공개, 발송한 SIGNUP 인증 요청 ID와 코드 | VerificationConfirmRequest | `200 EmailVerificationProof` | 400 VALIDATION_ERROR·INVALID_VERIFICATION_CODE, 404 NOT_FOUND, 409 VERIFICATION_EXPIRED, 429 RATE_LIMITED, 503 VERIFICATION_UNAVAILABLE | ACC-01, D11 |
+
+`verificationId`는 발송 응답에서 받은 값을 사용하고 `code`는 메일에 기재된 숫자 6자리를 문자열로 전달한다. 앞의 0을 보존해야 한다. 성공 시 반환한 증명은 민감한 값이므로 로그나 공유 문서에 기록하지 않는다.
+
+발급 후 24시간 동안 남는 상태 표식으로 만료된 요청은 `409 VERIFICATION_EXPIRED`로 구분한다. 없는 ID, 재발송으로 무효화된 ID, 이미 성공한 ID 또는 표식 보관기간이 지난 ID는 `404 NOT_FOUND`다. 번호별 5회째 실패는 해당 번호를 무효화하고 보통 `400 INVALID_VERIFICATION_CODE`를 반환하며, 이후 같은 ID는 `404 NOT_FOUND`다. 그 실패가 이메일별 최근 1시간 내 10번째 실패이기도 하면 `429 RATE_LIMITED`가 우선한다. 10번째 실패 시점부터 1시간 동안 해당 이메일의 활성 인증번호 확인을 제한한다. 잠금 상태에서 재발송은 가능하지만 새 번호 확인도 제한된다. 성공하더라도 최근 1시간 실패 기록은 조기 초기화하지 않는다.
 
 요청 예시:
 
@@ -104,19 +112,20 @@ Content-Type: application/json
 
 | Method·경로 | 인증 | 요청 | 성공 응답의 data | 주요 오류 | 근거 |
 | --- | --- | --- | --- | --- | --- |
-| `POST /api/auth/signup` | 공개, SIGNUP 인증 증명 | SignupRequest, `Idempotency-Key` | `201 SignupResult` | 400 VALIDATION_ERROR, 400 INVALID_EMAIL_VERIFICATION, 409 ACCOUNT_CONFLICT, 409 IDEMPOTENCY_CONFLICT, 503 SIGNUP_PENDING | ACC-01, D11·D18 |
+| `POST /api/auth/signup` | 공개, SIGNUP 인증 증명 | SignupRequest | `201 SignupResult` | 400 VALIDATION_ERROR·INVALID_EMAIL_VERIFICATION, 409 EMAIL_ALREADY_EXISTS·LOGIN_ID_ALREADY_EXISTS·NICKNAME_ALREADY_EXISTS, 503 VERIFICATION_UNAVAILABLE·SIGNUP_PENDING | ACC-01, D11·D18 |
+
+현재 구현은 멱등 키를 사용하지 않는다. 비밀번호를 제외한 필수 문자열은 공백만 입력할 수 없고 길이는 Unicode 코드 포인트 기준이다. 이름·아이디·증명은 최대 100자, 전화번호는 숫자만 최대 30자, 주소는 최대 255자, 닉네임은 최대 30자다. 생년월일은 `1000-01-01`부터 `9999-12-31`까지이며, 비밀번호는 조합 제한 없이 8~128 코드 포인트다. 이메일은 ASCII 형식이며 최대 254자다. 입력을 검증한 뒤 증명을 소비한다.
 
 요청 예시:
 
 ```http
 POST /api/auth/signup HTTP/1.1
-Idempotency-Key: <요청별 고유 키>
 Content-Type: application/json
 
 {
   "name": "김보호",
   "phoneNumber": "01000000000",
-  "gender": "<확정된 성별 코드>",
+  "gender": "FEMALE",
   "birthDate": "1995-01-01",
   "address": "서울특별시",
   "nickname": "루이집사",
@@ -138,23 +147,33 @@ Content-Type: application/json
 ```
 
 
+### 아이디·닉네임 사용 가능 여부
+
+| Method·경로 | 요청 | 성공 응답 | 주요 오류 |
+| --- | --- | --- | --- |
+| `GET /api/auth/login-ids/availability` | `loginId` 쿼리, 최대 100 코드 포인트 | `200`, `data.available:boolean` | 400 VALIDATION_ERROR |
+| `GET /api/auth/nicknames/availability` | `nickname` 쿼리, 최대 30 코드 포인트 | `200`, `data.available:boolean` | 400 VALIDATION_ERROR |
+
+두 값은 필수이며 공백만 입력할 수 없다. 조회 결과는 값을 예약하지 않으므로 실제 가입 시에도 중복을 검사한다.
+
 ### 가입 공통 처리
 
 1. 일반·소셜 가입 모두 사용자가 직접 입력한 이메일로 인증번호를 발송하고 확인한다. 소셜 제공자의 이메일 인증 상태를 근거로 이 절차를 생략하지 않는다.
 2. 인증 증명은 서버에서 이메일·목적·발급 절차·유효기간을 확인한다. 다른 이메일, EMAIL_CHANGE 증명 또는 만료된 증명으로 가입할 수 없다. EMAIL_CHANGE 인증 절차와 증명은 발급 요청자의 memberId에도 연결하고 이메일 변경 시 같은 본인인지 확인한다.
 3. 한 이메일당 계정 하나를 허용하고 로그인 ID 중복도 거부한다. 동일 이메일의 일반·소셜 계정을 자동 병합하지 않는다.
 4. 가입 성공 시 `Location: /api/members/me`를 반환한다. 가입 이후 로그인은 별도 로그인 API로 수행한다.
-5. 계정·인증 데이터는 MySQL, 일반 회원 프로필은 MongoDB에 저장한다. 두 저장소의 가입 작업을 하나의 복구 가능한 가입 절차로 관리하고, 프로필 저장까지 완료된 계정만 로그인 가능한 상태로 만든다.
-6. 동일 키·동일 입력의 가입 재시도는 진행 중 절차를 복구하거나 기존 성공 결과를 반환한다. 같은 키에 다른 입력은 409다. 인증 증명은 해당 가입 절차에 한 번 연결하며 부분 실패 재시도 때문에 이메일 증명이 다른 계정에 재사용되지 않도록 한다. 키·증명 보관 기간은 D11·D18에서 정한다.
+5. 현재 일반 가입 구현은 계정·로그인 정보·`user_profile`을 MySQL 트랜잭션에 저장한다. PRD의 일반 프로필 MongoDB 요구와 차이가 있으며 최종 저장소는 후속 검토한다.
+6. 현재 일반 가입은 이메일·목적·유효기간을 확인한 증명을 Redis에서 원자적으로 한 번 소비한다. 이후 중복이나 DB 저장 실패가 발생해도 증명은 복원되지 않으므로 다시 인증해야 한다. 동일 요청의 성공 결과 복구나 멱등 키는 지원하지 않는다. 소셜 가입은 설계 초안이다.
 
 ### 일반 가입 이메일 인증 정책
 
 - 서버는 암호학적으로 안전한 난수로 숫자 6자리 인증번호를 발급한다. 번호는 5분간 유효하며 성공 시 한 번만 사용할 수 있다.
-- 재발송은 60초 후 가능하며, 새 번호를 발급하면 이전 번호를 무효화한다. 동일 이메일의 발송은 1시간당 5회로 제한하고 IP별 발송 제한도 적용한다. IP 제한의 구체적인 기준은 구현 시 정한다.
-- 한 번호의 입력이 5회 실패하면 해당 번호를 무효화한다. 재발송해도 이메일별 누적 실패 횟수는 초기화하지 않으며 누적 제한과 해제 기준은 구현 시 정한다.
+- 재발송은 60초 후 가능하며, 새 번호를 발급하면 이전 번호를 무효화한다. 동일 이메일은 1시간당 5회, 동일 IP는 1시간당 100회로 발송을 제한한다. 현재 구현은 연결의 원격 IP를 사용하고 임의 전달 헤더를 신뢰하지 않는다. 프록시 배포에서는 신뢰할 수 있는 프록시 설정이 필요하다.
+- 발송 요청은 Brevo 트랜잭션 메일 API를 사용한다. 발송 실패 또는 결과가 불명확하더라도 제한 횟수는 차감하고 이전 번호는 무효로 유지한다. API 요청 수락과 실제 이메일 수신은 구분한다.
+- 한 번호의 입력이 5회 실패하면 해당 번호를 무효화한다. 재발송해도 이메일별 누적 실패 횟수는 초기화하지 않는다. 최근 1시간에 누적 10회 틀리면 10번째 실패부터 1시간 동안 해당 이메일의 활성 인증번호 확인을 제한한다. 재발송은 제한하지 않으며 성공해도 기존 실패 기록은 해당 기간 동안 유지한다.
 - 인증 성공 시 해당 이메일과 SIGNUP 목적에 연결된 일회성 가입 증명을 발급한다. 증명은 10분간 유효하며 이메일을 변경하면 다시 인증한다. 화면에는 가장 최근에 발송한 번호를 입력하도록 안내한다.
-- 인증 요청 ID, 이메일 확인값, 인증번호 확인값, 목적, 만료 시각, 실패 횟수와 발송 제한 정보, 가입 증명은 Redis에 저장하고 각 유효기간에 맞는 TTL을 적용한다. 이메일과 인증번호 확인값은 각각 별도 비밀키로 HMAC을 계산해 저장한다. 인증번호와 증명 원문은 로그에 남기지 않는다.
-- 가입 시작 시 유효한 증명을 해당 가입 절차에 원자적으로 연결하고 그 연결과 멱등성 상태를 지속 저장한다. 이후 Redis 증명 만료나 유실이 있어도 같은 키·같은 입력의 재시도는 연결된 절차를 복구한다. 다른 가입 절차가 같은 증명을 사용할 수 없도록 한다. Redis 장애로 새 인증을 확인할 수 없으면 가입을 완료하지 않고 인증을 다시 진행하도록 한다.
+- 인증 요청 ID, 이메일 확인값, 인증번호 확인값, 목적, 만료 시각, 실패 횟수와 발송 제한 정보, 가입 증명은 Redis에 저장하고 각 유효기간에 맞는 TTL을 적용한다. 이메일과 인증번호 확인값은 각각 별도 비밀키로 HMAC을 계산한다. 가입 증명도 원문 대신 HMAC 확인값으로 저장한다. 인증번호와 증명 원문은 로그에 남기지 않는다.
+- 가입 요청에서 유효한 증명은 원자적으로 소비되며 다른 가입에 재사용할 수 없다. Redis 장애로 증명을 확인할 수 없으면 가입을 완료하지 않는다. 증명 소비 후 저장 실패는 재인증이 필요하다.
 
 ## 로그인·소셜 가입·세션
 
