@@ -30,11 +30,15 @@
 
 모든 API는 Bearer 인증이 필요하며 로그인 사용자의 상담에 한정한다.
 
+공개 API에서는 상담 신청부터 매칭을 시작한다. `/api/consultations/{consultationId}/matching`은 해당 상담의 매칭 진행과 결과를 조회하는 경로다. 신청·조회·취소와 구독은 요청한 보호자 본인에게만 허용하며, 인증 실패는 공통 계약의 401, 존재하지 않거나 본인 상담이 아닌 경우는 404로 처리하는 설계안이다. 매칭된 수의사의 상담 접근 범위는 별도 연동 계약에서 정한다.
+
 ### `POST /api/consultations`
 
 | 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
 | --- | --- | --- | --- | --- | --- |
 | 실시간 상담 신청 | `POST /api/consultations` | Body `ConsultationInput`, Header `Idempotency-Key` | `ConsultationDetail`, 201 | 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 MEDIA_NOT_READY·IDEMPOTENCY_CONFLICT, 503 UPSTREAM_UNAVAILABLE | CON-01·CON-05 |
+
+보호자와 반려동물의 관계를 확인하고 유효한 위치·채널과 접근 가능한 완료 미디어를 검사한다. 신청 접수는 매칭 성공을 뜻하지 않으며 응답의 `MATCHING`은 대기 상태다. 인증 정보에서 보호자를 식별하며 다른 보호자의 동물은 조회할 수 없는 동물과 같이 404로 처리한다. 동일한 멱등성 키와 입력의 재시도는 기존 결과를 반환하고, 동일 키에 다른 입력이면 409다.
 
 요청 예시:
 
@@ -153,6 +157,8 @@ Authorization: Bearer <액세스 토큰>
 | --- | --- | --- | --- | --- | --- |
 | 매칭 진행·결과 | `GET /api/consultations/{consultationId}/matching` | 없음 | `MatchingStatus`, 200 | 404 NOT_FOUND | CON-02·CON-05 |
 
+`elapsedSeconds`는 요청 접수 이후 서버 기준 경과 시간이고, `expiresAt`은 확정된 기한이 없으면 `null`이다. `MATCHING`에서는 수의사가 `null`이며 `MATCHED`에서는 확정된 수의사와 병원 정보를 반환한다. `CANCELLED`와 `EXPIRED`는 각각 취소와 미매칭 종료를 나타낸다. 상태값은 외부 응답 초안이며 내부 저장 상태는 D18에서 정한다.
+
 요청 예시:
 
 ```http
@@ -181,6 +187,8 @@ Authorization: Bearer <액세스 토큰>
 | --- | --- | --- | --- | --- | --- |
 | 매칭·상담 상태 구독 | `GET /api/consultations/{consultationId}/stream` | Header `Last-Event-ID?:string` | `ConsultationEvent` 스트림, 200 | 404 NOT_FOUND, 503 UPSTREAM_UNAVAILABLE | CON-02·CON-05 |
 
+구독은 신청한 보호자 본인만 가능하다. 연결이 끊긴 뒤에는 매칭 상태 조회 API로 최신 상태를 확인한다. `Last-Event-ID`의 재전송 보장과 이벤트 유형은 D17에서 정하며, 현재 예시만으로 이벤트 유실이 없다고 가정하지 않는다.
+
 요청 예시:
 
 ```http
@@ -201,6 +209,8 @@ data: {"eventId":"event_01","type":"<이벤트_유형>","consultationId":"consul
 | 기능 | 요청 | 입력 | 성공 data·상태 | 주요 오류 | PRD |
 | --- | --- | --- | --- | --- | --- |
 | 상담 취소 | `POST /api/consultations/{consultationId}/cancellation` | Body `{reason?:string}` | `ConsultationDetail`, 200 | 404 NOT_FOUND, 409 STATE_CONFLICT | CON-02·CON-04 |
+
+보호자는 매칭 대기 중 취소할 수 있다. 같은 취소를 다시 요청하면 기존 취소 결과를 반환한다. 취소와 수락·만료가 경합할 때는 확정된 상태에 따라 처리하며, 이미 취소·만료된 상담은 늦은 수락으로 연결하지 않는다. 매칭 후 취소는 D04·D17 확정 전까지 허용을 보장하지 않는다.
 
 요청 예시:
 
@@ -327,6 +337,8 @@ Authorization: Bearer <액세스 토큰>
 | --- | --- | --- | --- | --- | --- |
 | 매칭 상대 정보 | `GET /api/consultations/{consultationId}/veterinarian` | 없음 | `VeterinarianInfo`, 200 | 404 NOT_FOUND, 409 STATE_CONFLICT, 503 UPSTREAM_UNAVAILABLE | VET-01 |
 
+매칭이 확정되기 전에는 409를 반환한다. 확정 후 상대 정보 제공 서비스의 장애는 503으로 구분한다. 표시하는 수의사와 실제 상담 상대는 같아야 한다.
+
 요청 예시:
 
 ```http
@@ -423,13 +435,19 @@ Authorization: Bearer <액세스 토큰>
 ## 신청·매칭 처리
 
 1. 신청한 동물의 소유권·삭제 상태, 채널과 위치, 제출한 미디어의 완료·접근 권한을 검사한다. 작성자와 상담 주체는 인증 정보에서 얻는다.
-2. 요청을 매칭 대기로 저장하고 가까운 병원부터 탐색한다. 원본 SQL의 수의사 필수 컬럼과 매칭 전 상대 미정 상태는 `D18`에서 저장 구조를 맞춘다.
+2. 요청을 매칭 대기로 저장하고 가까운 병원부터 탐색한다. 매칭 요청과 상담 식별자의 연결 및 필수 데이터의 생성 방법은 `D18`에서 정한다.
 3. 수락 결과와 취소·만료 이벤트가 경합해도 한 최종 상태만 반영한다. 취소·만료된 요청은 뒤늦은 수락으로 연결하지 않는다. 한 요청은 한 수의사에게만 확정한다.
 4. 매칭 성공·미매칭·취소를 상태 조회와 실시간 전달에 동일하게 반영한다. 이벤트는 중복·순서 변경 가능성을 고려해 버전 또는 순번을 포함할지 `D17`에서 정한다. 클라이언트는 재연결 후 상태 API로 최신 결과를 재조회한다.
+
+진행 중 상담이 있는 수의사는 다른 요청에 중복 배정하지 않는다. 후보에게 요청을 전달하는 방식과 가용 상태·수락·거절을 처리하는 주체 및 API는 D17에서 정한다. 동일 후보에 같은 요청을 중복 전달하지 않는 기존 합의를 연동 설계에 반영한다.
 
 `Idempotency-Key`는 같은 주체·동작·같은 입력의 재시도에 기존 결과를 반환한다. 같은 키로 다른 입력을 제출하면 409다. 멱등성 키 저장과 신청 상태가 분리되어 중복 신청되는 경우를 방지하고, 키 보관 기간은 구현 전에 정한다.
 
 기존 반경·전체 60초 합의의 최신 적용 여부는 `D17` 미정이다. 응답 `expiresAt`은 서버가 확정한 기한이 있을 때만 제공한다. 클라이언트가 임의로 반경·만료를 확정하지 않도록 한다.
+
+### ERD와 맞출 항목
+
+[매칭 ERD](../erd/svc_matching.md)의 `consultation_request`는 수의사 배정 전 `assigned_vet_uuid`를 비울 수 있으며, `match_offer`와 `match_wave`는 후보별 제안과 탐색 차수를 기록한다. 공개 API의 상담 ID와 매칭 요청 UUID의 연결은 아직 정해지지 않았다. ERD의 `expire_at`, 진료 과목·긴급 여부·지역·탐색 반경 등 필수값을 API 입력 또는 서버 계산 중 어디서 얻을지, 만료 기한이 미확정일 때 어떻게 저장할지 D17·D18에서 정한다. DB 컬럼이 존재한다는 사실만으로 API 입력이나 탐색 정책을 확정하지 않는다.
 
 ## 연결·취소·종료
 
