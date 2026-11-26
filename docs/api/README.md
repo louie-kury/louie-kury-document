@@ -16,10 +16,10 @@
 | [공통 미디어](media.md) | 우선 | 5 |
 | [커뮤니티·신고](community.md) | 우선 | 20 |
 | [건강 기록·병원진료](health.md) | 후순위 | 11 |
-| [실시간 상담·일지·후기](consultation.md) | 후순위 | 12 |
+| [실시간 상담 매칭](matching.md) | 후순위 | 9 |
 | [지도·병원 조회](hospital.md) | 후순위 | 2 |
 
-총 **94개 메서드·경로 조합**이다. 하나의 경로에 여러 HTTP 메서드가 있으면 각각 센다. 실시간 채널 제안도 포함한다.
+총 **91개 메서드·경로 조합**이다. 하나의 경로에 여러 HTTP 메서드가 있으면 각각 센다. 실시간 채널 제안도 포함한다.
 
 ## 저장소 경계
 
@@ -133,9 +133,9 @@ JSON 요청은 `Content-Type: application/json`이다. 파일 업로드만 `mult
 | PET-03 | [병원진료](health.md) | 29~33행 후순위 |
 | HLT-01·HLT-02·HLT-04 | [건강 기록](health.md)·[미디어](media.md) | 37~41행 후순위 |
 | HLT-03 | [예방접종](vaccination.md)·[병원진료](health.md) | PET-02·PET-03으로 이관 |
-| VET-01 | [상담 상대 정보](consultation.md) | 44~48행의 보호자 상담 정보 |
-| CON-01·CON-02·CON-03·CON-04·CON-05 | [실시간 상담](consultation.md) | 42~48행 후순위 |
-| LOG-01·REV-01 | [일지·후기](consultation.md) | 48행·기존 PRD 평가 합의, 후순위 |
+| VET-01 | [상담 상대 정보](matching.md) | 44~48행의 보호자 상담 정보 |
+| CON-01·CON-02·CON-03·CON-04·CON-05 | [실시간 상담](matching.md) | 42~48행 후순위 |
+| LOG-01·REV-01 | 명세 보류 | PRD 요구사항이며 ERD·제공 계약 확인 필요 |
 | COM-01·COM-02 | [커뮤니티·신고](community.md) | 90~103행 우선 |
 | COM-03 | [팔로우·팔로잉](follow.md) | 12~17행 우선 |
 | NTF-01 | [알림](notifications.md) | 67~70·72~75행 우선 |
