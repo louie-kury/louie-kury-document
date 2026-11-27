@@ -1,6 +1,6 @@
 # 반려동물 관리
 
-**우선 개발.** PRD `PET-01`, `MED-01`, `D11·D12·D18`, 요구사항정의서 `(필수3)` C18:H22 기준. 반려동물·소유 관계·종/품종은 MongoDB, 파일 메타데이터는 공통 미디어 저장소에서 관리한다.
+**우선 개발.** PRD `PET-01`, `MED-01`, `D11·D12·D18`, 요구사항정의서 `(필수3)` C18:H22 기준. 반려동물·소유 관계는 MongoDB, 종·품종 기준 데이터는 MySQL, 파일 메타데이터는 공통 미디어 저장소에서 관리한다.
 
 [공통 계약](README.md#공통-계약)을 함께 적용한다. 아래 경로·필드·오류 코드는 API 설계 초안이며 미정 정책은 마지막 절에서 추적한다.
 
@@ -67,7 +67,7 @@ Authorization: Bearer <액세스 토큰>
     "petId": "pet_01",
     "name": "루이",
     "species": {
-      "speciesId": "species_01",
+      "speciesId": "61b179ee-8a43-3b1d-8d63-f355b72ddf67",
       "name": "개"
     },
     "breed": null,
@@ -100,7 +100,7 @@ Content-Type: application/json
 
 {
   "name": "루이",
-  "speciesId": "species_01",
+  "speciesId": "61b179ee-8a43-3b1d-8d63-f355b72ddf67",
   "breedId": null,
   "profileMediaId": null,
   "birth": null,
@@ -119,7 +119,7 @@ Content-Type: application/json
     "petId": "pet_01",
     "name": "루이",
     "species": {
-      "speciesId": "species_01",
+      "speciesId": "61b179ee-8a43-3b1d-8d63-f355b72ddf67",
       "name": "개"
     },
     "breed": null,
@@ -162,7 +162,7 @@ Content-Type: application/json
     "petId": "pet_01",
     "name": "루이",
     "species": {
-      "speciesId": "species_01",
+      "speciesId": "61b179ee-8a43-3b1d-8d63-f355b72ddf67",
       "name": "개"
     },
     "breed": null,
@@ -213,7 +213,7 @@ Authorization: Bearer <액세스 토큰>
 {
   "data": [
     {
-      "speciesId": "species_01",
+      "speciesId": "61b179ee-8a43-3b1d-8d63-f355b72ddf67",
       "name": "개",
       "breeds": []
     }
@@ -225,7 +225,7 @@ Authorization: Bearer <액세스 토큰>
 ## 처리 규칙
 
 - 보호자는 인증된 계정에서 결정한다. 요청에 `caregiverId`를 받아 타인 동물로 저장하지 않는다. 목록은 본인 소유의 삭제되지 않은 동물만 반환한다.
-- `speciesId`와 `breedId`가 일치하는지 확인한다. 종·품종 목록도 MongoDB 기준 데이터이며 접종명 MySQL과 구분한다.
+- `speciesId`와 `breedId`는 MySQL `species.uuid`와 `breed.uuid`를 문자열로 전달하며 품종이 선택한 종에 속하는지 확인한다. 종·품종은 별도의 활성 상태나 소프트 삭제를 사용하지 않는다. 기존 MongoDB 참조는 UUID로 이관한다.
 - 프로필 파일은 [미디어 업로드](media.md) 후 받은 `mediaId`로 연결한다. 파일 존재·완료·소유·사용처 권한을 확인하고 부모 저장이 실패하면 기존 프로필을 유지한다.
 - PATCH의 생략은 유지다. 허용된 필드의 null만 해제를 뜻한다. 응답에 요청으로 보내지 않은 타인 정보나 MongoDB 내부 문서를 그대로 노출하지 않는다.
 - 삭제는 소프트 삭제다. 목록·상세·수정·기존 프로필 파일 직접 조회의 현재 접근 정책에 반영한다. 첨부 원본은 동물과 함께 보관하며 삭제된 동물의 기존 프로필 파일 접근을 차단한다.
@@ -235,4 +235,4 @@ Authorization: Bearer <액세스 토큰>
 
 - D12 — 생성 필수값, 생일을 모르는 경우, 나이 산식·기준일, 중성화·기본 접종 값, 체중 단위·범위, 프로필 선택 여부.
 - D11 — 진행 중 상담이 있는 동물 삭제의 허용 조건과 연결 이력 보관.
-- D18 — MongoDB 식별자·소유 관계·종/품종 문서 구조. 이 API의 필드가 DB 컬럼 설계를 확정하는 것은 아니다.
+- D18 — MongoDB 식별자·소유 관계와 MySQL 종·품종 UUID 참조 구조. 이 API의 필드가 DB 컬럼 설계를 확정하는 것은 아니다.
