@@ -1,6 +1,6 @@
 ---
 name: 기능 개발
-description: 만들 기능과 완료 기준을 정리합니다.
+about: 만들 기능과 완료 기준을 정리합니다.
 title: "[feat] "
 ---
 
